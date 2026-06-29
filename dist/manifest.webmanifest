@@ -1,0 +1,19 @@
+{
+  "name": "هەواڵی ئابوری",
+  "short_name": "هەواڵی ئابوری",
+  "description": "Live financial intelligence for Iraq and global markets.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#08111f",
+  "theme_color": "#08111f",
+  "lang": "ku-IQ",
+  "dir": "rtl",
+  "categories": ["news", "finance", "business"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

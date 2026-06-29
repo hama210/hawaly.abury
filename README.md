@@ -1,25 +1,34 @@
-# هەواڵی ئابوری — Phase 6 AI Financial Intelligence
+# هەواڵی ئابوری — Phase 8 SEO + PWA + Production Polish
 
-AI-ready financial intelligence upgrade.
+Phase 8 adds production polish to the live financial intelligence platform.
 
-## Added
-- AI Intelligence Command Center
-- Rule-based market sentiment dashboard
-- Risk mode / high-impact count / Iraq impact count
-- Asset Intelligence cards
-- Rule-based AI Market Assistant placeholder
-- Better market impact and affected-asset experience
-- Ready to connect real AI later with an API key
+## Added in Phase 8
 
-## APIs included
-- `/api/news`
-- `/api/sources`
-- `/api/markets`
-- `/api/intelligence`
+- SEO meta tags
+- Open Graph / Twitter sharing cards
+- JSON-LD structured data
+- `sitemap.xml`
+- `robots.txt`
+- PWA manifest
+- Service worker for app-shell caching
+- Installable app support
+- App icons
+- Cloudflare `_headers` security/cache rules
+- Better mobile/PWA readiness
 
 ## Deploy
-Cloudflare Pages settings:
-- Build command: `npm run build`
-- Output directory: `dist`
 
-Do not upload `node_modules`. Delete `package-lock.json` if Cloudflare npm install hangs.
+Upload the contents to GitHub root and commit:
+
+```txt
+Phase 8 SEO PWA production polish
+```
+
+Cloudflare settings stay the same:
+
+```txt
+Build command: npm run build
+Output directory: dist
+```
+
+Important: if `package-lock.json` exists in GitHub and Cloudflare hangs on `npm clean-install`, delete `package-lock.json` and redeploy.

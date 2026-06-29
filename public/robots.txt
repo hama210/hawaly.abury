@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://hawaly-aburyy.pages.dev/sitemap.xml
