@@ -1,99 +1,99 @@
-const CATEGORY_IMAGES = {
-  breaking: 'https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1200&q=80',
-  iraq: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1200&q=80',
-  forex: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1200&q=80',
-  oil: 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=1200&q=80',
-  crypto: 'https://images.unsplash.com/photo-1621504450181-5d356f61d307?auto=format&fit=crop&w=1200&q=80',
-  stocks: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=80',
-  geopolitics: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
-  banks: 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80',
-  economy: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80'
-};
+const FEEDS = [
+  { source:'Google News · Economy', category:'world', impact:'Medium', url:'https://news.google.com/rss/search?q=global+economy+OR+inflation+OR+GDP+when:1d&hl=en-US&gl=US&ceid=US:en' },
+  { source:'Google News · Forex', category:'forex', impact:'High', url:'https://news.google.com/rss/search?q=forex+OR+EURUSD+OR+Federal+Reserve+OR+ECB+when:1d&hl=en-US&gl=US&ceid=US:en' },
+  { source:'Google News · Oil', category:'oil', impact:'High', url:'https://news.google.com/rss/search?q=oil+prices+OR+OPEC+OR+EIA+OR+Iraq+oil+when:1d&hl=en-US&gl=US&ceid=US:en' },
+  { source:'Google News · Iraq Economy', category:'iraq', impact:'High', url:'https://news.google.com/rss/search?q=Iraq+economy+OR+Iraqi+dinar+OR+Central+Bank+of+Iraq+OR+Iraq+oil+when:1d&hl=en-US&gl=US&ceid=US:en' },
+  { source:'Google News · Stocks', category:'stocks', impact:'Medium', url:'https://news.google.com/rss/search?q=stock+market+OR+S%26P+500+OR+Nasdaq+OR+Dow+when:1d&hl=en-US&gl=US&ceid=US:en' },
+  { source:'Google News · Crypto', category:'crypto', impact:'Medium', url:'https://news.google.com/rss/search?q=bitcoin+OR+ethereum+OR+crypto+market+when:1d&hl=en-US&gl=US&ceid=US:en' },
+  { source:'Google News · Geopolitics', category:'geopolitics', impact:'High', url:'https://news.google.com/rss/search?q=war+OR+sanctions+OR+Middle+East+OR+Ukraine+markets+when:1d&hl=en-US&gl=US&ceid=US:en' },
+  { source:'Google News · Central Banks', category:'banks', impact:'High', url:'https://news.google.com/rss/search?q=central+bank+OR+interest+rates+OR+Fed+OR+ECB+OR+BOE+OR+BOJ+when:1d&hl=en-US&gl=US&ceid=US:en' },
+  { source:'MSN Money', category:'stocks', impact:'Medium', url:'https://www.msn.com/en-us/money/markets/rss' }
+]
 
-const SOURCES = [
-  { name:'Reuters Markets', category:'breaking', url:'https://news.google.com/rss/search?q=Reuters%20markets%20economy%20forex%20oil%20when:1d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'CNBC Markets', category:'stocks', url:'https://news.google.com/rss/search?q=CNBC%20markets%20economy%20forex%20when:1d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'MSN Money', category:'economy', url:'https://news.google.com/rss/search?q=MSN%20Money%20economy%20markets%20when:1d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'MarketWatch', category:'stocks', url:'https://news.google.com/rss/search?q=MarketWatch%20markets%20economy%20when:1d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'Yahoo Finance', category:'stocks', url:'https://finance.yahoo.com/news/rssindex' },
-  { name:'FXStreet', category:'forex', url:'https://www.fxstreet.com/rss/news' },
-  { name:'ForexLive', category:'forex', url:'https://www.forexlive.com/feed/news' },
-  { name:'OilPrice', category:'oil', url:'https://oilprice.com/rss/main' },
-  { name:'CoinDesk', category:'crypto', url:'https://www.coindesk.com/arc/outboundfeeds/rss/' },
-  { name:'Cointelegraph', category:'crypto', url:'https://cointelegraph.com/rss' },
-  { name:'Federal Reserve', category:'banks', url:'https://news.google.com/rss/search?q=Federal%20Reserve%20rates%20inflation%20when:2d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'ECB', category:'banks', url:'https://news.google.com/rss/search?q=ECB%20rates%20eurozone%20inflation%20when:2d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'OPEC', category:'oil', url:'https://news.google.com/rss/search?q=OPEC%20oil%20Iraq%20when:2d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'EIA', category:'oil', url:'https://news.google.com/rss/search?q=EIA%20oil%20inventories%20when:2d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'Iraq Business News', category:'iraq', url:'https://news.google.com/rss/search?q=Iraq%20Business%20News%20economy%20oil%20banking%20when:7d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'Shafaq News', category:'iraq', url:'https://news.google.com/rss/search?q=Shafaq%20News%20Iraq%20economy%20oil%20dinar%20when:7d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'Rudaw', category:'iraq', url:'https://news.google.com/rss/search?q=Rudaw%20Iraq%20Kurdistan%20economy%20oil%20when:7d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'Kurdistan24', category:'iraq', url:'https://news.google.com/rss/search?q=Kurdistan24%20Iraq%20economy%20oil%20when:7d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'Iraqi News Agency', category:'iraq', url:'https://news.google.com/rss/search?q=Iraqi%20News%20Agency%20economy%20oil%20bank%20when:7d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'Central Bank of Iraq', category:'iraq', url:'https://news.google.com/rss/search?q=Central%20Bank%20of%20Iraq%20dinar%20banking%20when:7d&hl=en-US&gl=US&ceid=US:en' },
-  { name:'Truth Social', category:'geopolitics', url:'https://news.google.com/rss/search?q=Truth%20Social%20Trump%20tariffs%20oil%20Fed%20when:1d&hl=en-US&gl=US&ceid=US:en' }
-];
+const FALLBACK_IMAGES = {
+  iraq:'https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=1400&q=80',
+  forex:'https://images.unsplash.com/photo-1640340434855-6084b1f4901c?auto=format&fit=crop&w=1400&q=80',
+  oil:'https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=1400&q=80',
+  crypto:'https://images.unsplash.com/photo-1621761191319-c6fb62004040?auto=format&fit=crop&w=1400&q=80',
+  stocks:'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1400&q=80',
+  geopolitics:'https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1400&q=80',
+  banks:'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1400&q=80',
+  world:'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1400&q=80'
+}
 
-const impactWords = ['fed','federal reserve','interest rate','cpi','inflation','nfp','jobs','opec','war','attack','tariff','central bank','recession','oil','iraq','dinar','banking','sanctions'];
-const marketMap = [
-  ['oil',['Oil','Brent','WTI','IQD']], ['opec',['Oil','Brent','WTI']], ['iraq',['IQD','USD/IQD','Oil']], ['dinar',['IQD','USD/IQD']],
-  ['fed',['USD','Gold','EUR/USD']], ['inflation',['USD','Gold','Stocks']], ['cpi',['USD','Gold','Stocks']], ['ecb',['EUR','EUR/USD']],
-  ['bitcoin',['BTC','ETH']], ['crypto',['BTC','ETH']], ['gold',['Gold','USD']], ['war',['Gold','Oil','USD']]
-];
-function decodeXml(v='') { return v.replace(/<!\[CDATA\[|\]\]>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").trim(); }
-function stripHtml(v='') { return decodeXml(v).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); }
-function getTag(item, tag) { const m = item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i')); return m ? decodeXml(m[1]) : ''; }
-function imageFrom(item, category) { const enclosure = item.match(/<enclosure[^>]+url=["']([^"']+)["']/i); if (enclosure) return enclosure[1]; const media = item.match(/<media:content[^>]+url=["']([^"']+)["']/i) || item.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i); if (media) return media[1]; const img = item.match(/<img[^>]+src=["']([^"']+)["']/i); if (img) return img[1]; return CATEGORY_IMAGES[category] || CATEGORY_IMAGES.economy; }
-function classifyImpact(title, desc) { const text = `${title} ${desc}`.toLowerCase(); const score = impactWords.reduce((n,w)=> n + (text.includes(w)?1:0), 0); return score >= 2 ? 'High' : score === 1 ? 'Medium' : 'Low'; }
-function affectedMarkets(title, desc, category) { const text = `${title} ${desc}`.toLowerCase(); const set = new Set(category==='iraq' ? ['IQD'] : []); marketMap.forEach(([key, markets]) => { if (text.includes(key)) markets.forEach(m=>set.add(m)); }); if (!set.size) set.add(category==='forex' ? 'FX' : category==='oil' ? 'Oil' : category==='crypto' ? 'Crypto' : 'Markets'); return [...set].slice(0,5); }
-function kurdishHint(title, category) { const t = title.toLowerCase(); if (category === 'iraq') return 'ئەم هەواڵە پەیوەندی بە عێراق، داهات، بانکی ناوەندی، نەوت یان دۆخی ئابووری ناوخۆییەوە هەیە.'; if (t.includes('fed') || t.includes('rate')) return 'ئەم بابەتە دەتوانێت کاریگەری لەسەر دۆلار، زێڕ و دراوە سەرەکییەکان هەبێت.'; if (t.includes('oil') || category === 'oil') return 'هەواڵی نەوت بۆ عێراق و بازاڕەکانی وزە گرنگە چونکە داهاتی نەوت کاریگەری لە بودجە و دراو هەیە.'; if (category === 'crypto') return 'ئەم هەواڵە پەیوەندی بە هەستی ڕیسک و بازاڕی کریپتۆوە هەیە.'; return 'ئەم هەواڵە لەوانەیە کاریگەری لە هەستی بازاڕ، دراوەکان، پشکەکان یان بڕیارە ئابوورییەکان هەبێت.'; }
-async function fetchSource(src) {
+export async function onRequest() {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 8500)
   try {
-    const res = await fetch(src.url, { headers: { 'User-Agent': 'HawaliAburi/2.0' }, cf: { cacheTtl: 60, cacheEverything: true } });
-    if (!res.ok) throw new Error(`${res.status}`);
-    const xml = await res.text();
-    const blocks = [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].map(m=>m[0]).slice(0, 8);
-    return blocks.map((item, i) => {
-      const title = stripHtml(getTag(item, 'title'));
-      const linkRaw = stripHtml(getTag(item, 'link')) || src.url;
-      const desc = stripHtml(getTag(item, 'description')).slice(0, 260);
-      const publishedAt = stripHtml(getTag(item, 'pubDate') || getTag(item, 'published'));
-      const link = linkRaw.includes('news.google.com') ? linkRaw : linkRaw;
-      const impact = classifyImpact(title, desc);
-      return {
-        id: `${src.name}-${i}-${title}`.replace(/\W+/g,'-').slice(0,110),
-        source: src.name,
-        category: src.category,
-        impact,
-        titleEn: title || src.name,
-        titleKu: title || src.name,
-        titleAr: title || src.name,
-        summaryKu: kurdishHint(title, src.category),
-        summaryAr: 'ملخص سريع: هذا الخبر قد يؤثر على الأسواق أو الاقتصاد حسب المصدر والتصنيف.',
-        summaryEn: desc || 'Live source update from a monitored financial/news feed.',
-        publishedAt: publishedAt ? new Date(publishedAt).toISOString() : new Date().toISOString(),
-        link,
-        image: imageFrom(item, src.category),
-        affected: affectedMarkets(title, desc, src.category),
-        trust: src.category === 'iraq' ? 'Iraq source' : 'Market source'
-      };
-    }).filter(x => x.titleEn && x.link);
-  } catch (e) { return []; }
+    const batches = await Promise.allSettled(FEEDS.map(feed => fetchFeed(feed, controller.signal)))
+    const items = batches.flatMap(r => r.status === 'fulfilled' ? r.value : [])
+    const deduped = dedupe(items).sort((a,b)=>new Date(b.publishedAt)-new Date(a.publishedAt)).slice(0,60)
+    return Response.json({ updatedAt:new Date().toISOString(), items: deduped.length ? deduped : fallbackItems() }, { headers:{ 'Cache-Control':'public, max-age=60, stale-while-revalidate=120' } })
+  } catch (error) {
+    return Response.json({ updatedAt:new Date().toISOString(), items:fallbackItems(), error:String(error?.message||error) }, { headers:{ 'Cache-Control':'public, max-age=30' } })
+  } finally { clearTimeout(timer) }
 }
-function fallbackNews() {
-  const now = new Date().toISOString();
+
+async function fetchFeed(feed, signal){
+  const res = await fetch(feed.url, { signal, headers:{ 'User-Agent':'HawaliAburi/3.0' } })
+  if(!res.ok) throw new Error(feed.source + ' ' + res.status)
+  const xml = await res.text()
+  return parseItems(xml).map((item, index) => normalize(item, feed, index))
+}
+
+function parseItems(xml){
+  const blocks = [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].map(m=>m[0]).slice(0,12)
+  return blocks.map(block => ({
+    title: clean(readTag(block,'title')),
+    link: clean(readTag(block,'link')) || clean(readTag(block,'guid')),
+    description: clean(readTag(block,'description')),
+    pubDate: clean(readTag(block,'pubDate')),
+    image: extractImage(block)
+  })).filter(x=>x.title && x.link)
+}
+function readTag(block, tag){ const m = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i')); return m ? decode(m[1]) : '' }
+function extractImage(block){
+  const media = block.match(/<media:content[^>]+url=["']([^"']+)["']/i) || block.match(/<media:thumbnail[^>]+url=["']([^"']+)["']/i)
+  if(media) return decode(media[1])
+  const img = block.match(/<img[^>]+src=["']([^"']+)["']/i)
+  return img ? decode(img[1]) : ''
+}
+function clean(text=''){ return decode(text).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim() }
+function decode(text=''){ return text.replace(/<!\[CDATA\[|\]\]>/g,'').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>') }
+function normalize(item, feed, index){
+  const title = item.title.replace(/ - [^-]+$/,'')
+  const category = classify(title + ' ' + item.description, feed.category)
+  const impact = scoreImpact(title + ' ' + item.description, feed.impact)
+  const affected = affectedAssets(title + ' ' + item.description, category)
+  return {
+    id: slug(feed.source + '-' + title + '-' + index), source: feed.source, tier: tierFor(feed.source), category, impact, sentiment: sentiment(title),
+    titleEn:title, titleKu:pseudoTranslate(title,'ku'), titleAr:pseudoTranslate(title,'ar'),
+    summaryEn: item.description || impactSummary(category, 'en'), summaryKu: impactSummary(category, 'ku'), summaryAr: impactSummary(category, 'ar'),
+    whyEn: why(category,'en'), whyKu: why(category,'ku'), whyAr: why(category,'ar'),
+    publishedAt: validDate(item.pubDate), link: item.link, image: item.image || FALLBACK_IMAGES[category] || FALLBACK_IMAGES.world, affected
+  }
+}
+function dedupe(items){ const seen = new Set(); return items.filter(item => { const key = item.titleEn.toLowerCase().replace(/[^a-z0-9]+/g,' ').slice(0,95); if(seen.has(key)) return false; seen.add(key); return true }) }
+function classify(text, fallback){ const s=text.toLowerCase(); if(/iraq|iqd|dinar|baghdad|erbil|kurdistan|cbi|basra/.test(s)) return 'iraq'; if(/fed|ecb|boj|boe|central bank|interest rate|fomc/.test(s)) return 'banks'; if(/oil|opec|brent|wti|energy|crude/.test(s)) return 'oil'; if(/bitcoin|crypto|ethereum|btc|eth/.test(s)) return 'crypto'; if(/forex|eurusd|gbpusd|usd|currency|dollar|yen|euro/.test(s)) return 'forex'; if(/stock|nasdaq|dow|s&p|shares|earnings/.test(s)) return 'stocks'; if(/war|sanction|ukraine|middle east|iran|israel|china taiwan/.test(s)) return 'geopolitics'; return fallback || 'world' }
+function scoreImpact(text, fallback){ const s=text.toLowerCase(); if(/fed|fomc|cpi|nfp|interest rate|war|opec|central bank of iraq|sanctions|oil prices|inflation/.test(s)) return 'High'; if(/gdp|pmi|retail sales|earnings|stocks|bitcoin/.test(s)) return 'Medium'; return fallback || 'Low' }
+function affectedAssets(text, category){ const s=text.toLowerCase(); const a = new Set(); if(/fed|usd|dollar|inflation|cpi|nfp|rate/.test(s)) ['USD','Gold','EUR/USD'].forEach(x=>a.add(x)); if(/oil|opec|iraq/.test(s)) ['Oil','IQD'].forEach(x=>a.add(x)); if(/bitcoin|crypto|ethereum/.test(s)) ['BTC','ETH'].forEach(x=>a.add(x)); if(/stock|nasdaq|dow|s&p/.test(s)) ['US Stocks','Nasdaq'].forEach(x=>a.add(x)); if(category==='iraq') ['Iraq','IQD','Oil'].forEach(x=>a.add(x)); if(category==='forex') ['USD','EUR/USD','Gold'].forEach(x=>a.add(x)); return [...a].slice(0,6) }
+function sentiment(text){ const s=text.toLowerCase(); if(/rise|gain|rally|strong|growth|record/.test(s)) return 'Bullish'; if(/fall|drop|weak|war|risk|sanction|cuts|slump/.test(s)) return 'Bearish'; return 'Neutral' }
+function tierFor(source){ if(/fed|ecb|bank|opec|eia|imf|world bank|cbi|ministry/i.test(source)) return 'Official'; if(/iraq|shafaq|rudaw|kurdistan/i.test(source)) return 'Iraq'; if(/google|msn|reuters|cnbc|yahoo|marketwatch/i.test(source)) return 'Major Media'; return 'Source' }
+function impactSummary(cat, lang){
+  const map = {
+    ku:{iraq:'ئەم هەواڵە دەتوانێت کاریگەری لەسەر ئابووری عێراق، دینار، نەوت و بڕیارە داراییەکان هەبێت.',forex:'هەواڵەکە پەیوەندی بە جووتە دراوەکان و هێزی دۆلارەوە هەیە.',oil:'نەوت و وزە دەتوانن کاریگەری لەسەر تورم و داهاتی وڵاتان بکەن.',crypto:'کریپتۆ بە هەواڵەکانی ڕیسک و سیاسەتی دارایی دەجوڵێت.',stocks:'بازاڕی پشکەکان بە هەواڵی کۆمپانیا و داتای ئابووری کاردەکات.',geopolitics:'ڕیسکە جیوپۆلیتیکییەکان زۆرجار زێڕ، نەوت و دۆلار دەجوڵێنن.',banks:'بڕیار و قسەکانی بانکە ناوەندییەکان کاریگەری ڕاستەوخۆ لەسەر فۆرێکس و زێڕ هەیە.',world:'هەواڵی ئابووری جیهانی دەتوانێت هەستی بازاڕ بگۆڕێت.'},
+    ar:{iraq:'قد يؤثر هذا الخبر على اقتصاد العراق والدينار والنفط والقرارات المالية.',forex:'يرتبط الخبر بالعملات وقوة الدولار.',oil:'النفط والطاقة يؤثران على التضخم وإيرادات الدول.',crypto:'العملات الرقمية تتحرك مع أخبار المخاطر والسياسة المالية.',stocks:'الأسهم تتأثر بأخبار الشركات والبيانات الاقتصادية.',geopolitics:'المخاطر الجيوسياسية غالباً تحرك الذهب والنفط والدولار.',banks:'قرارات وتصريحات البنوك المركزية تؤثر مباشرة على الفوركس والذهب.',world:'الأخبار الاقتصادية العالمية قد تغير معنويات الأسواق.'},
+    en:{iraq:'This story may affect Iraq, IQD, oil revenue, and financial decisions.',forex:'This story is connected to currency pairs and dollar strength.',oil:'Oil and energy headlines can affect inflation and national revenues.',crypto:'Crypto can move with risk sentiment and financial policy news.',stocks:'Stocks react to company headlines and economic data.',geopolitics:'Geopolitical risk often moves gold, oil, and USD.',banks:'Central-bank decisions directly affect FX and gold.',world:'Global economic news can shift market sentiment.'}
+  }; return map[lang][cat] || map[lang].world
+}
+function why(cat, lang){ return impactSummary(cat, lang) }
+function pseudoTranslate(title, lang){ if(lang==='en') return title; if(lang==='ar') return 'خبر مهم: ' + title; return 'هەواڵی گرنگ: ' + title }
+function slug(x){ return x.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,120) }
+function validDate(date){ const d = new Date(date); return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString() }
+function fallbackItems(){
+  const now=Date.now();
   return [
-    {id:'fallback-fed',source:'Market Monitor',category:'banks',impact:'High',titleEn:'Global markets monitor central bank signals',titleKu:'بازاڕە جیهانییەکان چاودێری ئاماژەکانی بانکە ناوەندییەکان دەکەن',titleAr:'الأسواق العالمية تراقب إشارات البنوك المركزية',summaryKu:'هەواڵەکانی سوود و تورم دەتوانن کاریگەری لەسەر دۆلار، زێڕ و فۆرێکس هەبێت.',summaryAr:'قرارات الفائدة والتضخم قد تؤثر على الدولار والذهب والفوركس.',summaryEn:'Fallback market brief while live feeds are loading.',publishedAt:now,link:'https://www.federalreserve.gov/newsevents.htm',image:CATEGORY_IMAGES.banks,affected:['USD','Gold','EUR/USD'],trust:'Fallback'},
-    {id:'fallback-iraq',source:'Iraq Monitor',category:'iraq',impact:'High',titleEn:'Iraq economy watch: oil, banking and dinar remain key themes',titleKu:'چاودێری ئابووری عێراق: نەوت، بانک و دینار بابەتی سەرەکین',titleAr:'متابعة اقتصاد العراق: النفط والمصارف والدينار ملفات رئيسية',summaryKu:'نەوت و بڕیارەکانی بانکی ناوەندی عێراق دەتوانن کاریگەری لەسەر ئابووری ناوخۆیی هەبێت.',summaryAr:'النفط وقرارات البنك المركزي العراقي يمكن أن تؤثر على الاقتصاد المحلي.',summaryEn:'Fallback Iraq market brief while live feeds are loading.',publishedAt:now,link:'https://cbi.iq/',image:CATEGORY_IMAGES.iraq,affected:['IQD','USD/IQD','Oil'],trust:'Fallback'}
-  ];
-}
-export async function onRequestGet() {
-  const results = (await Promise.all(SOURCES.map(fetchSource))).flat();
-  const seen = new Set();
-  const items = results.filter(item => {
-    const key = item.titleEn.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().slice(0,80);
-    if (!key || seen.has(key)) return false;
-    seen.add(key); return true;
-  }).sort((a,b)=> new Date(b.publishedAt) - new Date(a.publishedAt)).slice(0, 80);
-  return Response.json({ ok:true, updatedAt:new Date().toISOString(), count: items.length, items: items.length ? items : fallbackNews(), sources:SOURCES.map(s=>({name:s.name,category:s.category,url:s.url})) }, { headers: { 'Cache-Control':'public, max-age=60' } });
+    {id:'fb1',source:'Federal Reserve',tier:'Official',category:'banks',impact:'High',sentiment:'Neutral',titleEn:'Markets watch central-bank policy and inflation data',titleKu:'بازاڕەکان چاوەڕێی سیاسەتی بانکە ناوەندییەکان و داتای تورمن',titleAr:'الأسواق تترقب سياسات البنوك المركزية وبيانات التضخم',summaryEn:impactSummary('banks','en'),summaryKu:impactSummary('banks','ku'),summaryAr:impactSummary('banks','ar'),whyEn:why('banks','en'),whyKu:why('banks','ku'),whyAr:why('banks','ar'),publishedAt:new Date(now-8*60000).toISOString(),link:'https://www.federalreserve.gov/newsevents.htm',image:FALLBACK_IMAGES.banks,affected:['USD','Gold','EUR/USD']},
+    {id:'fb2',source:'Iraq Economy Monitor',tier:'Iraq',category:'iraq',impact:'High',sentiment:'Neutral',titleEn:'Oil and budget news remain important for Iraq',titleKu:'نەوت و بودجە هێشتا گرنگن بۆ ئابووری عێراق',titleAr:'أخبار النفط والموازنة تبقى مهمة لاقتصاد العراق',summaryEn:impactSummary('iraq','en'),summaryKu:impactSummary('iraq','ku'),summaryAr:impactSummary('iraq','ar'),whyEn:why('iraq','en'),whyKu:why('iraq','ku'),whyAr:why('iraq','ar'),publishedAt:new Date(now-18*60000).toISOString(),link:'https://oil.gov.iq/',image:FALLBACK_IMAGES.iraq,affected:['Oil','IQD','Iraq']}
+  ]
 }

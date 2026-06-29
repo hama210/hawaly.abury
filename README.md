@@ -1,11 +1,6 @@
-# هەواڵی ئابوری — Phase 2
+# هەواڵی ئابوری — Phase 3 Sprint 1
+Premium dashboard UI, multilingual switcher, hero news, sidebar, cards, source buttons, Cloudflare Pages Functions.
 
-Live news engine added.
-
-## Cloudflare Pages settings
+Cloudflare Pages:
 - Build command: `npm run build`
 - Output directory: `dist`
-
-## APIs
-- `/api/news` live RSS + Google News aggregation with 60 second cache
-- `/api/sources` source directory

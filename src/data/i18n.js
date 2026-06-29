@@ -1,0 +1,17 @@
+export const LANGS = [
+  { code:'ku', label:'KU', name:'کوردی', dir:'rtl' },
+  { code:'ar', label:'AR', name:'العربية', dir:'rtl' },
+  { code:'en', label:'EN', name:'English', dir:'ltr' },
+]
+
+export const dictionary = {
+  ku:{
+    site:'هەواڵی ئابوری', tagline:'سەکۆی زیرەکی بازاڕ و هەواڵی دارایی', search:'گەڕان لە هەواڵ، سەرچاوە، بازاڕ...', dashboard:'داشبۆرد', latest:'دوایین هەواڵ', iraq:'عێراق', forex:'فۆرێکس', calendar:'ڕۆژژمێری ئابوری', crypto:'کریپتۆ', oil:'نەوت', stocks:'پشکەکان', banks:'بانکە ناوەندییەکان', ai:'زیرەکی بازاڕ', settings:'ڕێکخستن', breaking:'هەواڵی گەرم', high:'کاریگەری بەرز', impact:'کاریگەری', source:'سەرچاوە', read:'خوێندنەوە لە سەرچاوە', save:'هەڵگرتن', share:'هاوبەشکردن', why:'بۆچی گرنگە؟', affected:'بازاڕە کاریگەرەکان', hero:'هەواڵی سەرەکی', intelligence:'ناوەندی زیرەکی بازاڕ', risk:'هەستی ڕیسک', dollar:'هێزی دۆلار', gold:'زێڕ', oilTrend:'ڕەوتی نەوت', iraqImpact:'کاریگەری لەسەر عێراق', live:'زنده', updated:'دوایین نوێکردنەوە', all:'هەموو', noNews:'هیچ هەواڵێک نەدۆزرایەوە', loading:'هەواڵەکان بار دەبن...', sources:'سەرچاوەکان', notifications:'ئاگادارییەکان', theme:'دۆخی ڕووناکی', related:'هەواڵی پەیوەندیدار', market:'زیرەکی بازاڕ', today:'ئەمڕۆ', premium:'Premium Dashboard'
+  },
+  ar:{
+    site:'أخبار الاقتصاد', tagline:'منصة ذكاء الأسواق والأخبار المالية', search:'ابحث في الأخبار، المصادر، الأسواق...', dashboard:'لوحة التحكم', latest:'آخر الأخبار', iraq:'العراق', forex:'الفوركس', calendar:'التقويم الاقتصادي', crypto:'العملات الرقمية', oil:'النفط', stocks:'الأسهم', banks:'البنوك المركزية', ai:'ذكاء السوق', settings:'الإعدادات', breaking:'عاجل', high:'تأثير عالٍ', impact:'التأثير', source:'المصدر', read:'اقرأ من المصدر', save:'حفظ', share:'مشاركة', why:'لماذا يهم؟', affected:'الأسواق المتأثرة', hero:'القصة الرئيسية', intelligence:'مركز ذكاء السوق', risk:'مزاج المخاطر', dollar:'قوة الدولار', gold:'الذهب', oilTrend:'اتجاه النفط', iraqImpact:'التأثير على العراق', live:'مباشر', updated:'آخر تحديث', all:'الكل', noNews:'لا توجد أخبار', loading:'جاري تحميل الأخبار...', sources:'المصادر', notifications:'الإشعارات', theme:'المظهر', related:'أخبار ذات صلة', market:'ذكاء السوق', today:'اليوم', premium:'لوحة Premium'
+  },
+  en:{
+    site:'Economic News', tagline:'Financial news and market intelligence platform', search:'Search news, sources, markets...', dashboard:'Dashboard', latest:'Latest News', iraq:'Iraq', forex:'Forex', calendar:'Economic Calendar', crypto:'Crypto', oil:'Oil', stocks:'Stocks', banks:'Central Banks', ai:'Market Intelligence', settings:'Settings', breaking:'Breaking', high:'High Impact', impact:'Impact', source:'Source', read:'Read Original', save:'Save', share:'Share', why:'Why this matters', affected:'Affected markets', hero:'Hero Story', intelligence:'Market Intelligence Center', risk:'Risk Mood', dollar:'Dollar Strength', gold:'Gold', oilTrend:'Oil Trend', iraqImpact:'Iraq Impact', live:'Live', updated:'Updated', all:'All', noNews:'No news found', loading:'Loading live news...', sources:'Sources', notifications:'Notifications', theme:'Theme', related:'Related News', market:'Market Intelligence', today:'Today', premium:'Premium Dashboard'
+  }
+}
