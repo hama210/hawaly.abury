@@ -1,58 +1,58 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Search, Globe2, Bell, Menu, X, TrendingUp, Newspaper, ShieldAlert, Building2, CalendarDays, Flame, BarChart3, Fuel, Bitcoin, Landmark, Share2, Bookmark } from 'lucide-react'
+import { Search, Globe2, RefreshCcw, Flame, BarChart3, CalendarDays, Share2, Bookmark, ExternalLink, Newspaper, ShieldAlert, Fuel, Bitcoin, Building2, Landmark } from 'lucide-react'
 import './styles.css'
 
 const translations = {
-  ku: {
-    name: 'هەواڵی ئابوری', tagline: 'سەکۆی زیرەکی ئابوری و بازاڕ', search: 'گەڕان لە هەواڵەکان...', breaking: 'هەواڵی گەرم', latest: 'دوایین هەواڵ', highImpact: 'کاریگەری بەرز', calendar: 'ڕۆژژمێری ئابوری', iraq: 'عێراق', forex: 'فۆرێکس', oil: 'نەوت و وزە', crypto: 'کریپتۆ', stocks: 'بازاڕی پشکەکان', geopolitics: 'جیوپۆلیتیک', banks: 'بانکە ناوەندییەکان', ai: 'AI Intelligence', sources: 'سەرچاوەکان', read: 'سەرچاوە بخوێنەوە', saved: 'هەڵگرتن', share: 'هاوبەشکردن', impact: 'کاریگەری', markets: 'بازاڕە کاریگەرەکان', why: 'بۆچی گرنگە؟', heroTitle: 'چاوەڕوانی بڕیارەکانی بانکە ناوەندییەکان بازاڕە جیهانییەکان دەجوڵێنێت', heroEnglish: 'Central bank decisions keep global markets on edge', heroSummary: 'وەبەرهێنەران چاوەڕوانی زانیاری نوێن لەسەر نرخەکانی سوود، تورم و دۆخی نەوت؛ ئەم بابەتانە کاریگەرییان لەسەر دۆلار، زێڕ، نەوت و دراوەکانی ناوچەکە دەبێت.'
-  },
-  ar: {
-    name: 'أخبار الاقتصاد', tagline: 'منصة ذكاء اقتصادي وأسواق', search: 'ابحث في الأخبار...', breaking: 'أخبار عاجلة', latest: 'آخر الأخبار', highImpact: 'تأثير عالٍ', calendar: 'التقويم الاقتصادي', iraq: 'العراق', forex: 'الفوركس', oil: 'النفط والطاقة', crypto: 'العملات الرقمية', stocks: 'الأسهم', geopolitics: 'الجغرافيا السياسية', banks: 'البنوك المركزية', ai: 'ذكاء السوق', sources: 'المصادر', read: 'اقرأ المصدر', saved: 'حفظ', share: 'مشاركة', impact: 'التأثير', markets: 'الأسواق المتأثرة', why: 'لماذا يهم؟', heroTitle: 'قرارات البنوك المركزية تبقي الأسواق العالمية في حالة ترقب', heroEnglish: 'Central bank decisions keep global markets on edge', heroSummary: 'يراقب المستثمرون بيانات الفائدة والتضخم والنفط لأنها قد تؤثر على الدولار والذهب والنفط وعملات المنطقة.'
-  },
-  en: {
-    name: 'Economic News', tagline: 'Financial intelligence and market news platform', search: 'Search news...', breaking: 'Breaking News', latest: 'Latest News', highImpact: 'High Impact', calendar: 'Economic Calendar', iraq: 'Iraq', forex: 'Forex', oil: 'Oil & Energy', crypto: 'Crypto', stocks: 'Stocks', geopolitics: 'Geopolitics', banks: 'Central Banks', ai: 'AI Intelligence', sources: 'Sources', read: 'Read source', saved: 'Save', share: 'Share', impact: 'Impact', markets: 'Affected markets', why: 'Why it matters', heroTitle: 'Central bank decisions keep global markets on edge', heroEnglish: 'Central bank decisions keep global markets on edge', heroSummary: 'Investors are watching rates, inflation and oil headlines as they may affect the dollar, gold, oil and regional currencies.'
-  }
+  ku: { name:'هەواڵی ئابوری', tagline:'سەکۆی هەواڵ و زیرەکی بازاڕ', search:'گەڕان لە هەواڵەکان...', breaking:'هەواڵی گەرم', latest:'دوایین هەواڵ', highImpact:'کاریگەری بەرز', calendar:'ڕۆژژمێری ئابوری', iraq:'عێراق', forex:'فۆرێکس', oil:'نەوت و وزە', crypto:'کریپتۆ', stocks:'بازاڕی پشکەکان', geopolitics:'جیوپۆلیتیک', banks:'بانکە ناوەندییەکان', ai:'زیرەکی بازاڕ', sources:'سەرچاوەکان', read:'سەرچاوە', saved:'هەڵگرتن', share:'هاوبەشکردن', impact:'کاریگەری', markets:'بازاڕە کاریگەرەکان', updated:'نوێکرایەوە', all:'هەموو', loading:'هەواڵەکان دێن...', noNews:'هیچ هەواڵێک نەدۆزرایەوە' },
+  ar: { name:'أخبار الاقتصاد', tagline:'منصة أخبار وذكاء الأسواق', search:'ابحث في الأخبار...', breaking:'أخبار عاجلة', latest:'آخر الأخبار', highImpact:'تأثير عالٍ', calendar:'التقويم الاقتصادي', iraq:'العراق', forex:'الفوركس', oil:'النفط والطاقة', crypto:'العملات الرقمية', stocks:'الأسهم', geopolitics:'الجغرافيا السياسية', banks:'البنوك المركزية', ai:'ذكاء السوق', sources:'المصادر', read:'المصدر', saved:'حفظ', share:'مشاركة', impact:'التأثير', markets:'الأسواق المتأثرة', updated:'آخر تحديث', all:'الكل', loading:'جاري تحميل الأخبار...', noNews:'لا توجد أخبار' },
+  en: { name:'Economic News', tagline:'Market news and intelligence platform', search:'Search news...', breaking:'Breaking News', latest:'Latest News', highImpact:'High Impact', calendar:'Economic Calendar', iraq:'Iraq', forex:'Forex', oil:'Oil & Energy', crypto:'Crypto', stocks:'Stocks', geopolitics:'Geopolitics', banks:'Central Banks', ai:'Market Intelligence', sources:'Sources', read:'Source', saved:'Save', share:'Share', impact:'Impact', markets:'Affected markets', updated:'Updated', all:'All', loading:'Loading live news...', noNews:'No news found' }
 }
-
-const nav = ['latest','calendar','iraq','forex','oil','crypto','stocks','geopolitics','banks','ai','sources']
-
-const sampleNews = [
-  { id: 1, cat:'banks', impact:'High', source:'Federal Reserve', image:'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80', ku:'فیدڕاڵ ڕیزێرڤ وەڵامی نوێ دەداتەوە سەبارەت بە ڕێڕەوی نرخەکانی سوود', en:'Fed officials signal caution on future rate path', markets:['USD','Gold','EUR/USD'], why:'قەبارەی گۆڕانکاری نرخەکانی سوود کاریگەری ڕاستەوخۆی لەسەر دۆلار و زێڕ هەیە.' },
-  { id: 2, cat:'iraq', impact:'High', source:'Central Bank of Iraq', image:'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1200&q=80', ku:'بانکی ناوەندی عێراق ڕێنمایی نوێی بانکی ڕادەگەیەنێت', en:'Central Bank of Iraq announces updated banking guidance', markets:['IQD','USD/IQD','Banks'], why:'هەواڵی بانکی ناوەندی دەتوانێت کاریگەری لەسەر دراو و بازاڕی ناوخۆیی هەبێت.' },
-  { id: 3, cat:'oil', impact:'Medium', source:'OPEC / EIA', image:'https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=1200&q=80', ku:'بازاڕی نەوت لەژێر کاریگەری دابینکردن و داواکاری جیهانییە', en:'Oil market watches supply and global demand signals', markets:['WTI','Brent','IQD'], why:'نەوت گرنگترین داهاتی عێراقە و کاریگەری لە بودجە و دراوەکەی هەیە.' },
-  { id: 4, cat:'geopolitics', impact:'High', source:'Reuters / AP', image:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80', ku:'مەترسییە جیوپۆلیتیکییەکان جارێکی تر نرخەکانی وزە و زێڕ دەجوڵێنن', en:'Geopolitical risk returns to energy and gold markets', markets:['Gold','Oil','USD'], why:'کێشەی سیاسی و ئەمنی زۆرجار هەستی ڕیسک لە بازاڕەکان دەگۆڕێت.' },
-  { id: 5, cat:'forex', impact:'Medium', source:'FXStreet', image:'https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1200&q=80', ku:'دۆلار بەرامبەر دراوە سەرەکییەکان جێگیر دەمێنێتەوە پێش داتای تورم', en:'Dollar steadies before inflation data', markets:['DXY','EUR/USD','GBP/USD'], why:'داتای تورم دەتوانێت چاوەڕوانییەکانی نرخەکانی سوود بگۆڕێت.' },
-  { id: 6, cat:'crypto', impact:'Medium', source:'CoinDesk', image:'https://images.unsplash.com/photo-1621504450181-5d356f61d307?auto=format&fit=crop&w=1200&q=80', ku:'بیتکۆین لەگەڵ گۆڕانی هەستی ڕیسک لە بازاڕەکاندا دەجوڵێت', en:'Bitcoin moves with broader market risk sentiment', markets:['BTC','ETH','NASDAQ'], why:'کریپتۆ زۆرجار بە گۆڕانی هەستی ڕیسک و پشکەکانی تەکنەلۆجیا دەجوڵێت.' }
-]
-
+const categories = ['iraq','forex','oil','crypto','stocks','geopolitics','banks']
+const fallback = [{ id:'local1', source:'Market Monitor', category:'banks', impact:'High', titleKu:'بانکە ناوەندییەکان و داتای تورم کاریگەری لە بازاڕەکان دەکەن', titleAr:'البنوك المركزية وبيانات التضخم تؤثر في الأسواق', titleEn:'Central banks and inflation data drive markets', summaryKu:'هەواڵەکانی سوود و تورم دەتوانن کاریگەری لەسەر دۆلار، زێڕ و فۆرێکس هەبێت.', summaryAr:'قرارات الفائدة والتضخم قد تؤثر على الدولار والذهب والفوركس.', summaryEn:'Central-bank and inflation headlines remain key market drivers.', publishedAt:new Date().toISOString(), link:'https://www.federalreserve.gov/newsevents.htm', image:'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80', affected:['USD','Gold','EUR/USD']}]
+function titleOf(n, lang){ return lang==='ku' ? (n.titleKu || n.titleEn) : lang==='ar' ? (n.titleAr || n.titleEn) : n.titleEn }
+function summaryOf(n, lang){ return lang==='ku' ? (n.summaryKu || n.summaryEn) : lang==='ar' ? (n.summaryAr || n.summaryEn) : n.summaryEn }
+function timeAgo(date, lang){ const d = new Date(date); if(isNaN(d)) return ''; const min = Math.max(1, Math.round((Date.now()-d.getTime())/60000)); if(min<60) return lang==='en'?`${min}m ago`:lang==='ar'?`قبل ${min} د`:`${min} خولەک پێش ئێستا`; const h=Math.round(min/60); if(h<24) return lang==='en'?`${h}h ago`:lang==='ar'?`قبل ${h} س`:`${h} کاتژمێر پێش ئێستا`; const days=Math.round(h/24); return lang==='en'?`${days}d ago`:lang==='ar'?`قبل ${days} يوم`:`${days} ڕۆژ پێش ئێستا`; }
+function categoryIcon(cat){ const map={iraq:<Landmark/>,forex:<BarChart3/>,oil:<Fuel/>,crypto:<Bitcoin/>,stocks:<TrendingIcon/>,geopolitics:<ShieldAlert/>,banks:<Building2/>}; return map[cat] || <Newspaper/> }
+function TrendingIcon(){ return <BarChart3/> }
 function App(){
   const [lang,setLang] = useState(localStorage.getItem('lang') || 'ku')
   const [query,setQuery] = useState('')
   const [active,setActive] = useState('all')
+  const [news,setNews] = useState(fallback)
+  const [sources,setSources] = useState([])
+  const [updated,setUpdated] = useState(null)
+  const [loading,setLoading] = useState(true)
   const t = translations[lang]
   const rtl = lang !== 'en'
   useEffect(()=>{ localStorage.setItem('lang', lang); document.documentElement.lang = lang; document.documentElement.dir = rtl ? 'rtl' : 'ltr' },[lang,rtl])
-  const filtered = useMemo(()=> sampleNews.filter(n => (active==='all'||n.cat===active) && (n.ku+n.en+n.source).toLowerCase().includes(query.toLowerCase())), [active,query])
-  const hero = filtered[0] || sampleNews[0]
+  const loadNews = async () => {
+    try { setLoading(true); const res = await fetch('/api/news?ts=' + Date.now()); const data = await res.json(); if(data.items?.length) setNews(data.items); setUpdated(data.updatedAt); }
+    catch(e){ console.error(e) } finally { setLoading(false) }
+  }
+  useEffect(()=>{ loadNews(); fetch('/api/sources').then(r=>r.json()).then(d=>setSources(d.sources||[])).catch(()=>{}); const id=setInterval(loadNews,60000); return()=>clearInterval(id) },[])
+  const filtered = useMemo(()=> news.filter(n => (active==='all'||n.category===active) && `${n.titleKu} ${n.titleAr} ${n.titleEn} ${n.source}`.toLowerCase().includes(query.toLowerCase())), [news,active,query])
+  const hero = filtered[0] || news[0] || fallback[0]
+  const high = filtered.filter(n=>n.impact==='High').slice(0,4)
   return <main className="app">
     <header className="topbar">
       <div className="brand"><div className="logo">هـ</div><div><h1>{t.name}</h1><p>{t.tagline}</p></div></div>
       <div className="search"><Search size={18}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t.search}/></div>
-      <div className="lang"><Globe2 size={16}/><button onClick={()=>setLang('ku')} className={lang==='ku'?'on':''}>KU</button><button onClick={()=>setLang('ar')} className={lang==='ar'?'on':''}>AR</button><button onClick={()=>setLang('en')} className={lang==='en'?'on':''}>EN</button></div>
+      <div className="lang"><Globe2 size={16}/><button onClick={()=>setLang('ku')} className={lang==='ku'?'on':''}>KU</button><button onClick={()=>setLang('ar')} className={lang==='ar'?'on':''}>AR</button><button onClick={()=>setLang('en')} className={lang==='en'?'on':''}>EN</button><button className="refresh" onClick={loadNews}><RefreshCcw size={15}/></button></div>
     </header>
-    <section className="ticker"><Flame size={18}/><span>{t.breaking}</span><marquee>{hero.ku} — {hero.en}</marquee></section>
-    <nav className="nav"><button onClick={()=>setActive('all')} className={active==='all'?'on':''}>All</button>{nav.map(k=><button key={k} onClick={()=>setActive(k)} className={active===k?'on':''}>{t[k]}</button>)}</nav>
+    <section className="ticker"><Flame size={18}/><span>{t.breaking}</span><marquee>{filtered.slice(0,8).map(n=>titleOf(n,lang)).join('  •  ')}</marquee></section>
+    <nav className="nav"><button onClick={()=>setActive('all')} className={active==='all'?'on':''}>{t.all}</button>{categories.map(k=><button key={k} onClick={()=>setActive(k)} className={active===k?'on':''}>{t[k]}</button>)}</nav>
     <section className="hero">
       <div className="heroImage" style={{backgroundImage:`url(${hero.image})`}} />
-      <div className="heroContent"><span className="badge high">🔴 {t.highImpact}</span><h2>{lang==='en'?hero.en:hero.ku}</h2><h3>{hero.en}</h3><p>{t.heroSummary}</p><div className="meta"><span>{hero.source}</span><span>{t.markets}: {hero.markets.join(', ')}</span></div><div className="actions"><button><Share2 size={16}/>{t.share}</button><button><Bookmark size={16}/>{t.saved}</button></div></div>
+      <div className="heroContent"><span className={`badge ${hero.impact==='High'?'high':hero.impact==='Medium'?'medium':'low'}`}>● {hero.impact}</span><h2>{titleOf(hero,lang)}</h2><h3>{hero.titleEn}</h3><p>{summaryOf(hero,lang)}</p><div className="meta"><span>{hero.source}</span><span>{timeAgo(hero.publishedAt,lang)}</span><span>{t.markets}: {(hero.affected||[]).join(', ')}</span></div><div className="actions"><a href={hero.link} target="_blank" rel="noreferrer"><ExternalLink size={16}/>{t.read}</a><button><Share2 size={16}/>{t.share}</button><button><Bookmark size={16}/>{t.saved}</button></div></div>
     </section>
     <section className="grid2">
-      <Panel title={t.ai} icon={<BarChart3/>}><div className="intelligence"><div><b>Risk Mood</b><span className="green">Risk On</span></div><div><b>USD</b><span>Neutral</span></div><div><b>Gold</b><span className="green">Bullish</span></div><div><b>Oil</b><span className="orange">Volatile</span></div><div><b>Iraq</b><span className="red">High Watch</span></div></div></Panel>
-      <Panel title={t.calendar} icon={<CalendarDays/>}><ul className="events"><li><b>US CPI</b><span>High Impact</span></li><li><b>Fed Speech</b><span>High Impact</span></li><li><b>Oil Inventories</b><span>Medium</span></li><li><b>CBI Statement</b><span>Iraq Impact</span></li></ul></Panel>
+      <Panel title={t.ai} icon={<BarChart3/>}><div className="intelligence"><div><b>Risk Mood</b><span className="green">Live Watch</span></div><div><b>Iraq</b><span className="orange">Oil / IQD</span></div><div><b>Breaking</b><span>{high.length} High</span></div><div><b>{t.updated}</b><span>{updated ? timeAgo(updated,lang) : '—'}</span></div></div></Panel>
+      <Panel title={t.highImpact} icon={<ShieldAlert/>}><ul className="events">{high.length?high.map(n=><li key={n.id}><b>{titleOf(n,lang)}</b><span>{n.source}</span></li>):<li><b>{t.loading}</b><span>API</span></li>}</ul></Panel>
     </section>
-    <section className="sectionHead"><h2>{t.latest}</h2><p>{filtered.length} articles</p></section>
-    <section className="newsGrid">{filtered.map(n=><article className="card" key={n.id}><img src={n.image}/><div><span className={`badge ${n.impact==='High'?'high':'medium'}`}>{n.impact}</span><h3>{lang==='en'?n.en:n.ku}</h3><p className="english">{n.en}</p><p>{n.why}</p><div className="cardFoot"><span>{n.source}</span><button>{t.read}</button></div></div></article>)}</section>
+    <section className="sectionHead"><h2>{t.latest}</h2><p>{loading ? t.loading : `${filtered.length} articles`}</p></section>
+    <section className="newsGrid">{filtered.length ? filtered.map(n=><article className="card" key={n.id}><img src={n.image} onError={e=>{e.currentTarget.src='https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1200&q=80'}}/><div><span className={`badge ${n.impact==='High'?'high':n.impact==='Medium'?'medium':'low'}`}>{n.impact}</span><h3>{titleOf(n,lang)}</h3><p className="english">{n.titleEn}</p><p>{summaryOf(n,lang)}</p><div className="tags">{(n.affected||[]).slice(0,4).map(a=><small key={a}>{a}</small>)}</div><div className="cardFoot"><span>{n.source} · {timeAgo(n.publishedAt,lang)}</span><a href={n.link} target="_blank" rel="noreferrer">{t.read}</a></div></div></article>) : <div className="empty">{t.noNews}</div>}</section>
+    <section className="sources"><h2>{t.sources}</h2><div>{sources.slice(0,24).map(s=><a key={s.name} href={s.url} target="_blank" rel="noreferrer">{s.name}</a>)}</div></section>
     <footer><b>{t.name}</b><span>Reuters • CNBC • MSN • BBC • AP • FXStreet • ForexLive • CBI • Shafaq • Rudaw • Kurdistan24 • OPEC • EIA</span></footer>
   </main>
 }

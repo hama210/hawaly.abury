@@ -1,10 +1,11 @@
-# هەواڵی ئابوری — Phase 1 Foundation
+# هەواڵی ئابوری — Phase 2
 
-React + Vite + Cloudflare Pages Functions foundation.
+Live news engine added.
 
-## Deploy settings
-Build command: `npm run build`
-Output directory: `dist`
+## Cloudflare Pages settings
+- Build command: `npm run build`
+- Output directory: `dist`
 
-## Next phase
-Phase 2 adds live news aggregation, RSS parsing, source normalization, and smart caching.
+## APIs
+- `/api/news` live RSS + Google News aggregation with 60 second cache
+- `/api/sources` source directory
