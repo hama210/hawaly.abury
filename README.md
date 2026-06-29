@@ -1,18 +1,25 @@
-# هەواڵی ئابوری — Phase 5 Sprint 1
+# هەواڵی ئابوری — Phase 6 AI Financial Intelligence
 
-Live financial terminal upgrade.
+AI-ready financial intelligence upgrade.
 
 ## Added
-- Live market ticker API: `/api/markets`
-- Gold, Oil, BTC, ETH, EUR/USD, GBP/USD, USD/JPY, DXY, US500, NASDAQ, USD/IQD
-- Market dashboard cards with mini charts
-- Watchlist widget
-- Economic calendar widget
-- Market heatmap
-- 60-second refresh
+- AI Intelligence Command Center
+- Rule-based market sentiment dashboard
+- Risk mode / high-impact count / Iraq impact count
+- Asset Intelligence cards
+- Rule-based AI Market Assistant placeholder
+- Better market impact and affected-asset experience
+- Ready to connect real AI later with an API key
 
-## Cloudflare Pages
-Build command: `npm run build`
-Output directory: `dist`
+## APIs included
+- `/api/news`
+- `/api/sources`
+- `/api/markets`
+- `/api/intelligence`
 
-Delete `package-lock.json` before deploy if npm install hangs on Cloudflare.
+## Deploy
+Cloudflare Pages settings:
+- Build command: `npm run build`
+- Output directory: `dist`
+
+Do not upload `node_modules`. Delete `package-lock.json` if Cloudflare npm install hangs.

@@ -91,6 +91,73 @@ function Watchlist({ markets, dict }) {
 }
 
 
+
+function countAssets(items) {
+  const map = new Map();
+  items.forEach(item => (item.intelligence?.assets || []).forEach(asset => map.set(asset, (map.get(asset) || 0) + 1)));
+  return [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8).map(([asset,count])=>({asset,count}));
+}
+function IntelligenceDashboard({ items, markets, lang, dict, onAsset }) {
+  const high = items.filter(i => i.intelligence?.impact === 'high');
+  const iraq = items.filter(i => i.intelligence?.iraqImpact);
+  const bullish = items.filter(i => i.intelligence?.sentiment === 'bullish').length;
+  const bearish = items.filter(i => i.intelligence?.sentiment === 'bearish').length;
+  const riskLevel = high.length >= 5 ? 'Critical' : high.length >= 2 ? 'Elevated' : 'Normal';
+  const sentiment = bullish > bearish ? 'Bullish' : bearish > bullish ? 'Bearish' : 'Neutral';
+  const assets = countAssets(items);
+  const headline = high[0] || items[0];
+  return <section className="ai-command panel">
+    <div className="ai-head">
+      <div><span className="eyebrow">🤖 AI INTELLIGENCE</span><h2>{dict.intelligence}</h2><p>{lang==='ku'?'زیرەکی بازاڕ بە شێوەی rule-based؛ کاتێک API key زیاد بکەیت دەبێتە AI ڕاستەقینە.':lang==='ar'?'تحليل ذكي مبدئي؛ عند إضافة مفتاح API سيتحول إلى ذكاء اصطناعي حقيقي.':'AI-ready rule-based intelligence. Add an API key later to enable real AI.'}</p></div>
+      <div className="ai-score"><b>{riskLevel}</b><small>Risk Mode</small></div>
+    </div>
+    <div className="ai-grid">
+      <div className="ai-metric"><small>Market Sentiment</small><b>{sentiment}</b><span className={bullish>=bearish?'up':'down'}>{bullish} bullish / {bearish} bearish</span></div>
+      <div className="ai-metric"><small>High Impact</small><b>{high.length}</b><span>critical headlines</span></div>
+      <div className="ai-metric"><small>Iraq Impact</small><b>{iraq.length}</b><span>local economy stories</span></div>
+      <div className="ai-metric"><small>Live Assets</small><b>{markets.length}</b><span>tracked markets</span></div>
+    </div>
+    {headline && <div className="ai-brief">
+      <h3>🔥 {lang==='ku'?'گرنگترین شت لە ئێستادا':lang==='ar'?'الأهم الآن':'Most important now'}</h3>
+      <p>{headline.title}</p>
+      <div className="assets">{(headline.intelligence?.assets||[]).map(a=><button className="asset" key={a} onClick={()=>onAsset(a)}>{a}</button>)}</div>
+      <small>{headline.intelligence?.why}</small>
+    </div>}
+    <div className="asset-cloud">
+      {assets.map(a => <button key={a.asset} onClick={()=>onAsset(a.asset)}><b>{a.asset}</b><span>{a.count}</span></button>)}
+    </div>
+  </section>;
+}
+function AssetIntelligence({ items, markets, dict, onAsset }) {
+  const assets = countAssets(items);
+  return <section><div className="section-head"><h2>🧠 Asset Intelligence</h2><span className="muted">AI-ready</span></div><div className="asset-intel-grid">
+    {assets.slice(0,6).map(a=>{
+      const market = markets.find(m => m.symbol?.includes(a.asset) || m.name?.toLowerCase().includes(a.asset.toLowerCase()));
+      const related = items.filter(i => (i.intelligence?.assets||[]).includes(a.asset));
+      const high = related.filter(i=>i.intelligence?.impact==='high').length;
+      return <button className="asset-intel-card" key={a.asset} onClick={()=>onAsset(a.asset)}>
+        <div><b>{a.asset}</b><small>{a.count} related stories</small></div>
+        <strong>{market ? formatPrice(market.price) : 'Watch'}</strong>
+        <span className={high?'down':'up'}>{high ? `${high} high impact` : 'normal risk'}</span>
+      </button>
+    })}
+  </div></section>
+}
+function AiAssistant({ items, lang }) {
+  const [q,setQ]=useState('');
+  const [answer,setAnswer]=useState('');
+  function ask(){
+    const query=q.toLowerCase();
+    const related=items.filter(i=>`${i.title} ${i.source} ${i.category} ${(i.intelligence?.assets||[]).join(' ')}`.toLowerCase().includes(query.split(' ')[0]||query)).slice(0,3);
+    const base=related[0]||items[0];
+    const ku='ئەم وەڵامە بە شێوەی rule-based دروستکراوە. بۆ AI ڕاستەقینە پێویستە API key زیاد بکرێت.';
+    const ar='هذه إجابة rule-based مؤقتة. لتفعيل الذكاء الاصطناعي الحقيقي أضف API key لاحقاً.';
+    const en='This is a rule-based assistant answer. Add an API key later for real AI responses.';
+    setAnswer(`${lang==='ku'?ku:lang==='ar'?ar:en}\n\n${base ? base.title : ''}\n${base?.intelligence?.why || ''}`);
+  }
+  return <section className="panel assistant-panel"><h3>💬 AI Market Assistant</h3><div className="assistant-box"><input value={q} onChange={e=>setQ(e.target.value)} placeholder={lang==='ku'?'بپرسە: بۆچی زێڕ دەجوڵێت؟':lang==='ar'?'اسأل: لماذا يتحرك الذهب؟':'Ask: why is gold moving?'} onKeyDown={e=>{if(e.key==='Enter')ask()}}/><button className="btn gold" onClick={ask}>Ask</button></div>{answer && <pre>{answer}</pre>}</section>
+}
+
 function Header({ lang, setLang, theme, setTheme, query, setQuery, dict }) {
   return <header className="topbar">
     <button className="iconbtn mobile-menu"><Icon name="☰" /></button>
@@ -178,7 +245,7 @@ function App(){
   const filtered=useMemo(()=>news.filter(i=>{const q=query.toLowerCase(); const text=`${i.title} ${i.source} ${i.category} ${i.intelligence?.assets?.join(' ')}`.toLowerCase(); const activeOk=active==='all'||text.includes(active)||i.category?.toLowerCase().includes(active); return (!q||text.includes(q))&&activeOk;}),[news,query,active]);
   const hero=filtered[0]||news[0];
   const rest=filtered.filter(i=>i.id!==hero?.id);
-  return <div className="app"><Sidebar active={active} setActive={setActive} dict={dict}/><main className="main"><Header lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict}/><MarketTicker markets={markets} dict={dict}/><Ticker items={news} dict={dict}/><section className="hero-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/><div className="side-stack"><IntelligencePanel items={news} lang={lang} dict={dict}/><Watchlist markets={markets} dict={dict}/></div></section><MarketDashboard markets={markets} dict={dict}/><section className="dash-two"><EconomicCalendar dict={dict}/><Heatmap markets={markets} dict={dict}/></section><IraqWidget dict={dict}/><div className="section-head"><h2>{dict.latest}</h2><div className="filters">{nav.slice(0,8).map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{categoryMap[n]||n}</button>)}</div></div>{filtered.length===0?<div className="panel">{dict.noResults}</div>:<div className="news-grid">{rest.map(item=><NewsCard key={item.id} item={item} lang={lang} dict={dict} onOpen={setSelected} onAsset={(a)=>{setQuery(a);setActive('all')}} />)}</div>}<div style={{height:40}}/><ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/></main></div>
+  return <div className="app"><Sidebar active={active} setActive={setActive} dict={dict}/><main className="main"><Header lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict}/><MarketTicker markets={markets} dict={dict}/><Ticker items={news} dict={dict}/><section className="hero-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/><div className="side-stack"><IntelligencePanel items={news} lang={lang} dict={dict}/><Watchlist markets={markets} dict={dict}/></div></section><MarketDashboard markets={markets} dict={dict}/><section className="dash-two"><EconomicCalendar dict={dict}/><Heatmap markets={markets} dict={dict}/></section><IntelligenceDashboard items={news} markets={markets} lang={lang} dict={dict} onAsset={(a)=>{setQuery(a);setActive('all')}}/><AssetIntelligence items={news} markets={markets} dict={dict} onAsset={(a)=>{setQuery(a);setActive('all')}}/><IraqWidget dict={dict}/><AiAssistant items={news} lang={lang}/><div className="section-head"><h2>{dict.latest}</h2><div className="filters">{nav.slice(0,8).map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{categoryMap[n]||n}</button>)}</div></div>{filtered.length===0?<div className="panel">{dict.noResults}</div>:<div className="news-grid">{rest.map(item=><NewsCard key={item.id} item={item} lang={lang} dict={dict} onOpen={setSelected} onAsset={(a)=>{setQuery(a);setActive('all')}} />)}</div>}<div style={{height:40}}/><ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/></main></div>
 }
 
 createRoot(document.getElementById('root')).render(<App/>);
