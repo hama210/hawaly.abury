@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Search, Globe2, Bell, Menu, X, TrendingUp, Newspaper, ShieldAlert, Building2, CalendarDays, Flame, BarChart3, Oil, Bitcoin, Landmark, Share2, Bookmark } from 'lucide-react'
+import { Search, Globe2, Bell, Menu, X, TrendingUp, Newspaper, ShieldAlert, Building2, CalendarDays, Flame, BarChart3, Fuel, Bitcoin, Landmark, Share2, Bookmark } from 'lucide-react'
 import './styles.css'
 
 const translations = {
