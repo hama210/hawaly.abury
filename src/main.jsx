@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import { fetchNews } from './services/news.js';
+import { fetchMarkets } from './services/markets.js';
 import { LANGS, t } from './utils/i18n.js';
 import { analyzeArticle, localizeSummary } from './utils/intelligence.js';
 
@@ -24,6 +25,71 @@ function timeAgo(value, lang) {
 function impactLabel(key, lang){ const dict=t[lang]; return key==='high'?dict.high:key==='medium'?dict.medium:dict.low; }
 function sentimentLabel(key, lang){ const dict=t[lang]; return key==='bullish'?dict.bullish:key==='bearish'?dict.bearish:dict.neutral; }
 function copyLink(url){ navigator.clipboard?.writeText(url || location.href); }
+
+function formatPrice(value) {
+  if (value === null || value === undefined || value === '—') return '—';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  if (Math.abs(n) >= 1000) return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  if (Math.abs(n) >= 10) return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  return n.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+}
+function changeClass(v) { return Number(v) > 0 ? 'up' : Number(v) < 0 ? 'down' : 'flat'; }
+function MarketTicker({ markets, dict }) {
+  const list = markets?.length ? markets : [];
+  return <div className="market-ticker" aria-label={dict.marketTicker}>
+    <div className="market-ticker-track">
+      <b>📈 {dict.marketTicker}</b>
+      {[...list, ...list].map((m, i) => <span className="market-tick" key={m.symbol + i}>
+        <strong>{m.symbol}</strong> <em>{formatPrice(m.price)}</em> <small className={changeClass(m.changePct)}>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small>
+      </span>)}
+    </div>
+  </div>;
+}
+function MarketDashboard({ markets, dict }) {
+  const visible = markets.slice(0, 8);
+  return <section>
+    <div className="section-head"><h2>📊 {dict.markets}</h2><span className="muted">60s</span></div>
+    <div className="market-grid">
+      {visible.map((m, idx) => <div className={`market-card ${changeClass(m.changePct)}`} key={m.symbol}>
+        <div className="market-card-top"><b>{m.symbol}</b><span>{m.name}</span></div>
+        <div className="market-price">{formatPrice(m.price)}</div>
+        <div className="market-change"><span>{Number(m.changePct) > 0 ? '▲' : Number(m.changePct) < 0 ? '▼' : '◆'} {Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</span><small>{m.source}</small></div>
+        <svg className="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline points={sparkPoints(Number(m.changePct), idx)} /></svg>
+      </div>)}
+    </div>
+  </section>;
+}
+function sparkPoints(change, seed) {
+  const points = [];
+  for (let i = 0; i < 9; i++) {
+    const x = i * 15;
+    const drift = change >= 0 ? -i * 1.2 : i * 1.2;
+    const wave = Math.sin(i + seed) * 5;
+    const y = 21 + drift + wave;
+    points.push(`${x},${Math.max(5, Math.min(30, y)).toFixed(1)}`);
+  }
+  return points.join(' ');
+}
+function EconomicCalendar({ dict }) {
+  const events = [
+    ['🔴', 'FOMC / Fed Speech', 'USD, Gold, Stocks'],
+    ['🔴', 'US CPI / Inflation', 'USD, Gold, BTC'],
+    ['🟠', 'OPEC / Oil Inventories', 'Oil, IQD'],
+    ['🟠', 'ECB / BOE Updates', 'EUR/USD, GBP/USD'],
+    ['🟡', 'Iraq Budget / CBI', 'IQD, Banking']
+  ];
+  return <section className="panel calendar-panel"><h3>📅 {dict.calendarEvents}</h3>{events.map(([impact, title, affected]) => <div className="calendar-row" key={title}><span>{impact}</span><b>{title}</b><small>{affected}</small></div>)}</section>;
+}
+function Heatmap({ markets, dict }) {
+  return <section className="panel"><h3>🧭 {dict.heatmap}</h3><div className="heatmap">{markets.slice(0, 11).map(m => <button className={`heat ${changeClass(m.changePct)}`} key={m.symbol}><b>{m.symbol}</b><small>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small></button>)}</div></section>;
+}
+function Watchlist({ markets, dict }) {
+  const picks = ['XAU/USD', 'WTI', 'BTC/USD', 'EUR/USD', 'USD/IQD'];
+  const rows = picks.map(p => markets.find(m => m.symbol === p)).filter(Boolean);
+  return <section className="panel"><h3>⭐ {dict.watchlist}</h3>{rows.map(m => <div className="watch-row" key={m.symbol}><b>{m.symbol}</b><span>{formatPrice(m.price)}</span><small className={changeClass(m.changePct)}>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small></div>)}</section>;
+}
+
 
 function Header({ lang, setLang, theme, setTheme, query, setQuery, dict }) {
   return <header className="topbar">
@@ -103,14 +169,16 @@ function App(){
   const [active,setActive]=useState('all');
   const [query,setQuery]=useState('');
   const [news,setNews]=useState([]);
+  const [markets,setMarkets]=useState([]);
   const [selected,setSelected]=useState(null);
   const dict=t[lang];
   useEffect(()=>{document.documentElement.lang=lang;document.documentElement.dir=LANGS[lang].dir;document.documentElement.dataset.theme=theme;localStorage.setItem('lang',lang);localStorage.setItem('theme',theme)},[lang,theme]);
   useEffect(()=>{let alive=true; const load=()=>fetchNews().then(items=>alive&&setNews(items)); load(); const id=setInterval(load,60000); return()=>{alive=false;clearInterval(id)}},[]);
+  useEffect(()=>{let alive=true; const load=()=>fetchMarkets().then(items=>alive&&setMarkets(items)); load(); const id=setInterval(load,60000); return()=>{alive=false;clearInterval(id)}},[]);
   const filtered=useMemo(()=>news.filter(i=>{const q=query.toLowerCase(); const text=`${i.title} ${i.source} ${i.category} ${i.intelligence?.assets?.join(' ')}`.toLowerCase(); const activeOk=active==='all'||text.includes(active)||i.category?.toLowerCase().includes(active); return (!q||text.includes(q))&&activeOk;}),[news,query,active]);
   const hero=filtered[0]||news[0];
   const rest=filtered.filter(i=>i.id!==hero?.id);
-  return <div className="app"><Sidebar active={active} setActive={setActive} dict={dict}/><main className="main"><Header lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict}/><Ticker items={news} dict={dict}/><section className="hero-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/><IntelligencePanel items={news} lang={lang} dict={dict}/></section><IraqWidget dict={dict}/><div className="section-head"><h2>{dict.latest}</h2><div className="filters">{nav.slice(0,8).map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{categoryMap[n]||n}</button>)}</div></div>{filtered.length===0?<div className="panel">{dict.noResults}</div>:<div className="news-grid">{rest.map(item=><NewsCard key={item.id} item={item} lang={lang} dict={dict} onOpen={setSelected} onAsset={(a)=>{setQuery(a);setActive('all')}} />)}</div>}<div style={{height:40}}/><ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/></main></div>
+  return <div className="app"><Sidebar active={active} setActive={setActive} dict={dict}/><main className="main"><Header lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict}/><MarketTicker markets={markets} dict={dict}/><Ticker items={news} dict={dict}/><section className="hero-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/><div className="side-stack"><IntelligencePanel items={news} lang={lang} dict={dict}/><Watchlist markets={markets} dict={dict}/></div></section><MarketDashboard markets={markets} dict={dict}/><section className="dash-two"><EconomicCalendar dict={dict}/><Heatmap markets={markets} dict={dict}/></section><IraqWidget dict={dict}/><div className="section-head"><h2>{dict.latest}</h2><div className="filters">{nav.slice(0,8).map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{categoryMap[n]||n}</button>)}</div></div>{filtered.length===0?<div className="panel">{dict.noResults}</div>:<div className="news-grid">{rest.map(item=><NewsCard key={item.id} item={item} lang={lang} dict={dict} onOpen={setSelected} onAsset={(a)=>{setQuery(a);setActive('all')}} />)}</div>}<div style={{height:40}}/><ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/></main></div>
 }
 
 createRoot(document.getElementById('root')).render(<App/>);
