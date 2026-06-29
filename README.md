@@ -1,18 +1,11 @@
-# هەواڵی ئابوری — Phase 3 Sprint 3
+# هەواڵی ئابوری — Phase 4 AI-Ready Intelligence
 
-Premium dashboard update.
-
-## Added
-- Market Intelligence Center
-- High-impact event watchlist
-- Premium command center stats
-- Category shortcut dashboard
-- Improved homepage hierarchy
-- Enhanced card/grid styling
-- Fully responsive dashboard refinements
-
-## Deploy
-Cloudflare Pages settings stay the same:
+Cloudflare Pages settings:
 
 - Build command: `npm run build`
 - Output directory: `dist`
+
+Notes:
+- Do not upload `package-lock.json`.
+- This version uses stable frontend dependencies only.
+- AI is rule-based/AI-ready. You can connect a real API key later.
