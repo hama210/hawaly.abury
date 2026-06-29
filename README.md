@@ -1,15 +1,18 @@
-# هەواڵی ئابوری — Phase 3 Sprint 2
+# هەواڵی ئابوری — Phase 3 Sprint 3
 
-Premium dashboard update with:
+Premium dashboard update.
 
-- Article details modal
-- Advanced filters by source, asset, country and date
-- Working save/share controls
-- Clickable affected-asset filters
-- Iraq Intelligence panel
-- Improved card interactions
+## Added
+- Market Intelligence Center
+- High-impact event watchlist
+- Premium command center stats
+- Category shortcut dashboard
+- Improved homepage hierarchy
+- Enhanced card/grid styling
+- Fully responsive dashboard refinements
 
-Deploy on Cloudflare Pages:
+## Deploy
+Cloudflare Pages settings stay the same:
 
 - Build command: `npm run build`
 - Output directory: `dist`

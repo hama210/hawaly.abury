@@ -7,6 +7,9 @@ import IntelligencePanel from './components/IntelligencePanel.jsx'
 import FilterBar from './components/FilterBar.jsx'
 import AdvancedSearch from './components/AdvancedSearch.jsx'
 import IraqIntelligence from './components/IraqIntelligence.jsx'
+import MarketPulse from './components/MarketPulse.jsx'
+import EventRail from './components/EventRail.jsx'
+import CategoryShowcase from './components/CategoryShowcase.jsx'
 import ArticleModal from './components/ArticleModal.jsx'
 import NewsCard from './components/NewsCard.jsx'
 import SourceStrip from './components/SourceStrip.jsx'
@@ -61,19 +64,25 @@ export default function App(){
     <div className="main-area">
       <Header t={t} lang={lang} setLang={setLang} query={query} setQuery={setQuery} theme={theme} setTheme={setTheme} refresh={refresh} toggleSidebar={()=>setSidebarOpen(true)}/>
       <BreakingTicker t={t} lang={lang} items={news}/>
+      <section className="command-center">
+        <div className="command-copy"><span>Phase 3 Sprint 3</span><h2>{t.site}</h2><p>{t.tagline}</p></div>
+        <div className="command-stats"><b>{filtered.length}</b><span>{t.latest}</span><b>{high.length}</b><span>{t.high}</span><b>{sources.length}</b><span>{t.sources}</span></div>
+      </section>
       <FilterBar t={t} category={category} setCategory={setCategory} impact={impact} setImpact={setImpact}/>
       <AdvancedSearch t={t} filters={advanced} setFilters={setAdvanced} options={options}/>
       <HeroNews t={t} lang={lang} item={hero} onOpen={openArticle} onShare={shareArticle} onSave={saveArticle} saved={bookmarks.includes(hero?.id)} onAsset={selectAsset}/>
-      <section className="dashboard-row">
+      <MarketPulse lang={lang}/>
+      <section className="dashboard-row sprint3-row">
         <IntelligencePanel t={t} highCount={high.length} updatedAt={updatedLabel}/>
-        <section className="high-impact-board"><div className="board-title"><h2>{t.high}</h2><span>{t.today}</span></div>{high.slice(0,5).map(item=><button onClick={()=>openArticle(item)} key={item.id}><b>{lang==='en' ? item.titleEn : lang==='ar' ? item.titleAr : item.titleKu}</b><span>{item.source}</span></button>)}</section>
+        <EventRail lang={lang}/>
       </section>
+      <CategoryShowcase lang={lang} setCategory={setCategory}/>
       <IraqIntelligence t={t} lang={lang} items={news} onOpen={openArticle}/>
       <section className="section-title"><div><h2>{t.latest}</h2><p>{loading ? t.loading : `${filtered.length} articles • ${t.updated}: ${updatedLabel}`}</p></div></section>
       {loading && filtered.length < 2 ? <Skeleton/> : <section className="news-grid-pro">{filtered.map(item => <NewsCard key={item.id} item={item} lang={lang} t={t} onOpen={openArticle} onShare={shareArticle} onSave={saveArticle} saved={bookmarks.includes(item.id)} onAsset={selectAsset}/>)}</section>}
       {!filtered.length && <div className="empty-state">{t.noNews}</div>}
       <SourceStrip t={t} sources={sources}/>
-      <footer className="footer"><div><b>{t.site}</b><span>{t.tagline}</span></div><p>Phase 3 Sprint 2 • Article modal • Advanced search • Iraq Intelligence</p></footer>
+      <footer className="footer"><div><b>{t.site}</b><span>{t.tagline}</span></div><p>Phase 3 Sprint 3 • Premium dashboard • Intelligence widgets • Category command center</p></footer>
     </div>
     <ArticleModal item={selected} lang={lang} t={t} onClose={()=>setSelected(null)} saved={selected ? bookmarks.includes(selected.id) : false} onSave={saveArticle} onShare={shareArticle}/>
   </div>
