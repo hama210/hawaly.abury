@@ -41,7 +41,6 @@ const fallbackImages = {
   geopolitics: 'https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1200&q=80'
 };
 
-const translateCache = new Map();
 const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','sanction','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi'];
 const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory','election','lawsuit','pipeline','exports','banking'];
 const assetRules = [
@@ -58,7 +57,6 @@ const extractTag = (xml, tag) => decode(xml.match(new RegExp(`<${tag}[^>]*>([\\s
 const extractImage = xml => xml.match(/<media:content[^>]+url=["']([^"']+)/i)?.[1] || xml.match(/<enclosure[^>]+url=["']([^"']+)/i)?.[1] || xml.match(/<img[^>]+src=["']([^"']+)/i)?.[1] || '';
 const cleanGoogleTitle = title => title.replace(/\s+-\s+[^-]{2,80}$/,'').trim();
 const sourceFromGoogleTitle = (title, fallback) => title.split(' - ').length > 1 ? title.split(' - ').at(-1).trim() : fallback;
-const shortText = (text='', max=260) => String(text || '').replace(/\s+/g,' ').trim().slice(0, max);
 
 function analyze(item){
   const text = `${item.title} ${item.summary} ${item.source} ${item.category}`.toLowerCase();
@@ -69,39 +67,9 @@ function analyze(item){
   return { impact, sentiment, assets: affected.length ? affected : ['Markets'], iraqImpact };
 }
 
-async function translateText(text, target){
-  const clean = shortText(text, target === 'ku' ? 180 : 220);
-  if(!clean) return '';
-  const googleTarget = target === 'ku' ? 'ckb' : target;
-  const key = `${googleTarget}:${clean}`;
-  if(translateCache.has(key)) return translateCache.get(key);
-  try{
-    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + encodeURIComponent(googleTarget) + '&dt=t&q=' + encodeURIComponent(clean);
-    const res = await fetch(url, { cf: { cacheTtl: 3600, cacheEverything: true }, headers: { 'user-agent': 'HawaliAburiBot/1.4' }});
-    if(!res.ok) throw new Error(String(res.status));
-    const data = await res.json();
-    const translated = Array.isArray(data?.[0]) ? data[0].map(part => part?.[0] || '').join('').trim() : '';
-    const result = translated && translated.toLowerCase() !== clean.toLowerCase() ? translated : clean;
-    translateCache.set(key, result);
-    return result;
-  }catch(e){ return clean; }
-}
-
-async function addTranslations(item){
-  const titleEn = item.title || '';
-  const summaryEn = shortText(item.summary || 'Market-moving update from trusted sources.', 260);
-  const whyEn = item.category === 'iraq'
-    ? 'Important for Iraq, Kurdistan Region, IQD, oil, banking, or local market sentiment.'
-    : 'Important for markets, currency, oil, crypto, stocks, or geopolitical risk.';
-  const [titleKu, titleAr, summaryKu, summaryAr, whyKu, whyAr] = await Promise.all([
-    translateText(titleEn, 'ku'), translateText(titleEn, 'ar'), translateText(summaryEn, 'ku'), translateText(summaryEn, 'ar'), translateText(whyEn, 'ku'), translateText(whyEn, 'ar')
-  ]);
-  return { ...item, titleEn, summaryEn, titleKu, titleAr, summaryKu, summaryAr, whyEn, whyKu, whyAr };
-}
-
 async function fetchFeed(feed){
   try{
-    const res = await fetch(feed.url, { cf: { cacheTtl: 60, cacheEverything: false }, headers: { 'user-agent': 'HawaliAburiBot/1.4' }});
+    const res = await fetch(feed.url, { cf: { cacheTtl: 60, cacheEverything: false }, headers: { 'user-agent': 'HawaliAburiBot/1.5' }});
     if(!res.ok) throw new Error(String(res.status));
     const xml = await res.text();
     const perFeedLimit = feed.category === 'iraq' ? 25 : 18;
@@ -113,14 +81,14 @@ async function fetchFeed(feed){
       const summary = extractTag(entry,'description') || extractTag(entry,'summary');
       const publishedAt = extractTag(entry,'pubDate') || extractTag(entry,'published') || new Date().toISOString();
       const image = extractImage(entry) || fallbackImages[feed.category] || fallbackImages.markets;
-      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, summary, source: sourceFromGoogleTitle(rawTitle, feed.source), sourceGroup: feed.source, category: feed.category, link, publishedAt, image };
+      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, source: sourceFromGoogleTitle(rawTitle, feed.source), sourceGroup: feed.source, category: feed.category, link, publishedAt, image };
       const intel = analyze(base);
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
     }).filter(i=>i.title);
   }catch(e){ return []; }
 }
 
-async function fallback(){
+function fallback(){
   const base = [
     ['Iraq latest economy, dinar, banking and oil updates','Iraq Latest','iraq','https://news.google.com/search?q=Iraq%20economy%20dinar%20oil%20banking'],
     ['Kurdistan Region news from Erbil, Sulaimani and Duhok','Kurdistan Region','iraq','https://news.google.com/search?q=Kurdistan%20Region%20Erbil%20Sulaimani%20Duhok'],
@@ -129,25 +97,25 @@ async function fallback(){
     ['Oil traders monitor OPEC supply signals and Middle East risk','OilPrice','oil','https://oilprice.com/'],
     ['Bitcoin and crypto sentiment follows risk appetite in global markets','CoinDesk','crypto','https://www.coindesk.com/']
   ].map(([title, source, category, link], idx)=>{
-    const base = { id:`fallback-${idx}`, title, summary:'Market-moving update from trusted sources.', source, category, link, image:fallbackImages[category], publishedAt:new Date(Date.now()-idx*900000).toISOString() };
+    const base = { id:`fallback-${idx}`, title, titleEn:title, summary:'Market-moving update from trusted sources.', summaryEn:'Market-moving update from trusted sources.', source, category, link, image:fallbackImages[category], publishedAt:new Date(Date.now()-idx*900000).toISOString() };
     const intel = analyze(base);
     return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
   });
-  return Promise.all(base.map(addTranslations));
+  return base;
 }
 
 export async function onRequest({ request }) {
   const url = new URL(request.url);
   const q = (url.searchParams.get('q') || '').trim().toLowerCase();
-  const limit = Math.min(Number(url.searchParams.get('limit') || 80), 120);
+  const limit = Math.min(Number(url.searchParams.get('limit') || 120), 180);
   const batches = await Promise.all(FEEDS.map(fetchFeed));
   const seen = new Set();
-  const rawItems = batches.flat().filter(i=>{
+  let items = batches.flat().filter(i=>{
     const text = `${i.title} ${i.summary} ${i.source} ${i.sourceGroup || ''} ${i.category}`.toLowerCase();
     if(q && !text.includes(q)) return false;
     const key = i.title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().slice(0,110);
     if(seen.has(key)) return false; seen.add(key); return true;
   }).sort((a,b)=>new Date(b.publishedAt)-new Date(a.publishedAt)).slice(0,limit);
-  const items = rawItems.length ? await Promise.all(rawItems.map(addTranslations)) : await fallback();
-  return Response.json({ updatedAt: new Date().toISOString(), count: items.length, translated: true, languages: ['en','ku','ar'], items }, { headers: { 'Cache-Control': 'public, max-age=60' } });
+  if(!items.length) items = fallback();
+  return Response.json({ updatedAt: new Date().toISOString(), count: items.length, translated: false, items }, { headers: { 'Cache-Control': 'public, max-age=60' } });
 }
