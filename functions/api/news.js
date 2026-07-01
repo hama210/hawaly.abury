@@ -1,35 +1,35 @@
 const FEEDS = [
-  { source: 'Reuters Markets', category: 'markets', url: 'https://news.google.com/rss/search?q=Reuters%20markets%20economy%20forex&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Reuters Trump', category: 'geopolitics', url: 'https://news.google.com/rss/search?q=Reuters%20Donald%20Trump%20economy%20tariffs%20markets&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'AP Trump', category: 'geopolitics', url: 'https://news.google.com/rss/search?q=Associated%20Press%20Donald%20Trump%20White%20House%20economy&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'MSN News', category: 'geopolitics', url: 'https://news.google.com/rss/search?q=site%3Amsn.com%20Donald%20Trump%20economy%20markets&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'MSN Money', category: 'markets', url: 'https://news.google.com/rss/search?q=site%3Amsn.com%20money%20markets%20economy%20stocks&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Daily Mail', category: 'geopolitics', url: 'https://news.google.com/rss/search?q=site%3Adailymail.co.uk%20Donald%20Trump%20US%20politics%20economy&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'BBC Business', category: 'markets', url: 'https://news.google.com/rss/search?q=BBC%20business%20markets%20economy&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'CNBC Markets', category: 'markets', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html' },
-  { source: 'Yahoo Finance', category: 'stocks', url: 'https://finance.yahoo.com/news/rssindex' },
-  { source: 'MarketWatch', category: 'stocks', url: 'https://feeds.content.dowjones.io/public/rss/mw_topstories' },
-  { source: 'FXStreet', category: 'forex', url: 'https://www.fxstreet.com/rss/news' },
-  { source: 'ForexLive', category: 'forex', url: 'https://www.forexlive.com/feed/news' },
-  { source: 'OilPrice', category: 'oil', url: 'https://oilprice.com/rss/main' },
-  { source: 'CoinDesk', category: 'crypto', url: 'https://www.coindesk.com/arc/outboundfeeds/rss/' },
-  { source: 'Cointelegraph', category: 'crypto', url: 'https://cointelegraph.com/rss' },
-  { source: 'Iraq Latest', category: 'iraq', url: 'https://news.google.com/rss/search?q=Iraq%20OR%20Baghdad%20OR%20Kurdistan%20when%3A7d&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Iraq Economy', category: 'iraq', url: 'https://news.google.com/rss/search?q=Iraq%20economy%20budget%20oil%20dinar%20banking%20when%3A14d&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Iraq Oil', category: 'iraq', url: 'https://news.google.com/rss/search?q=Iraq%20oil%20exports%20OPEC%20Kurdistan%20pipeline%20when%3A14d&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Iraq Dinar CBI', category: 'iraq', url: 'https://news.google.com/rss/search?q=Iraq%20dinar%20Central%20Bank%20of%20Iraq%20CBI%20dollar%20when%3A30d&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Kurdistan Region', category: 'iraq', url: 'https://news.google.com/rss/search?q=Kurdistan%20Region%20Erbil%20Sulaimani%20Duhok%20when%3A14d&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Rudaw Search', category: 'iraq', url: 'https://news.google.com/rss/search?q=site%3Arudaw.net%20Iraq%20OR%20Kurdistan%20when%3A14d&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Shafaq Search', category: 'iraq', url: 'https://news.google.com/rss/search?q=site%3Ashafaq.com%20Iraq%20OR%20Baghdad%20OR%20Kurdistan%20when%3A14d&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Iraqi News Search', category: 'iraq', url: 'https://news.google.com/rss/search?q=site%3Airaqinews.com%20Iraq%20economy%20politics%20when%3A30d&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Iraq Business Search', category: 'iraq', url: 'https://news.google.com/rss/search?q=site%3Airaq-businessnews.com%20Iraq%20business%20oil%20banking%20when%3A30d&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Shafaq News', category: 'iraq', url: 'https://www.shafaq.com/en/rss' },
-  { source: 'Rudaw', category: 'iraq', url: 'https://www.rudaw.net/english/rss' },
-  { source: 'Kurdistan24', category: 'iraq', url: 'https://www.kurdistan24.net/en/rss' },
-  { source: 'Iraq Business News', category: 'iraq', url: 'https://www.iraq-businessnews.com/feed/' },
-  { source: 'Central Bank of Iraq', category: 'iraq', url: 'https://news.google.com/rss/search?q=Central%20Bank%20of%20Iraq%20CBI%20dinar&hl=en-US&gl=US&ceid=US:en' },
-  { source: 'Truth Social monitoring', category: 'geopolitics', url: 'https://news.google.com/rss/search?q=Truth%20Social%20Trump%20tariffs%20Fed%20oil%20markets&hl=en-US&gl=US&ceid=US:en' }
-];
+  ['Reuters Markets','markets','https://news.google.com/rss/search?q=Reuters%20markets%20economy%20forex&hl=en-US&gl=US&ceid=US:en'],
+  ['Reuters Trump','geopolitics','https://news.google.com/rss/search?q=Reuters%20Donald%20Trump%20economy%20tariffs%20markets&hl=en-US&gl=US&ceid=US:en'],
+  ['AP Trump','geopolitics','https://news.google.com/rss/search?q=Associated%20Press%20Donald%20Trump%20White%20House%20economy&hl=en-US&gl=US&ceid=US:en'],
+  ['MSN News','geopolitics','https://news.google.com/rss/search?q=site%3Amsn.com%20Donald%20Trump%20economy%20markets&hl=en-US&gl=US&ceid=US:en'],
+  ['MSN Money','markets','https://news.google.com/rss/search?q=site%3Amsn.com%20money%20markets%20economy%20stocks&hl=en-US&gl=US&ceid=US:en'],
+  ['Daily Mail','geopolitics','https://news.google.com/rss/search?q=site%3Adailymail.co.uk%20Donald%20Trump%20US%20politics%20economy&hl=en-US&gl=US&ceid=US:en'],
+  ['BBC Business','markets','https://news.google.com/rss/search?q=BBC%20business%20markets%20economy&hl=en-US&gl=US&ceid=US:en'],
+  ['CNBC Markets','markets','https://www.cnbc.com/id/100003114/device/rss/rss.html'],
+  ['Yahoo Finance','stocks','https://finance.yahoo.com/news/rssindex'],
+  ['MarketWatch','stocks','https://feeds.content.dowjones.io/public/rss/mw_topstories'],
+  ['FXStreet','forex','https://www.fxstreet.com/rss/news'],
+  ['ForexLive','forex','https://www.forexlive.com/feed/news'],
+  ['OilPrice','oil','https://oilprice.com/rss/main'],
+  ['CoinDesk','crypto','https://www.coindesk.com/arc/outboundfeeds/rss/'],
+  ['Cointelegraph','crypto','https://cointelegraph.com/rss'],
+  ['Iraq Latest','iraq','https://news.google.com/rss/search?q=Iraq%20OR%20Baghdad%20OR%20Kurdistan%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Economy','iraq','https://news.google.com/rss/search?q=Iraq%20economy%20budget%20oil%20dinar%20banking%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Oil','iraq','https://news.google.com/rss/search?q=Iraq%20oil%20exports%20OPEC%20Kurdistan%20pipeline%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Dinar CBI','iraq','https://news.google.com/rss/search?q=Iraq%20dinar%20Central%20Bank%20of%20Iraq%20CBI%20dollar%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Kurdistan Region','iraq','https://news.google.com/rss/search?q=Kurdistan%20Region%20Erbil%20Sulaimani%20Duhok%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Rudaw Search','iraq','https://news.google.com/rss/search?q=site%3Arudaw.net%20Iraq%20OR%20Kurdistan%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Shafaq Search','iraq','https://news.google.com/rss/search?q=site%3Ashafaq.com%20Iraq%20OR%20Baghdad%20OR%20Kurdistan%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraqi News Search','iraq','https://news.google.com/rss/search?q=site%3Airaqinews.com%20Iraq%20economy%20politics%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Business Search','iraq','https://news.google.com/rss/search?q=site%3Airaq-businessnews.com%20Iraq%20business%20oil%20banking%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Shafaq News','iraq','https://www.shafaq.com/en/rss'],
+  ['Rudaw','iraq','https://www.rudaw.net/english/rss'],
+  ['Kurdistan24','iraq','https://www.kurdistan24.net/en/rss'],
+  ['Iraq Business News','iraq','https://www.iraq-businessnews.com/feed/'],
+  ['Central Bank of Iraq','iraq','https://news.google.com/rss/search?q=Central%20Bank%20of%20Iraq%20CBI%20dinar&hl=en-US&gl=US&ceid=US:en'],
+  ['Truth Social monitoring','geopolitics','https://news.google.com/rss/search?q=Truth%20Social%20Trump%20tariffs%20Fed%20oil%20markets&hl=en-US&gl=US&ceid=US:en']
+].map(([source, category, url]) => ({ source, category, url }));
 
 const fallbackImages = {
   iraq: 'https://images.unsplash.com/photo-1569163139599-0f4517e36f51?auto=format&fit=crop&w=1200&q=80',
@@ -44,7 +44,7 @@ const fallbackImages = {
 const translateCache = new Map();
 const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','sanction','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi'];
 const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory','election','lawsuit','pipeline','exports','banking'];
-const assets = [
+const assetRules = [
   ['USD',['fed','dollar','rate','fomc','treasury','cpi','nfp','trump','tariff','white house']],
   ['Gold',['gold','inflation','war','risk','safe haven']],
   ['Oil',['oil','brent','wti','opec','crude','eia','exports','pipeline']],
@@ -53,36 +53,22 @@ const assets = [
   ['Stocks',['stocks','nasdaq','s&p','dow','earnings','wall street']]
 ];
 
+const decode = (str='') => str.replace(/<!\[CDATA\[(.*?)\]\]>/gs,'$1').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'').trim();
+const extractTag = (xml, tag) => decode(xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1] || '');
+const extractImage = xml => xml.match(/<media:content[^>]+url=["']([^"']+)/i)?.[1] || xml.match(/<enclosure[^>]+url=["']([^"']+)/i)?.[1] || xml.match(/<img[^>]+src=["']([^"']+)/i)?.[1] || '';
+const cleanGoogleTitle = title => title.replace(/\s+-\s+[^-]{2,80}$/,'').trim();
+const sourceFromGoogleTitle = (title, fallback) => title.split(' - ').length > 1 ? title.split(' - ').at(-1).trim() : fallback;
+const shortText = (text='', max=260) => String(text || '').replace(/\s+/g,' ').trim().slice(0, max);
+
 function analyze(item){
   const text = `${item.title} ${item.summary} ${item.source} ${item.category}`.toLowerCase();
-  const found = assets.filter(([,w])=>w.some(x=>text.includes(x))).map(([a])=>a);
-  return {
-    impact: highWords.some(w=>text.includes(w)) ? 'high' : mediumWords.some(w=>text.includes(w)) ? 'medium' : 'low',
-    sentiment: /(falls|drops|war|attack|weak|recession|sanction|tariff|lawsuit|clash|explosion|strike)/i.test(text) ? 'bearish' : /(rises|gains|strong|growth|beats|surges|deal|approval|agreement)/i.test(text) ? 'bullish' : 'neutral',
-    assets: found.length ? found : ['Markets'],
-    iraqImpact: /(iraq|baghdad|kurdistan|erbil|sulaimani|duhok|basra|mosul|iqd|dinar|central bank of iraq|cbi|shafaq|rudaw|kurdistan24|iraqi)/i.test(text)
-  };
+  const affected = assetRules.filter(([,w])=>w.some(x=>text.includes(x))).map(([a])=>a);
+  const impact = highWords.some(w=>text.includes(w)) ? 'high' : mediumWords.some(w=>text.includes(w)) ? 'medium' : 'low';
+  const sentiment = /(falls|drops|war|attack|weak|recession|sanction|tariff|lawsuit|clash|explosion|strike)/i.test(text) ? 'bearish' : /(rises|gains|strong|growth|beats|surges|deal|approval|agreement)/i.test(text) ? 'bullish' : 'neutral';
+  const iraqImpact = /(iraq|baghdad|kurdistan|erbil|sulaimani|duhok|basra|mosul|iqd|dinar|central bank of iraq|cbi|shafaq|rudaw|kurdistan24|iraqi)/i.test(text);
+  return { impact, sentiment, assets: affected.length ? affected : ['Markets'], iraqImpact };
 }
-function decode(str=''){
-  return str.replace(/<!\[CDATA\[(.*?)\]\]>/gs,'$1').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'').trim();
-}
-function extractTag(xml, tag){
-  const m = xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'));
-  return decode(m?.[1] || '');
-}
-function extractImage(xml){
-  return xml.match(/<media:content[^>]+url=["']([^"']+)/i)?.[1] || xml.match(/<enclosure[^>]+url=["']([^"']+)/i)?.[1] || xml.match(/<img[^>]+src=["']([^"']+)/i)?.[1] || '';
-}
-function cleanGoogleTitle(title){
-  return title.replace(/\s+-\s+[^-]{2,80}$/,'').trim();
-}
-function sourceFromGoogleTitle(title, fallback){
-  const parts = title.split(' - ');
-  return parts.length > 1 ? parts.at(-1).trim() : fallback;
-}
-function shortText(text='', max=260){
-  return String(text || '').replace(/\s+/g,' ').trim().slice(0, max);
-}
+
 async function translateText(text, target){
   const clean = shortText(text, target === 'ku' ? 180 : 220);
   if(!clean) return '';
@@ -90,17 +76,16 @@ async function translateText(text, target){
   if(translateCache.has(key)) return translateCache.get(key);
   try{
     const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + encodeURIComponent(target) + '&dt=t&q=' + encodeURIComponent(clean);
-    const res = await fetch(url, { headers: { 'user-agent': 'HawaliAburiBot/1.2' }});
+    const res = await fetch(url, { cf: { cacheTtl: 3600, cacheEverything: true }, headers: { 'user-agent': 'HawaliAburiBot/1.3' }});
     if(!res.ok) throw new Error(String(res.status));
     const data = await res.json();
     const translated = Array.isArray(data?.[0]) ? data[0].map(part => part?.[0] || '').join('').trim() : '';
     const result = translated || clean;
     translateCache.set(key, result);
     return result;
-  }catch(e){
-    return clean;
-  }
+  }catch(e){ return clean; }
 }
+
 async function addTranslations(item){
   const titleEn = item.title || '';
   const summaryEn = shortText(item.summary || 'Market-moving update from trusted sources.', 260);
@@ -108,64 +93,60 @@ async function addTranslations(item){
     ? 'Important for Iraq, Kurdistan Region, IQD, oil, banking, or local market sentiment.'
     : 'Important for markets, currency, oil, crypto, stocks, or geopolitical risk.';
   const [titleKu, titleAr, summaryKu, summaryAr, whyKu, whyAr] = await Promise.all([
-    translateText(titleEn, 'ku'),
-    translateText(titleEn, 'ar'),
-    translateText(summaryEn, 'ku'),
-    translateText(summaryEn, 'ar'),
-    translateText(whyEn, 'ku'),
-    translateText(whyEn, 'ar')
+    translateText(titleEn, 'ku'), translateText(titleEn, 'ar'), translateText(summaryEn, 'ku'), translateText(summaryEn, 'ar'), translateText(whyEn, 'ku'), translateText(whyEn, 'ar')
   ]);
   return { ...item, titleEn, summaryEn, titleKu, titleAr, summaryKu, summaryAr, whyEn, whyKu, whyAr };
 }
+
 async function fetchFeed(feed){
   try{
-    const res = await fetch(feed.url, { cf: { cacheTtl: 60, cacheEverything: false }, headers: { 'user-agent': 'HawaliAburiBot/1.2' }});
+    const res = await fetch(feed.url, { cf: { cacheTtl: 60, cacheEverything: false }, headers: { 'user-agent': 'HawaliAburiBot/1.3' }});
     if(!res.ok) throw new Error(String(res.status));
     const xml = await res.text();
     const perFeedLimit = feed.category === 'iraq' ? 25 : 18;
-    const entries = [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0,perFeedLimit).map(m=>m[0]);
-    const items = entries.map((entry, idx)=>{
+    return [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
+      const entry = m[0];
       const rawTitle = extractTag(entry,'title');
       const title = cleanGoogleTitle(rawTitle);
       const link = extractTag(entry,'link') || extractTag(entry,'guid') || feed.url;
       const summary = extractTag(entry,'description') || extractTag(entry,'summary');
       const publishedAt = extractTag(entry,'pubDate') || extractTag(entry,'published') || new Date().toISOString();
       const image = extractImage(entry) || fallbackImages[feed.category] || fallbackImages.markets;
-      const item = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, summary, source: sourceFromGoogleTitle(rawTitle, feed.source), sourceGroup: feed.source, category: feed.category, link, publishedAt, image };
-      const intel = analyze(item);
-      return { ...item, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
+      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, summary, source: sourceFromGoogleTitle(rawTitle, feed.source), sourceGroup: feed.source, category: feed.category, link, publishedAt, image };
+      const intel = analyze(base);
+      return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
     }).filter(i=>i.title);
-    return Promise.all(items.map(addTranslations));
   }catch(e){ return []; }
 }
+
 async function fallback(){
   const base = [
-    { title: 'Iraq latest economy, dinar, banking and oil updates', source: 'Iraq Latest', category: 'iraq', link: 'https://news.google.com/search?q=Iraq%20economy%20dinar%20oil%20banking', image: fallbackImages.iraq },
-    { title: 'Kurdistan Region news from Erbil, Sulaimani and Duhok', source: 'Kurdistan Region', category: 'iraq', link: 'https://news.google.com/search?q=Kurdistan%20Region%20Erbil%20Sulaimani%20Duhok', image: fallbackImages.iraq },
-    { title: 'Donald Trump economic policy and tariffs remain key for global markets', source: 'Trump monitoring', category: 'geopolitics', link: 'https://news.google.com/search?q=Donald%20Trump%20economy%20markets', image: fallbackImages.geopolitics },
-    { title: 'Federal Reserve and inflation expectations remain key for global markets', source: 'Reuters Markets', category: 'markets', link: 'https://www.reuters.com/markets/', image: fallbackImages.markets },
-    { title: 'Oil traders monitor OPEC supply signals and Middle East risk', source: 'OilPrice', category: 'oil', link: 'https://oilprice.com/', image: fallbackImages.oil },
-    { title: 'Bitcoin and crypto sentiment follows risk appetite in global markets', source: 'CoinDesk', category: 'crypto', link: 'https://www.coindesk.com/', image: fallbackImages.crypto }
-  ];
-  const items = base.map((i,idx)=>{
-    const intel = analyze(i);
-    return { id:`fallback-${idx}`, summary:'Market-moving update from trusted sources.', publishedAt:new Date(Date.now()-idx*900000).toISOString(), ...i, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
+    ['Iraq latest economy, dinar, banking and oil updates','Iraq Latest','iraq','https://news.google.com/search?q=Iraq%20economy%20dinar%20oil%20banking'],
+    ['Kurdistan Region news from Erbil, Sulaimani and Duhok','Kurdistan Region','iraq','https://news.google.com/search?q=Kurdistan%20Region%20Erbil%20Sulaimani%20Duhok'],
+    ['Donald Trump economic policy and tariffs remain key for global markets','Trump monitoring','geopolitics','https://news.google.com/search?q=Donald%20Trump%20economy%20markets'],
+    ['Federal Reserve and inflation expectations remain key for global markets','Reuters Markets','markets','https://www.reuters.com/markets/'],
+    ['Oil traders monitor OPEC supply signals and Middle East risk','OilPrice','oil','https://oilprice.com/'],
+    ['Bitcoin and crypto sentiment follows risk appetite in global markets','CoinDesk','crypto','https://www.coindesk.com/']
+  ].map(([title, source, category, link], idx)=>{
+    const base = { id:`fallback-${idx}`, title, summary:'Market-moving update from trusted sources.', source, category, link, image:fallbackImages[category], publishedAt:new Date(Date.now()-idx*900000).toISOString() };
+    const intel = analyze(base);
+    return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
   });
-  return Promise.all(items.map(addTranslations));
+  return Promise.all(base.map(addTranslations));
 }
+
 export async function onRequest({ request }) {
   const url = new URL(request.url);
   const q = (url.searchParams.get('q') || '').trim().toLowerCase();
-  const limit = Math.min(Number(url.searchParams.get('limit') || 200), 250);
+  const limit = Math.min(Number(url.searchParams.get('limit') || 80), 120);
   const batches = await Promise.all(FEEDS.map(fetchFeed));
   const seen = new Set();
-  let rawItems = batches.flat().filter(i=>{
-    const text = `${i.title} ${i.titleEn || ''} ${i.titleKu || ''} ${i.titleAr || ''} ${i.summary} ${i.summaryEn || ''} ${i.summaryKu || ''} ${i.summaryAr || ''} ${i.source} ${i.sourceGroup || ''} ${i.category}`.toLowerCase();
+  const rawItems = batches.flat().filter(i=>{
+    const text = `${i.title} ${i.summary} ${i.source} ${i.sourceGroup || ''} ${i.category}`.toLowerCase();
     if(q && !text.includes(q)) return false;
-    const key = (i.titleEn || i.title).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().slice(0,110);
+    const key = i.title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().slice(0,110);
     if(seen.has(key)) return false; seen.add(key); return true;
   }).sort((a,b)=>new Date(b.publishedAt)-new Date(a.publishedAt)).slice(0,limit);
-  let items = rawItems;
-  if(!items.length) items = await fallback();
+  const items = rawItems.length ? await Promise.all(rawItems.map(addTranslations)) : await fallback();
   return Response.json({ updatedAt: new Date().toISOString(), count: items.length, translated: true, languages: ['en','ku','ar'], items }, { headers: { 'Cache-Control': 'public, max-age=60' } });
 }
