@@ -258,6 +258,11 @@ createRoot(document.getElementById('root')).render(<App/>);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    if (import.meta.env.DEV) {
+      navigator.serviceWorker.getRegistrations?.().then(registrations => registrations.forEach(registration => registration.unregister())).catch(() => {});
+      window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
+      return;
+    }
+    navigator.serviceWorker.register('/sw.js?v=20260701-translate').catch(() => {});
   });
 }

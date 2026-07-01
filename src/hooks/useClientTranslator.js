@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 
 const memory = new Map()
-const CACHE_PREFIX = 'hawali_translate_v2_'
+const CACHE_PREFIX = 'hawali_translate_v3_'
 
 function clean(value = ''){
   return String(value || '').replace(/\s+/g, ' ').trim()
+}
+
+function comparable(value = ''){
+  return clean(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+}
+
+function usefulText(original, translated){
+  const output = clean(translated)
+  return output && comparable(output) !== comparable(original) ? output : ''
 }
 
 async function translateItem(item, lang){
@@ -33,9 +42,17 @@ async function translateItem(item, lang){
     if(!response.ok) throw new Error('bad response')
     const data = await response.json()
     if(data.ok === false || !Array.isArray(data.translated)) throw new Error(data.error || 'Translate failed')
-    const fields = lang === 'ku'
-      ? { titleKu: clean(data.translated?.[0] || titleEn), summaryKu: clean(data.translated?.[1] || summaryEn) }
-      : { titleAr: clean(data.translated?.[0] || titleEn), summaryAr: clean(data.translated?.[1] || summaryEn) }
+    const title = usefulText(titleEn, data.translated?.[0])
+    const summary = usefulText(summaryEn, data.translated?.[1])
+    if(!title && !summary) throw new Error('No translated text')
+    const fields = {}
+    if(lang === 'ku'){
+      if(title) fields.titleKu = title
+      if(summary) fields.summaryKu = summary
+    }else{
+      if(title) fields.titleAr = title
+      if(summary) fields.summaryAr = summary
+    }
     memory.set(key, fields)
     try{ sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(fields)) }catch{}
     return { ...item, titleEn, summaryEn, ...fields }
