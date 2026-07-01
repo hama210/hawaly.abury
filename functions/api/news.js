@@ -72,15 +72,16 @@ function analyze(item){
 async function translateText(text, target){
   const clean = shortText(text, target === 'ku' ? 180 : 220);
   if(!clean) return '';
-  const key = `${target}:${clean}`;
+  const googleTarget = target === 'ku' ? 'ckb' : target;
+  const key = `${googleTarget}:${clean}`;
   if(translateCache.has(key)) return translateCache.get(key);
   try{
-    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + encodeURIComponent(target) + '&dt=t&q=' + encodeURIComponent(clean);
-    const res = await fetch(url, { cf: { cacheTtl: 3600, cacheEverything: true }, headers: { 'user-agent': 'HawaliAburiBot/1.3' }});
+    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + encodeURIComponent(googleTarget) + '&dt=t&q=' + encodeURIComponent(clean);
+    const res = await fetch(url, { cf: { cacheTtl: 3600, cacheEverything: true }, headers: { 'user-agent': 'HawaliAburiBot/1.4' }});
     if(!res.ok) throw new Error(String(res.status));
     const data = await res.json();
     const translated = Array.isArray(data?.[0]) ? data[0].map(part => part?.[0] || '').join('').trim() : '';
-    const result = translated || clean;
+    const result = translated && translated.toLowerCase() !== clean.toLowerCase() ? translated : clean;
     translateCache.set(key, result);
     return result;
   }catch(e){ return clean; }
@@ -100,7 +101,7 @@ async function addTranslations(item){
 
 async function fetchFeed(feed){
   try{
-    const res = await fetch(feed.url, { cf: { cacheTtl: 60, cacheEverything: false }, headers: { 'user-agent': 'HawaliAburiBot/1.3' }});
+    const res = await fetch(feed.url, { cf: { cacheTtl: 60, cacheEverything: false }, headers: { 'user-agent': 'HawaliAburiBot/1.4' }});
     if(!res.ok) throw new Error(String(res.status));
     const xml = await res.text();
     const perFeedLimit = feed.category === 'iraq' ? 25 : 18;
