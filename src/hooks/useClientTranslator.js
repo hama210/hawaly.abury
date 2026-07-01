@@ -1,103 +1,75 @@
 import { useEffect, useMemo, useState } from 'react'
 
-const cache = new Map()
-const GOOGLE_TARGET = { ku: 'ckb', ar: 'ar', en: 'en' }
-const SEP = ' |||HAWALI||| '
+const memory = new Map()
 
-function clean(value=''){
+function clean(value = ''){
   return String(value || '').replace(/\s+/g, ' ').trim()
 }
 
-async function translatePair(title, summary, lang){
-  const target = GOOGLE_TARGET[lang] || 'en'
-  const titleText = clean(title)
-  const summaryText = clean(summary)
-  if(!titleText && !summaryText) return { title:'', summary:'' }
-  if(target === 'en') return { title:titleText, summary:summaryText }
+async function translateItem(item, lang){
+  const titleEn = item.titleEn || item.title || ''
+  const summaryEn = item.summaryEn || item.summary || ''
+  if(lang === 'en') return { ...item, titleEn, summaryEn }
 
-  const cacheKey = `${target}:${titleText}:${summaryText}`
-  if(cache.has(cacheKey)) return cache.get(cacheKey)
-
-  const stored = localStorage.getItem('hawali-tr-' + cacheKey)
-  if(stored){
-    try{
-      const parsed = JSON.parse(stored)
-      cache.set(cacheKey, parsed)
-      return parsed
-    }catch{}
-  }
+  const key = `${lang}:${titleEn}:${summaryEn}`
+  if(memory.has(key)) return { ...item, titleEn, summaryEn, ...memory.get(key) }
 
   try{
-    const q = `${titleText}${SEP}${summaryText}`
-    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + encodeURIComponent(target) + '&dt=t&q=' + encodeURIComponent(q)
-    const res = await fetch(url)
-    if(!res.ok) throw new Error('translate failed')
-    const data = await res.json()
-    const translated = Array.isArray(data?.[0]) ? data[0].map(part => part?.[0] || '').join('') : ''
-    const [translatedTitle, translatedSummary] = translated.split(SEP)
-    const result = {
-      title: clean(translatedTitle || translated || titleText),
-      summary: clean(translatedSummary || summaryText)
+    const saved = sessionStorage.getItem('hawali_translate_' + key)
+    if(saved){
+      const parsed = JSON.parse(saved)
+      memory.set(key, parsed)
+      return { ...item, titleEn, summaryEn, ...parsed }
     }
-    cache.set(cacheKey, result)
-    try{ localStorage.setItem('hawali-tr-' + cacheKey, JSON.stringify(result)) }catch{}
-    return result
+  }catch{}
+
+  try{
+    const response = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lang, texts: [clean(titleEn), clean(summaryEn)] })
+    })
+    if(!response.ok) throw new Error('bad response')
+    const data = await response.json()
+    const fields = lang === 'ku'
+      ? { titleKu: clean(data.translated?.[0] || titleEn), summaryKu: clean(data.translated?.[1] || summaryEn) }
+      : { titleAr: clean(data.translated?.[0] || titleEn), summaryAr: clean(data.translated?.[1] || summaryEn) }
+    memory.set(key, fields)
+    try{ sessionStorage.setItem('hawali_translate_' + key, JSON.stringify(fields)) }catch{}
+    return { ...item, titleEn, summaryEn, ...fields }
   }catch{
-    return { title:titleText, summary:summaryText }
+    return { ...item, titleEn, summaryEn }
   }
 }
 
-async function translateInBatches(items, lang, onProgress){
+async function translateList(items, lang, update){
   const output = [...items]
-  const batchSize = 6
-  for(let i = 0; i < items.length; i += batchSize){
-    const batch = items.slice(i, i + batchSize)
-    const translated = await Promise.all(batch.map(async item => {
-      const titleEn = item.titleEn || item.title || ''
-      const summaryEn = item.summaryEn || item.summary || ''
-      const pair = await translatePair(titleEn, summaryEn, lang)
-      return {
-        ...item,
-        titleEn,
-        summaryEn,
-        ...(lang === 'ku' ? { titleKu: pair.title, summaryKu: pair.summary } : {}),
-        ...(lang === 'ar' ? { titleAr: pair.title, summaryAr: pair.summary } : {})
-      }
-    }))
-    translated.forEach((item, idx) => { output[i + idx] = item })
-    onProgress([...output])
+  for(let i = 0; i < items.length; i += 4){
+    const part = items.slice(i, i + 4)
+    const result = await Promise.all(part.map(item => translateItem(item, lang)))
+    result.forEach((item, index) => { output[i + index] = item })
+    update([...output])
   }
 }
 
 export function useClientTranslator(news, lang){
-  const stableNews = useMemo(() => Array.isArray(news) ? news : [], [news])
-  const [translatedNews, setTranslatedNews] = useState(stableNews)
+  const source = useMemo(() => Array.isArray(news) ? news : [], [news])
+  const [translatedNews, setTranslatedNews] = useState(source)
   const [translating, setTranslating] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
-    const base = stableNews.map(item => ({
-      ...item,
-      titleEn: item.titleEn || item.title || '',
-      summaryEn: item.summaryEn || item.summary || ''
-    }))
-
+    let stopped = false
+    const base = source.map(item => ({ ...item, titleEn: item.titleEn || item.title || '', summaryEn: item.summaryEn || item.summary || '' }))
+    setTranslatedNews(base)
     if(lang === 'en'){
-      setTranslatedNews(base)
       setTranslating(false)
       return
     }
-
-    setTranslatedNews(base)
     setTranslating(true)
-    translateInBatches(base, lang, partial => {
-      if(!cancelled) setTranslatedNews(partial)
-    }).finally(() => {
-      if(!cancelled) setTranslating(false)
-    })
-
-    return () => { cancelled = true }
-  }, [stableNews, lang])
+    translateList(base, lang, items => { if(!stopped) setTranslatedNews(items) })
+      .finally(() => { if(!stopped) setTranslating(false) })
+    return () => { stopped = true }
+  }, [source, lang])
 
   return { translatedNews, translating }
 }
