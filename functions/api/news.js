@@ -14,11 +14,23 @@ const FEEDS = [
   { source: 'OilPrice', category: 'oil', url: 'https://oilprice.com/rss/main' },
   { source: 'CoinDesk', category: 'crypto', url: 'https://www.coindesk.com/arc/outboundfeeds/rss/' },
   { source: 'Cointelegraph', category: 'crypto', url: 'https://cointelegraph.com/rss' },
+
+  // Iraq and Kurdistan coverage. Direct RSS + Google News fallback searches.
+  { source: 'Iraq Latest', category: 'iraq', url: 'https://news.google.com/rss/search?q=Iraq%20OR%20Baghdad%20OR%20Kurdistan%20when%3A7d&hl=en-US&gl=US&ceid=US:en' },
+  { source: 'Iraq Economy', category: 'iraq', url: 'https://news.google.com/rss/search?q=Iraq%20economy%20budget%20oil%20dinar%20banking%20when%3A14d&hl=en-US&gl=US&ceid=US:en' },
+  { source: 'Iraq Oil', category: 'iraq', url: 'https://news.google.com/rss/search?q=Iraq%20oil%20exports%20OPEC%20Kurdistan%20pipeline%20when%3A14d&hl=en-US&gl=US&ceid=US:en' },
+  { source: 'Iraq Dinar CBI', category: 'iraq', url: 'https://news.google.com/rss/search?q=Iraq%20dinar%20Central%20Bank%20of%20Iraq%20CBI%20dollar%20when%3A30d&hl=en-US&gl=US&ceid=US:en' },
+  { source: 'Kurdistan Region', category: 'iraq', url: 'https://news.google.com/rss/search?q=Kurdistan%20Region%20Erbil%20Sulaimani%20Duhok%20when%3A14d&hl=en-US&gl=US&ceid=US:en' },
+  { source: 'Rudaw Search', category: 'iraq', url: 'https://news.google.com/rss/search?q=site%3Arudaw.net%20Iraq%20OR%20Kurdistan%20when%3A14d&hl=en-US&gl=US&ceid=US:en' },
+  { source: 'Shafaq Search', category: 'iraq', url: 'https://news.google.com/rss/search?q=site%3Ashafaq.com%20Iraq%20OR%20Baghdad%20OR%20Kurdistan%20when%3A14d&hl=en-US&gl=US&ceid=US:en' },
+  { source: 'Iraqi News Search', category: 'iraq', url: 'https://news.google.com/rss/search?q=site%3Airaqinews.com%20Iraq%20economy%20politics%20when%3A30d&hl=en-US&gl=US&ceid=US:en' },
+  { source: 'Iraq Business Search', category: 'iraq', url: 'https://news.google.com/rss/search?q=site%3Airaq-businessnews.com%20Iraq%20business%20oil%20banking%20when%3A30d&hl=en-US&gl=US&ceid=US:en' },
   { source: 'Shafaq News', category: 'iraq', url: 'https://www.shafaq.com/en/rss' },
   { source: 'Rudaw', category: 'iraq', url: 'https://www.rudaw.net/english/rss' },
   { source: 'Kurdistan24', category: 'iraq', url: 'https://www.kurdistan24.net/en/rss' },
   { source: 'Iraq Business News', category: 'iraq', url: 'https://www.iraq-businessnews.com/feed/' },
   { source: 'Central Bank of Iraq', category: 'iraq', url: 'https://news.google.com/rss/search?q=Central%20Bank%20of%20Iraq%20CBI%20dinar&hl=en-US&gl=US&ceid=US:en' },
+
   { source: 'Truth Social monitoring', category: 'geopolitics', url: 'https://news.google.com/rss/search?q=Truth%20Social%20Trump%20tariffs%20Fed%20oil%20markets&hl=en-US&gl=US&ceid=US:en' }
 ];
 
@@ -32,13 +44,13 @@ const fallbackImages = {
   geopolitics: 'https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1200&q=80'
 };
 
-const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','sanction','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house'];
-const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory','election','lawsuit'];
+const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','sanction','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi'];
+const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory','election','lawsuit','pipeline','exports','banking'];
 const assets = [
   ['USD',['fed','dollar','rate','fomc','treasury','cpi','nfp','trump','tariff','white house']],
   ['Gold',['gold','inflation','war','risk','safe haven']],
-  ['Oil',['oil','brent','wti','opec','crude','eia']],
-  ['IQD',['iraq','dinar','iqd','cbi','central bank of iraq','budget']],
+  ['Oil',['oil','brent','wti','opec','crude','eia','exports','pipeline']],
+  ['IQD',['iraq','baghdad','kurdistan','dinar','iqd','cbi','central bank of iraq','budget','banking','erbil','sulaimani','duhok']],
   ['BTC',['bitcoin','btc','crypto']],
   ['Stocks',['stocks','nasdaq','s&p','dow','earnings','wall street']]
 ];
@@ -48,9 +60,9 @@ function analyze(item){
   const found = assets.filter(([,w])=>w.some(x=>text.includes(x))).map(([a])=>a);
   return {
     impact: highWords.some(w=>text.includes(w)) ? 'high' : mediumWords.some(w=>text.includes(w)) ? 'medium' : 'low',
-    sentiment: /(falls|drops|war|attack|weak|recession|sanction|tariff|lawsuit)/i.test(text) ? 'bearish' : /(rises|gains|strong|growth|beats|surges|deal)/i.test(text) ? 'bullish' : 'neutral',
+    sentiment: /(falls|drops|war|attack|weak|recession|sanction|tariff|lawsuit|clash|explosion|strike)/i.test(text) ? 'bearish' : /(rises|gains|strong|growth|beats|surges|deal|approval|agreement)/i.test(text) ? 'bullish' : 'neutral',
     assets: found.length ? found : ['Markets'],
-    iraqImpact: /(iraq|baghdad|kurdistan|iqd|dinar|central bank of iraq|cbi|shafaq|rudaw)/i.test(text)
+    iraqImpact: /(iraq|baghdad|kurdistan|erbil|sulaimani|duhok|basra|mosul|iqd|dinar|central bank of iraq|cbi|shafaq|rudaw|kurdistan24|iraqi)/i.test(text)
   };
 }
 function decode(str=''){
@@ -72,10 +84,11 @@ function sourceFromGoogleTitle(title, fallback){
 }
 async function fetchFeed(feed){
   try{
-    const res = await fetch(feed.url, { cf: { cacheTtl: 60, cacheEverything: false }, headers: { 'user-agent': 'HawaliAburiBot/1.1' }});
+    const res = await fetch(feed.url, { cf: { cacheTtl: 60, cacheEverything: false }, headers: { 'user-agent': 'HawaliAburiBot/1.2' }});
     if(!res.ok) throw new Error(String(res.status));
     const xml = await res.text();
-    const entries = [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0,18).map(m=>m[0]);
+    const perFeedLimit = feed.category === 'iraq' ? 25 : 18;
+    const entries = [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0,perFeedLimit).map(m=>m[0]);
     return entries.map((entry, idx)=>{
       const rawTitle = extractTag(entry,'title');
       const title = cleanGoogleTitle(rawTitle);
@@ -90,9 +103,10 @@ async function fetchFeed(feed){
 }
 function fallback(){
   const base = [
+    { title: 'Iraq latest economy, dinar, banking and oil updates', source: 'Iraq Latest', category: 'iraq', link: 'https://news.google.com/search?q=Iraq%20economy%20dinar%20oil%20banking', image: fallbackImages.iraq },
+    { title: 'Kurdistan Region news from Erbil, Sulaimani and Duhok', source: 'Kurdistan Region', category: 'iraq', link: 'https://news.google.com/search?q=Kurdistan%20Region%20Erbil%20Sulaimani%20Duhok', image: fallbackImages.iraq },
     { title: 'Donald Trump economic policy and tariffs remain key for global markets', source: 'Trump monitoring', category: 'geopolitics', link: 'https://news.google.com/search?q=Donald%20Trump%20economy%20markets', image: fallbackImages.geopolitics },
     { title: 'Federal Reserve and inflation expectations remain key for global markets', source: 'Reuters Markets', category: 'markets', link: 'https://www.reuters.com/markets/', image: fallbackImages.markets },
-    { title: 'Iraq budget, banking and oil revenue remain important for local economy', source: 'Iraq Business News', category: 'iraq', link: 'https://www.iraq-businessnews.com/', image: fallbackImages.iraq },
     { title: 'Oil traders monitor OPEC supply signals and Middle East risk', source: 'OilPrice', category: 'oil', link: 'https://oilprice.com/', image: fallbackImages.oil },
     { title: 'Bitcoin and crypto sentiment follows risk appetite in global markets', source: 'CoinDesk', category: 'crypto', link: 'https://www.coindesk.com/', image: fallbackImages.crypto }
   ];
@@ -101,7 +115,7 @@ function fallback(){
 export async function onRequest({ request }) {
   const url = new URL(request.url);
   const q = (url.searchParams.get('q') || '').trim().toLowerCase();
-  const limit = Math.min(Number(url.searchParams.get('limit') || 150), 200);
+  const limit = Math.min(Number(url.searchParams.get('limit') || 200), 250);
   const batches = await Promise.all(FEEDS.map(fetchFeed));
   const seen = new Set();
   let items = batches.flat().filter(i=>{
