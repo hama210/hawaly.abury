@@ -16,6 +16,7 @@ import SourceStrip from './components/SourceStrip.jsx'
 import Skeleton from './components/Skeleton.jsx'
 import { dictionary, LANGS } from './data/i18n.js'
 import { useFilteredNews, useNews } from './hooks/useNews.js'
+import { useClientTranslator } from './hooks/useClientTranslator.js'
 import { timeAgo } from './utils/news.js'
 import './styles.css'
 
@@ -33,9 +34,11 @@ export default function App(){
   const [selected, setSelected] = useState(null)
   const [bookmarks, setBookmarks] = useState(savedBookmarks)
   const { news, sources, loading, updatedAt, refresh } = useNews()
-  const filtered = useFilteredNews(news, { query, category, impact, ...advanced })
+  const { translatedNews, translating } = useClientTranslator(news, lang)
+  const displayNews = translatedNews.length ? translatedNews : news
+  const filtered = useFilteredNews(displayNews, { query, category, impact, ...advanced })
   const high = filtered.filter(n => String(n.impact).toLowerCase() === 'high')
-  const hero = filtered[0] || news[0]
+  const hero = filtered[0] || displayNews[0]
   const t = dictionary[lang]
   const dir = LANGS.find(l=>l.code===lang)?.dir || 'rtl'
 
@@ -45,25 +48,26 @@ export default function App(){
 
   const updatedLabel = useMemo(()=>updatedAt ? timeAgo(updatedAt, lang) : '—', [updatedAt, lang])
   const options = useMemo(()=>({
-    sources:[...new Set(news.map(n=>n.source).filter(Boolean))].sort(),
-    assets:[...new Set(news.flatMap(n=>n.affected || []).filter(Boolean))].sort()
-  }), [news])
-  const openArticle = item => setSelected({ ...item, related: news.filter(n => n.id !== item.id && (n.category === item.category || (n.affected||[]).some(a => (item.affected||[]).includes(a)))).slice(0,3).map(n => n.titleEn || n.titleKu) })
+    sources:[...new Set(displayNews.map(n=>n.source).filter(Boolean))].sort(),
+    assets:[...new Set(displayNews.flatMap(n=>n.affected || []).filter(Boolean))].sort()
+  }), [displayNews])
+  const openArticle = item => setSelected({ ...item, related: displayNews.filter(n => n.id !== item.id && (n.category === item.category || (n.affected||[]).some(a => (item.affected||[]).includes(a)))).slice(0,3).map(n => n.titleEn || n.titleKu || n.title) })
   const saveArticle = item => setBookmarks(prev => prev.includes(item.id) ? prev.filter(id=>id!==item.id) : [...prev, item.id])
   const shareArticle = async item => {
     const link = item.link || location.href
     try{
-      if(navigator.share) await navigator.share({ title:item.titleEn || item.titleKu, url:link })
+      if(navigator.share) await navigator.share({ title:item.titleEn || item.titleKu || item.title, url:link })
       else await navigator.clipboard.writeText(link)
     }catch{}
   }
   const selectAsset = asset => { setAdvanced(prev => ({ ...prev, asset })); window.scrollTo({ top: 0, behavior:'smooth' }) }
+  const statusText = translating ? 'translating news...' : `${t.updated}: ${updatedLabel}`
 
   return <div className="app-shell">
     <Sidebar t={t} open={sidebarOpen} setOpen={setSidebarOpen} activeCategory={category} setActiveCategory={setCategory}/>
     <div className="main-area">
       <Header t={t} lang={lang} setLang={setLang} query={query} setQuery={setQuery} theme={theme} setTheme={setTheme} refresh={refresh} toggleSidebar={()=>setSidebarOpen(true)}/>
-      <BreakingTicker t={t} lang={lang} items={news}/>
+      <BreakingTicker t={t} lang={lang} items={displayNews}/>
       <section className="command-center">
         <div className="command-copy"><span>Phase 3 Sprint 3</span><h2>{t.site}</h2><p>{t.tagline}</p></div>
         <div className="command-stats"><b>{filtered.length}</b><span>{t.latest}</span><b>{high.length}</b><span>{t.high}</span><b>{sources.length}</b><span>{t.sources}</span></div>
@@ -77,8 +81,8 @@ export default function App(){
         <EventRail lang={lang}/>
       </section>
       <CategoryShowcase lang={lang} setCategory={setCategory}/>
-      <IraqIntelligence t={t} lang={lang} items={news} onOpen={openArticle}/>
-      <section className="section-title"><div><h2>{t.latest}</h2><p>{loading ? t.loading : `${filtered.length} articles • ${t.updated}: ${updatedLabel}`}</p></div></section>
+      <IraqIntelligence t={t} lang={lang} items={displayNews} onOpen={openArticle}/>
+      <section className="section-title"><div><h2>{t.latest}</h2><p>{loading ? t.loading : `${filtered.length} articles • ${statusText}`}</p></div></section>
       {loading && filtered.length < 2 ? <Skeleton/> : <section className="news-grid-pro">{filtered.map(item => <NewsCard key={item.id} item={item} lang={lang} t={t} onOpen={openArticle} onShare={shareArticle} onSave={saveArticle} saved={bookmarks.includes(item.id)} onAsset={selectAsset}/>)}</section>}
       {!filtered.length && <div className="empty-state">{t.noNews}</div>}
       <SourceStrip t={t} sources={sources}/>
