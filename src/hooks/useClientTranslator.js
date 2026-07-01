@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 const memory = new Map()
+const CACHE_PREFIX = 'hawali_translate_v2_'
 
 function clean(value = ''){
   return String(value || '').replace(/\s+/g, ' ').trim()
@@ -15,7 +16,7 @@ async function translateItem(item, lang){
   if(memory.has(key)) return { ...item, titleEn, summaryEn, ...memory.get(key) }
 
   try{
-    const saved = sessionStorage.getItem('hawali_translate_' + key)
+    const saved = sessionStorage.getItem(CACHE_PREFIX + key)
     if(saved){
       const parsed = JSON.parse(saved)
       memory.set(key, parsed)
@@ -31,11 +32,12 @@ async function translateItem(item, lang){
     })
     if(!response.ok) throw new Error('bad response')
     const data = await response.json()
+    if(data.ok === false || !Array.isArray(data.translated)) throw new Error(data.error || 'Translate failed')
     const fields = lang === 'ku'
       ? { titleKu: clean(data.translated?.[0] || titleEn), summaryKu: clean(data.translated?.[1] || summaryEn) }
       : { titleAr: clean(data.translated?.[0] || titleEn), summaryAr: clean(data.translated?.[1] || summaryEn) }
     memory.set(key, fields)
-    try{ sessionStorage.setItem('hawali_translate_' + key, JSON.stringify(fields)) }catch{}
+    try{ sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(fields)) }catch{}
     return { ...item, titleEn, summaryEn, ...fields }
   }catch{
     return { ...item, titleEn, summaryEn }
