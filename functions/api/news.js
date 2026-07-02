@@ -1,4 +1,4 @@
-const FEEDS = [
+export const FEEDS = [
   ['Reuters Markets','markets','https://news.google.com/rss/search?q=Reuters%20markets%20economy%20forex&hl=en-US&gl=US&ceid=US:en'],
   ['Reuters Economy','markets','https://news.google.com/rss/search?q=Reuters%20global%20economy%20inflation%20markets%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
   ['World Economy Search','markets','https://news.google.com/rss/search?q=%22world%20economy%22%20OR%20%22global%20economy%22%20OR%20inflation%20OR%20recession%20when%3A3d&hl=en-US&gl=US&ceid=US:en'],
@@ -32,13 +32,49 @@ const FEEDS = [
   ['Cointelegraph','crypto','https://cointelegraph.com/rss'],
   ['Iraq Latest','iraq','https://news.google.com/rss/search?q=Iraq%20OR%20Baghdad%20OR%20Kurdistan%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
   ['Iraq Economy','iraq','https://news.google.com/rss/search?q=Iraq%20economy%20budget%20oil%20dinar%20banking%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Economy Broad','iraq','https://news.google.com/rss/search?q=Iraq%20economy%20OR%20Iraqi%20economy%20budget%20oil%20dinar%20banking%20investment%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Dinar and Banks','iraq','https://news.google.com/rss/search?q=Iraq%20dinar%20CBI%20central%20bank%20dollar%20auction%20banking%20reform%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Budget and Salaries','iraq','https://news.google.com/rss/search?q=Iraq%20budget%20salaries%20public%20payroll%20deficit%20finance%20ministry%20parliament%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
   ['Iraq Oil','iraq','https://news.google.com/rss/search?q=Iraq%20oil%20exports%20OPEC%20Kurdistan%20pipeline%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Oil Exports','iraq','https://news.google.com/rss/search?q=Iraq%20oil%20exports%20SOMO%20Basra%20OPEC%20pipeline%20Kurdistan%20Ceyhan%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Investment Projects','iraq','https://news.google.com/rss/search?q=Iraq%20investment%20development%20road%20port%20railway%20energy%20gas%20power%20electricity%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Trade Customs','iraq','https://news.google.com/rss/search?q=Iraq%20trade%20customs%20border%20ports%20imports%20exports%20taxes%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Stock Exchange','iraq','https://news.google.com/rss/search?q=Iraq%20Stock%20Exchange%20ISX%20Iraqi%20securities%20banks%20shares%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Banking Reform','iraq','https://news.google.com/rss/search?q=Iraq%20banking%20reform%20digital%20payments%20Rafidain%20Rasheed%20TBI%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Power Gas Economy','iraq','https://news.google.com/rss/search?q=Iraq%20electricity%20gas%20imports%20power%20projects%20economy%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Agriculture Water Economy','iraq','https://news.google.com/rss/search?q=Iraq%20agriculture%20wheat%20water%20economy%20trade%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Private Sector Jobs','iraq','https://news.google.com/rss/search?q=Iraq%20private%20sector%20jobs%20unemployment%20projects%20investment%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
   ['Iraq Dinar CBI','iraq','https://news.google.com/rss/search?q=Iraq%20dinar%20Central%20Bank%20of%20Iraq%20CBI%20dollar%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
   ['Kurdistan Region','iraq','https://news.google.com/rss/search?q=Kurdistan%20Region%20Erbil%20Sulaimani%20Duhok%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Kurdistan Economy Oil','iraq','https://news.google.com/rss/search?q=Kurdistan%20Region%20economy%20oil%20exports%20budget%20salaries%20Baghdad%20Erbil%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['KRG Budget Salaries','iraq','https://news.google.com/rss/search?q=KRG%20salaries%20budget%20Baghdad%20Erbil%20oil%20revenue%20customs%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['INA Iraq Economy Search','iraq','https://news.google.com/rss/search?q=site%3Aina.iq%2Fen%20Iraq%20economy%20budget%20oil%20dinar%20investment%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
   ['Rudaw Search','iraq','https://news.google.com/rss/search?q=site%3Arudaw.net%20Iraq%20OR%20Kurdistan%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Rudaw Economy Search','iraq','https://news.google.com/rss/search?q=site%3Arudaw.net%2Fenglish%20economy%20Iraq%20oil%20dinar%20budget%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
   ['Shafaq Search','iraq','https://news.google.com/rss/search?q=site%3Ashafaq.com%20Iraq%20OR%20Baghdad%20OR%20Kurdistan%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Shafaq Economy Search','iraq','https://news.google.com/rss/search?q=site%3Ashafaq.com%2Fen%20Economy%20Iraq%20oil%20dinar%20budget%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Kurdistan24 Economy Search','iraq','https://news.google.com/rss/search?q=site%3Akurdistan24.net%2Fen%20business%20economy%20Iraq%20oil%20budget%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
   ['Iraqi News Search','iraq','https://news.google.com/rss/search?q=site%3Airaqinews.com%20Iraq%20economy%20politics%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['IraqiNews RSS','iraq','https://www.iraqinews.com/feed/'],
+  ['IraqiNews Economy Search','iraq','https://news.google.com/rss/search?q=site%3Airaqinews.com%20Iraq%20economy%20business%20oil%20investment%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
   ['Iraq Business Search','iraq','https://news.google.com/rss/search?q=site%3Airaq-businessnews.com%20Iraq%20business%20oil%20banking%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Business Oil Gas','iraq','https://news.google.com/rss/search?q=site%3Airaq-businessnews.com%20%22Iraq%20Oil%20%26%20Gas%20News%22%20OR%20oil%20OR%20gas%20when%3A60d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Business Banking Finance','iraq','https://news.google.com/rss/search?q=site%3Airaq-businessnews.com%20banking%20finance%20investment%20Iraq%20when%3A60d&hl=en-US&gl=US&ceid=US:en'],
+  ['BasNews Economy Search','iraq','https://news.google.com/rss/search?q=site%3Abasnews.com%2Fen%20Iraq%20economy%20oil%20budget%20Kurdistan%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['NINA Economy Search','iraq','https://news.google.com/rss/search?q=site%3Aninanews.com%20Iraq%20economy%20oil%20budget%20investment%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Alsumaria Economy Search','iraq','https://news.google.com/rss/search?q=site%3Aalsumaria.tv%20Iraq%20economy%20dollar%20dinar%20budget%20oil%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['The National Iraq Economy','iraq','https://news.google.com/rss/search?q=site%3Athenationalnews.com%20Iraq%20economy%20central%20bank%20dinar%20oil%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['AP Iraq Economy Search','iraq','https://news.google.com/rss/search?q=site%3Aapnews.com%20Iraq%20oil%20exports%20Kurdistan%20economy%20when%3A60d&hl=en-US&gl=US&ceid=US:en'],
+  ['Reuters Iraq Economy Search','iraq','https://news.google.com/rss/search?q=Reuters%20Iraq%20economy%20oil%20OPEC%20dinar%20budget%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Bloomberg Iraq Economy Search','iraq','https://news.google.com/rss/search?q=Bloomberg%20Iraq%20economy%20oil%20OPEC%20dinar%20budget%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Financial Times Iraq Economy Search','iraq','https://news.google.com/rss/search?q=Financial%20Times%20Iraq%20economy%20oil%20OPEC%20budget%20when%3A60d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Oil Report Search','iraq','https://news.google.com/rss/search?q=site%3Airaqoilreport.com%20Iraq%20oil%20exports%20budget%20Basra%20when%3A60d&hl=en-US&gl=US&ceid=US:en'],
+  ['MEES Iraq Oil Search','iraq','https://news.google.com/rss/search?q=site%3Amees.com%20Iraq%20oil%20exports%20OPEC%20budget%20when%3A60d&hl=en-US&gl=US&ceid=US:en'],
+  ['EIA Iraq Energy Search','iraq','https://news.google.com/rss/search?q=site%3Aeia.gov%2Finternational%20Iraq%20oil%20production%20exports%20energy%20when%3A365d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Ministry Oil Search','iraq','https://news.google.com/rss/search?q=Iraq%20Ministry%20of%20Oil%20exports%20SOMO%20production%20Basra%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Ministry Finance Search','iraq','https://news.google.com/rss/search?q=Iraq%20Ministry%20of%20Finance%20budget%20salaries%20deficit%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Ministry Planning Search','iraq','https://news.google.com/rss/search?q=Iraq%20Ministry%20of%20Planning%20economy%20investment%20development%20projects%20when%3A30d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iraq Investment Commission Search','iraq','https://news.google.com/rss/search?q=Iraq%20National%20Investment%20Commission%20projects%20economy%20when%3A60d&hl=en-US&gl=US&ceid=US:en'],
   ['Shafaq News','iraq','https://www.shafaq.com/en/rss'],
   ['Rudaw','iraq','https://www.rudaw.net/english/rss'],
   ['Kurdistan24','iraq','https://www.kurdistan24.net/en/rss'],
@@ -57,13 +93,13 @@ const fallbackImages = {
   geopolitics: 'https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1200&q=80'
 };
 
-const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','sanction','sanctions','missile','drone','ceasefire','invasion','conflict','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi','ukraine','russia','israel','iran','gaza','lebanon','red sea','houthi','nato'];
-const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory','election','lawsuit','pipeline','exports','banking','defense','military','shipping','supply chain','security','diplomacy'];
+const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','sanction','sanctions','missile','drone','ceasefire','invasion','conflict','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi','somo','budget','salary','salaries','oil revenue','basra','ceyhan','rafidain','rasheed','ukraine','russia','israel','iran','gaza','lebanon','red sea','houthi','nato'];
+const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory','election','lawsuit','pipeline','exports','banking','investment','customs','taxes','ports','development road','private sector','electricity','gas imports','defense','military','shipping','supply chain','security','diplomacy'];
 const assetRules = [
-  ['USD',['fed','dollar','rate','fomc','treasury','cpi','nfp','trump','tariff','white house','sanctions','war']],
+  ['USD',['fed','dollar','rate','fomc','treasury','cpi','nfp','trump','tariff','white house','sanctions','war','iraq dinar','dollar auction']],
   ['Gold',['gold','inflation','war','conflict','attack','risk','safe haven','missile','ceasefire']],
   ['Oil',['oil','brent','wti','opec','crude','eia','exports','pipeline','red sea','houthi','middle east','iran','shipping']],
-  ['IQD',['iraq','baghdad','kurdistan','dinar','iqd','cbi','central bank of iraq','budget','banking','erbil','sulaimani','duhok']],
+  ['IQD',['iraq','baghdad','kurdistan','dinar','iqd','cbi','central bank of iraq','budget','salary','salaries','banking','rafidain','rasheed','tbi','erbil','sulaimani','duhok']],
   ['BTC',['bitcoin','btc','crypto']],
   ['Stocks',['stocks','nasdaq','s&p','dow','earnings','wall street','war','conflict','sanctions','shipping']]
 ];
@@ -81,6 +117,40 @@ function analyze(item){
   const sentiment = /(falls|drops|war|attack|weak|recession|sanction|tariff|lawsuit|clash|explosion|strike|missile|drone|invasion|conflict|blockade)/i.test(text) ? 'bearish' : /(rises|gains|strong|growth|beats|surges|deal|approval|agreement|ceasefire|truce)/i.test(text) ? 'bullish' : 'neutral';
   const iraqImpact = /(iraq|baghdad|kurdistan|erbil|sulaimani|duhok|basra|mosul|iqd|dinar|central bank of iraq|cbi|shafaq|rudaw|kurdistan24|iraqi)/i.test(text);
   return { impact, sentiment, assets: affected.length ? affected : ['Markets'], iraqImpact };
+}
+
+function isIraqEconomy(item){
+  const text = `${item.title} ${item.summary} ${item.source} ${item.sourceGroup || ''} ${item.category}`.toLowerCase();
+  const group = String(item.sourceGroup || item.source || '');
+  const iraqRelated = item.category === 'iraq'
+    || /\b(iraq|iraqi|baghdad|kurdistan|erbil|sulaimani|duhok|basra|mosul|dinar|iqd|cbi|somo|rafidain|rasheed|krg|shafaq|rudaw|kurdistan24)\b|central bank of iraq|iraq business/i.test(text)
+    || /INA Iraq/i.test(group);
+  const economyRelated = /\b(economy|economic|oil|gas|opec|somo|budget|salary|salaries|dinar|iqd|bank|banking|cbi|finance|financial|investment|trade|customs|tax|stock|isx|securities|exports|imports|pipeline|power|electricity|agriculture|wheat|water|development|project|port|railway|private sector|jobs|unemployment|revenue|payroll|deficit|loan|dollar)\b/i.test(text)
+    || /Economy|Dinar|Budget|Oil|Business|Banking|Finance|Investment|Stock|Trade|Power|Gas|Agriculture|Private Sector|KRG Budget|SOMO|Ministry|EIA|MEES|Iraq Oil Report|Central Bank/i.test(group);
+  return iraqRelated && economyRelated;
+}
+
+function itemKey(item){
+  return item.title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().slice(0,110);
+}
+
+function itemText(item){
+  return `${item.title} ${item.summary} ${item.source} ${item.sourceGroup || ''} ${item.category}`.toLowerCase();
+}
+
+function dedupeItems(items, seen = new Set()){
+  const output = [];
+  for(const item of items){
+    const key = itemKey(item);
+    if(!key || seen.has(key)) continue;
+    seen.add(key);
+    output.push(item);
+  }
+  return output;
+}
+
+function newestFirst(items){
+  return [...items].sort((a,b)=>new Date(b.publishedAt)-new Date(a.publishedAt));
 }
 
 async function fetchFeed(feed){
@@ -128,13 +198,19 @@ export async function onRequest({ request }) {
   const q = (url.searchParams.get('q') || '').trim().toLowerCase();
   const limit = Math.min(Number(url.searchParams.get('limit') || 120), 180);
   const batches = await Promise.all(FEEDS.map(fetchFeed));
-  const seen = new Set();
-  let items = batches.flat().filter(i=>{
-    const text = `${i.title} ${i.summary} ${i.source} ${i.sourceGroup || ''} ${i.category}`.toLowerCase();
-    if(q && !text.includes(q)) return false;
-    const key = i.title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().slice(0,110);
-    if(seen.has(key)) return false; seen.add(key); return true;
-  }).sort((a,b)=>new Date(b.publishedAt)-new Date(a.publishedAt)).slice(0,limit);
+  const raw = batches.flat().filter(i => !q || itemText(i).includes(q));
+  let items;
+
+  if(q){
+    items = newestFirst(dedupeItems(raw)).slice(0, limit);
+  }else{
+    const iraq = newestFirst(dedupeItems(raw.filter(isIraqEconomy)));
+    const reserved = Math.min(iraq.length, Math.max(20, Math.ceil(limit * 0.4)));
+    const seen = new Set(iraq.slice(0, reserved).map(itemKey));
+    const others = newestFirst(dedupeItems(raw.filter(item => !seen.has(itemKey(item))), seen));
+    items = newestFirst([...iraq.slice(0, reserved), ...others.slice(0, Math.max(0, limit - reserved))]);
+  }
+
   if(!items.length) items = fallback();
   return Response.json({ updatedAt: new Date().toISOString(), count: items.length, translated: false, items }, { headers: { 'Cache-Control': 'public, max-age=60' } });
 }
