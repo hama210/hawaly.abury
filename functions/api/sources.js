@@ -1,5 +1,6 @@
 import { FEEDS } from './news.js';
 
 export async function onRequest() {
-  return Response.json({ sources: FEEDS.map(feed => feed.source) }, { headers: { 'Cache-Control': 'public, max-age=300' } });
+  const sources = [...new Set(FEEDS.map(feed => feed.source).filter(Boolean))];
+  return Response.json({ sources, count: sources.length }, { headers: { 'Cache-Control': 'public, max-age=300' } });
 }
