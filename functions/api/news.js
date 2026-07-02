@@ -1,5 +1,21 @@
 const FEEDS = [
   ['Reuters Markets','markets','https://news.google.com/rss/search?q=Reuters%20markets%20economy%20forex&hl=en-US&gl=US&ceid=US:en'],
+  ['Reuters Economy','markets','https://news.google.com/rss/search?q=Reuters%20global%20economy%20inflation%20markets%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
+  ['World Economy Search','markets','https://news.google.com/rss/search?q=%22world%20economy%22%20OR%20%22global%20economy%22%20OR%20inflation%20OR%20recession%20when%3A3d&hl=en-US&gl=US&ceid=US:en'],
+  ['IMF World Bank Search','markets','https://news.google.com/rss/search?q=IMF%20OR%20%22World%20Bank%22%20global%20economy%20growth%20inflation%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['BBC World','geopolitics','https://feeds.bbci.co.uk/news/world/rss.xml'],
+  ['BBC Business RSS','markets','https://feeds.bbci.co.uk/news/business/rss.xml'],
+  ['Guardian World','geopolitics','https://www.theguardian.com/world/rss'],
+  ['Guardian Business','markets','https://www.theguardian.com/business/rss'],
+  ['Al Jazeera World','geopolitics','https://www.aljazeera.com/xml/rss/all.xml'],
+  ['DW World','geopolitics','https://rss.dw.com/rdf/rss-en-all'],
+  ['France24 World','geopolitics','https://www.france24.com/en/rss'],
+  ['UN News Global','geopolitics','https://news.un.org/feed/subscribe/en/news/all/rss.xml'],
+  ['Global Conflict Search','geopolitics','https://news.google.com/rss/search?q=war%20OR%20conflict%20OR%20missile%20OR%20ceasefire%20OR%20invasion%20when%3A3d&hl=en-US&gl=US&ceid=US:en'],
+  ['Ukraine War Search','geopolitics','https://news.google.com/rss/search?q=Ukraine%20war%20Russia%20sanctions%20energy%20markets%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
+  ['Middle East War Search','geopolitics','https://news.google.com/rss/search?q=Middle%20East%20war%20Israel%20Iran%20Gaza%20Lebanon%20Syria%20markets%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
+  ['Red Sea Shipping Risk','geopolitics','https://news.google.com/rss/search?q=Red%20Sea%20shipping%20Houthi%20oil%20trade%20supply%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
+  ['Sanctions Economy Search','geopolitics','https://news.google.com/rss/search?q=sanctions%20economy%20oil%20banks%20markets%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
   ['Reuters Trump','geopolitics','https://news.google.com/rss/search?q=Reuters%20Donald%20Trump%20economy%20tariffs%20markets&hl=en-US&gl=US&ceid=US:en'],
   ['AP Trump','geopolitics','https://news.google.com/rss/search?q=Associated%20Press%20Donald%20Trump%20White%20House%20economy&hl=en-US&gl=US&ceid=US:en'],
   ['MSN News','geopolitics','https://news.google.com/rss/search?q=site%3Amsn.com%20Donald%20Trump%20economy%20markets&hl=en-US&gl=US&ceid=US:en'],
@@ -41,15 +57,15 @@ const fallbackImages = {
   geopolitics: 'https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1200&q=80'
 };
 
-const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','sanction','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi'];
-const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory','election','lawsuit','pipeline','exports','banking'];
+const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','sanction','sanctions','missile','drone','ceasefire','invasion','conflict','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi','ukraine','russia','israel','iran','gaza','lebanon','red sea','houthi','nato'];
+const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory','election','lawsuit','pipeline','exports','banking','defense','military','shipping','supply chain','security','diplomacy'];
 const assetRules = [
-  ['USD',['fed','dollar','rate','fomc','treasury','cpi','nfp','trump','tariff','white house']],
-  ['Gold',['gold','inflation','war','risk','safe haven']],
-  ['Oil',['oil','brent','wti','opec','crude','eia','exports','pipeline']],
+  ['USD',['fed','dollar','rate','fomc','treasury','cpi','nfp','trump','tariff','white house','sanctions','war']],
+  ['Gold',['gold','inflation','war','conflict','attack','risk','safe haven','missile','ceasefire']],
+  ['Oil',['oil','brent','wti','opec','crude','eia','exports','pipeline','red sea','houthi','middle east','iran','shipping']],
   ['IQD',['iraq','baghdad','kurdistan','dinar','iqd','cbi','central bank of iraq','budget','banking','erbil','sulaimani','duhok']],
   ['BTC',['bitcoin','btc','crypto']],
-  ['Stocks',['stocks','nasdaq','s&p','dow','earnings','wall street']]
+  ['Stocks',['stocks','nasdaq','s&p','dow','earnings','wall street','war','conflict','sanctions','shipping']]
 ];
 
 const decode = (str='') => str.replace(/<!\[CDATA\[(.*?)\]\]>/gs,'$1').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'').trim();
@@ -62,7 +78,7 @@ function analyze(item){
   const text = `${item.title} ${item.summary} ${item.source} ${item.category}`.toLowerCase();
   const affected = assetRules.filter(([,w])=>w.some(x=>text.includes(x))).map(([a])=>a);
   const impact = highWords.some(w=>text.includes(w)) ? 'high' : mediumWords.some(w=>text.includes(w)) ? 'medium' : 'low';
-  const sentiment = /(falls|drops|war|attack|weak|recession|sanction|tariff|lawsuit|clash|explosion|strike)/i.test(text) ? 'bearish' : /(rises|gains|strong|growth|beats|surges|deal|approval|agreement)/i.test(text) ? 'bullish' : 'neutral';
+  const sentiment = /(falls|drops|war|attack|weak|recession|sanction|tariff|lawsuit|clash|explosion|strike|missile|drone|invasion|conflict|blockade)/i.test(text) ? 'bearish' : /(rises|gains|strong|growth|beats|surges|deal|approval|agreement|ceasefire|truce)/i.test(text) ? 'bullish' : 'neutral';
   const iraqImpact = /(iraq|baghdad|kurdistan|erbil|sulaimani|duhok|basra|mosul|iqd|dinar|central bank of iraq|cbi|shafaq|rudaw|kurdistan24|iraqi)/i.test(text);
   return { impact, sentiment, assets: affected.length ? affected : ['Markets'], iraqImpact };
 }
@@ -91,6 +107,9 @@ async function fetchFeed(feed){
 function fallback(){
   const base = [
     ['Iraq latest economy, dinar, banking and oil updates','Iraq Latest','iraq','https://news.google.com/search?q=Iraq%20economy%20dinar%20oil%20banking'],
+    ['Global economy, inflation and recession risks move markets','World Economy Search','markets','https://news.google.com/search?q=global%20economy%20inflation%20recession%20markets'],
+    ['War, sanctions and conflict headlines drive global risk sentiment','Global Conflict Search','geopolitics','https://news.google.com/search?q=war%20sanctions%20conflict%20markets'],
+    ['Middle East and Red Sea risks remain important for oil and shipping','Middle East War Search','geopolitics','https://news.google.com/search?q=Middle%20East%20war%20Red%20Sea%20oil%20shipping'],
     ['Kurdistan Region news from Erbil, Sulaimani and Duhok','Kurdistan Region','iraq','https://news.google.com/search?q=Kurdistan%20Region%20Erbil%20Sulaimani%20Duhok'],
     ['Donald Trump economic policy and tariffs remain key for global markets','Trump monitoring','geopolitics','https://news.google.com/search?q=Donald%20Trump%20economy%20markets'],
     ['Federal Reserve and inflation expectations remain key for global markets','Reuters Markets','markets','https://www.reuters.com/markets/'],
