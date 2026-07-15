@@ -37,9 +37,10 @@ function dateOk(value, filter){
 }
 function countryOk(item, country){
   if(country === 'all') return true
-  const text = `${item.category} ${item.source} ${item.titleEn} ${item.titleKu} ${item.summaryEn} ${(item.affected||[]).join(' ')}`.toLowerCase()
+  const text = `${item.category} ${item.source} ${item.sourceGroup || ''} ${item.titleEn} ${item.titleKu} ${item.summaryEn} ${(item.affected||[]).join(' ')}`.toLowerCase()
   if(country === 'iraq') return /iraq|iqd|baghdad|kurdistan|cbi|dinar|عێراق|العراق/.test(text)
   if(country === 'usa') return /usa|u\.s\.|us |fed|federal|dollar|wall street|white house/.test(text)
+  if(country === 'iran') return /iran|iranian|tehran|irgc|irna|hormuz|persian gulf|ئێران|إيران/.test(text)
   if(country === 'europe') return /europe|euro|ecb|eurozone|eu |eur/.test(text)
   if(country === 'china') return /china|chinese|yuan|beijing/.test(text)
   if(country === 'global') return !/iraq|iqd|baghdad|kurdistan|cbi/.test(text)

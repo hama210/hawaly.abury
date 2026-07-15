@@ -23,6 +23,7 @@ const fallbackSeeds = [
   ['OPEC supply signals keep oil markets on alert','OilPrice','Oil','https://oilprice.com/','oil'],
   ['US stocks react to earnings, inflation and Fed expectations','Yahoo Finance','Stocks','https://finance.yahoo.com/','stocks'],
   ['Middle East headlines keep investors cautious on risk assets','Al Jazeera','Geopolitics','https://www.aljazeera.com/','geopolitics'],
+  ['Iran-US war updates focus on strikes, shipping and the Strait of Hormuz','Iran-US War Live','Geopolitics','https://news.google.com/search?q=Iran%20US%20war%20strikes%20Strait%20of%20Hormuz','geopolitics'],
   ['Iraq banking, salaries and budget news remain market-moving locally','Shafaq Economy','Iraq','https://shafaq.com/en','iraq'],
   ['Crypto market watches ETF demand and broader risk appetite','Cointelegraph','Crypto','https://cointelegraph.com/','crypto'],
   ['China growth data affects oil, commodities and global stocks','Global Economy','Markets','https://news.google.com/search?q=global%20economy','markets'],
@@ -61,12 +62,28 @@ function mergeUnique(primary = [], backup = []) {
   return output;
 }
 
+async function fetchBatch(batch) {
+  try {
+    const res = await fetch(`/api/news?phase=4&limit=120&batch=${batch}&ts=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchNews() {
   try {
-    const res = await fetch('/api/news?phase=4&limit=120&ts=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) throw new Error('news api failed');
-    const data = await res.json();
-    const liveItems = Array.isArray(data.items) ? data.items : [];
+    const payloads = await Promise.all([0, 1].map(fetchBatch));
+    const batchCount = Math.max(1, ...payloads.map(data => Number(data?.batchCount) || 1));
+    if (batchCount > payloads.length) {
+      const remaining = Array.from({ length: batchCount - payloads.length }, (_, index) => index + payloads.length);
+      payloads.push(...await Promise.all(remaining.map(fetchBatch)));
+    }
+    const combined = payloads.flatMap(data => Array.isArray(data?.items) ? data.items : []);
+    const liveItems = mergeUnique([], combined)
+      .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0))
+      .slice(0, 120);
     const items = liveItems.length >= 10 ? liveItems : mergeUnique(liveItems, fallback);
     return withIntelligence(items, liveItems.length ? 'live' : 'fallback');
   } catch {

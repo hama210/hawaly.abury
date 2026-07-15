@@ -7,7 +7,7 @@ const cats = [
   ['stocks','Stocks','پشکەکان','الأسهم', LineChart],
   ['crypto','Crypto','کریپتۆ','العملات الرقمية', Bitcoin],
   ['banks','Central Banks','بانکە ناوەندییەکان','البنوك المركزية', Building2],
-  ['war','Geopolitics','جیوپۆلیتیک','الجيوسياسة', ShieldAlert],
+  ['geopolitics','War & Geopolitics','جەنگ و جیوپۆلیتیک','الحرب والجغرافيا السياسية', ShieldAlert],
   ['breaking','Breaking','فوری','عاجل', RadioTower],
 ]
 

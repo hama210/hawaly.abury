@@ -1,7 +1,7 @@
 const rules = [
   { asset: 'USD', words: ['fed','federal reserve','dollar','rate','interest','fomc','treasury','us economy','cpi','nfp'] },
   { asset: 'Gold', words: ['gold','xau','inflation','safe haven','fed','rates','war','risk'] },
-  { asset: 'Oil', words: ['oil','brent','wti','opec','energy','crude','iraq oil','eia'] },
+  { asset: 'Oil', words: ['oil','brent','wti','opec','energy','crude','iraq oil','eia','iran','hormuz','blockade','shipping'] },
   { asset: 'EUR/USD', words: ['ecb','euro','europe','eurozone','eurusd'] },
   { asset: 'GBP/USD', words: ['boe','pound','uk','britain','gbp'] },
   { asset: 'BTC', words: ['bitcoin','btc','crypto','etf','coinbase','binance'] },
@@ -9,9 +9,9 @@ const rules = [
   { asset: 'Stocks', words: ['stocks','nasdaq','s&p','dow','shares','earnings','tesla','nvidia','apple','microsoft'] }
 ];
 
-const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','sanction','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq'];
+const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','strike','strikes','blockade','strait of hormuz','sanction','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq'];
 const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory'];
-const bearishWords = ['war','attack','falls','drops','weak','slump','sanction','recession','inflation rises','risk off','cuts outlook'];
+const bearishWords = ['war','attack','strike','strikes','blockade','falls','drops','weak','slump','sanction','recession','inflation rises','risk off','cuts outlook'];
 const bullishWords = ['rises','gains','strong','growth','beats','risk on','eases','recovery','surges'];
 
 export function analyzeArticle(item) {

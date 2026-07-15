@@ -8,11 +8,11 @@ import { LANGS, t } from './utils/i18n.js';
 import { analyzeArticle, localizeSummary } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
 
-const nav = ['all','iraq','forex','calendar','oil','stocks','crypto','central','geopolitics','intelligence'];
+const nav = ['all','iraq','iran','geopolitics','forex','calendar','oil','stocks','crypto','central','intelligence'];
 const categoryMap = {
-  ku: { all:'هەموو', iraq:'عێراق', forex:'فۆرێکس', calendar:'ڕۆژژمێر', oil:'نەوت', stocks:'پشکەکان', crypto:'کریپتۆ', central:'بانک', geopolitics:'جیوپۆلیتیک', intelligence:'AI' },
-  ar: { all:'الكل', iraq:'العراق', forex:'فوركس', calendar:'التقويم', oil:'النفط', stocks:'الأسهم', crypto:'كريبتو', central:'البنوك', geopolitics:'الجيوسياسة', intelligence:'AI' },
-  en: { all:'All', iraq:'Iraq', forex:'Forex', calendar:'Calendar', oil:'Oil', stocks:'Stocks', crypto:'Crypto', central:'Banks', geopolitics:'Geopolitics', intelligence:'AI' }
+  ku: { all:'هەموو', iraq:'عێراق', iran:'ئێران', geopolitics:'جەنگ و جیوپۆلیتیک', forex:'فۆرێکس', calendar:'ڕۆژژمێر', oil:'نەوت', stocks:'پشکەکان', crypto:'کریپتۆ', central:'بانک', intelligence:'AI' },
+  ar: { all:'الكل', iraq:'العراق', iran:'إيران', geopolitics:'الحرب والجغرافيا السياسية', forex:'فوركس', calendar:'التقويم', oil:'النفط', stocks:'الأسهم', crypto:'كريبتو', central:'البنوك', intelligence:'AI' },
+  en: { all:'All', iraq:'Iraq', iran:'Iran', geopolitics:'War & Geopolitics', forex:'Forex', calendar:'Calendar', oil:'Oil', stocks:'Stocks', crypto:'Crypto', central:'Banks', intelligence:'AI' }
 };
 const labels = {
   ku: {
@@ -186,7 +186,7 @@ function Header({ lang, setLang, theme, setTheme, query, setQuery, dict }) {
   </header>;
 }
 function Sidebar({ active, setActive, dict, lang }) {
-  const names={ all:'📰 '+dict.latest, iraq:'🇮🇶 '+dict.iraq, forex:'💱 '+dict.forex, calendar:'📅 '+dict.calendar, oil:'🛢️ '+dict.oil, stocks:'📈 '+dict.stocks, crypto:'₿ '+dict.crypto, central:'🏦 '+dict.central, geopolitics:'🌍 '+dict.geopolitics, intelligence:'🧠 '+dict.intelligence };
+  const names={ all:'📰 '+dict.latest, iraq:'🇮🇶 '+dict.iraq, iran:'🇮🇷 '+dict.iran, geopolitics:'⚠️ '+dict.geopolitics, forex:'💱 '+dict.forex, calendar:'📅 '+dict.calendar, oil:'🛢️ '+dict.oil, stocks:'📈 '+dict.stocks, crypto:'₿ '+dict.crypto, central:'🏦 '+dict.central, intelligence:'🧠 '+dict.intelligence };
   const L = tr(lang);
   return <aside className="sidebar">
     <div className="brand"><div className="logo">HA</div><div><h1>{dict.site}</h1><p>{dict.tagline}</p></div></div>
@@ -299,10 +299,10 @@ function App(){
   useEffect(()=>{document.documentElement.lang=lang;document.documentElement.dir=LANGS[lang].dir;document.documentElement.dataset.theme=theme;localStorage.setItem('lang',lang);localStorage.setItem('theme',theme)},[lang,theme]);
   useEffect(()=>{let alive=true; const load=()=>fetchNews().then(items=>alive&&setNews(items)); load(); const id=setInterval(load,60000); return()=>{alive=false;clearInterval(id)}},[]);
   useEffect(()=>{let alive=true; const load=()=>fetchMarkets().then(items=>alive&&setMarkets(items)); load(); const id=setInterval(load,60000); return()=>{alive=false;clearInterval(id)}},[]);
-  const filtered=useMemo(()=>displayNews.filter(i=>{const q=query.trim().toLowerCase(); const text=`${i.title || ''} ${i.titleEn || ''} ${i.titleKu || ''} ${i.titleAr || ''} ${i.summary || ''} ${i.summaryEn || ''} ${i.summaryKu || ''} ${i.summaryAr || ''} ${i.source} ${i.category} ${i.intelligence?.assets?.join(' ')}`.toLowerCase(); const activeOk=active==='all'||text.includes(active)||i.category?.toLowerCase().includes(active); return (!q||text.includes(q))&&activeOk;}),[displayNews,query,active]);
+  const filtered=useMemo(()=>displayNews.filter(i=>{const q=query.trim().toLowerCase(); const text=`${i.title || ''} ${i.titleEn || ''} ${i.titleKu || ''} ${i.titleAr || ''} ${i.summary || ''} ${i.summaryEn || ''} ${i.summaryKu || ''} ${i.summaryAr || ''} ${i.source} ${i.sourceGroup || ''} ${i.category} ${i.intelligence?.assets?.join(' ')}`.toLowerCase(); const activeOk=active==='all'||text.includes(active)||i.category?.toLowerCase().includes(active); return (!q||text.includes(q))&&activeOk;}),[displayNews,query,active]);
   const hero=filtered[0]||displayNews[0];
   const rest=filtered.filter(i=>i.id!==hero?.id);
-  return <div className="app"><Sidebar active={active} setActive={setActive} dict={dict} lang={lang}/><main className="main"><Header lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict}/><MarketTicker markets={markets} dict={dict}/><Ticker items={displayNews} lang={lang} dict={dict}/><section className="hero-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/><div className="side-stack"><IntelligencePanel items={displayNews} lang={lang} dict={dict}/><Watchlist markets={markets} dict={dict}/></div></section><MarketDashboard markets={markets} dict={dict} lang={lang}/><section className="dash-two"><EconomicCalendar dict={dict} lang={lang}/><Heatmap markets={markets} dict={dict}/></section><IntelligenceDashboard items={displayNews} markets={markets} lang={lang} dict={dict} onAsset={(a)=>{setQuery(a);setActive('all')}}/><AssetIntelligence items={displayNews} markets={markets} lang={lang} onAsset={(a)=>{setQuery(a);setActive('all')}}/><IraqWidget dict={dict} lang={lang}/><AiAssistant items={displayNews} lang={lang}/><div className="section-head"><h2>{dict.latest}</h2>{translating && <span className="muted">{tr(lang).translating}</span>}<div className="filters">{nav.slice(0,8).map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{categoryMap[lang]?.[n]||n}</button>)}</div></div>{filtered.length===0?<div className="panel">{dict.noResults}</div>:<div className="news-grid">{rest.map(item=><NewsCard key={item.id} item={item} lang={lang} dict={dict} onOpen={setSelected} onAsset={(a)=>{setQuery(a);setActive('all')}} />)}</div>}<div style={{height:40}}/><ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/></main></div>;
+  return <div className="app"><Sidebar active={active} setActive={setActive} dict={dict} lang={lang}/><main className="main"><Header lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict}/><MarketTicker markets={markets} dict={dict}/><Ticker items={displayNews} lang={lang} dict={dict}/><section className="hero-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/><div className="side-stack"><IntelligencePanel items={displayNews} lang={lang} dict={dict}/><Watchlist markets={markets} dict={dict}/></div></section><MarketDashboard markets={markets} dict={dict} lang={lang}/><section className="dash-two"><EconomicCalendar dict={dict} lang={lang}/><Heatmap markets={markets} dict={dict}/></section><IntelligenceDashboard items={displayNews} markets={markets} lang={lang} dict={dict} onAsset={(a)=>{setQuery(a);setActive('all')}}/><AssetIntelligence items={displayNews} markets={markets} lang={lang} onAsset={(a)=>{setQuery(a);setActive('all')}}/><IraqWidget dict={dict} lang={lang}/><AiAssistant items={displayNews} lang={lang}/><div className="section-head"><h2>{dict.latest}</h2>{translating && <span className="muted">{tr(lang).translating}</span>}<div className="filters">{nav.filter(n=>n!=='intelligence').map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{categoryMap[lang]?.[n]||n}</button>)}</div></div>{filtered.length===0?<div className="panel">{dict.noResults}</div>:<div className="news-grid">{rest.map(item=><NewsCard key={item.id} item={item} lang={lang} dict={dict} onOpen={setSelected} onAsset={(a)=>{setQuery(a);setActive('all')}} />)}</div>}<div style={{height:40}}/><ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/></main></div>;
 }
 
 createRoot(document.getElementById('root')).render(<><App/><SourcesDisclosure /></>);
@@ -314,6 +314,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260701-ui-text-fix').catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260715-iran-us-war').catch(() => {});
   });
 }

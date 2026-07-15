@@ -1,3 +1,5 @@
+const googleNewsFeed = query => `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+
 export const FEEDS = [
   ['Reuters Markets','markets','https://news.google.com/rss/search?q=Reuters%20markets%20economy%20forex%20stocks%20oil%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
   ['Reuters Economy','markets','https://news.google.com/rss/search?q=site%3Areuters.com%20global%20economy%20inflation%20markets%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
@@ -13,6 +15,15 @@ export const FEEDS = [
   ['Global Conflict','geopolitics','https://news.google.com/rss/search?q=war%20OR%20conflict%20OR%20missile%20OR%20ceasefire%20OR%20invasion%20when%3A3d&hl=en-US&gl=US&ceid=US:en'],
   ['Ukraine War','geopolitics','https://news.google.com/rss/search?q=Ukraine%20war%20Russia%20sanctions%20energy%20markets%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
   ['Middle East Conflict','geopolitics','https://news.google.com/rss/search?q=Middle%20East%20war%20Israel%20Iran%20Gaza%20Lebanon%20Syria%20markets%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
+  ['Iran-US War Live','geopolitics',googleNewsFeed('Iran (US OR "United States") (war OR strikes OR missile OR blockade OR ceasefire OR Hormuz) when:3d')],
+  ['Reuters Iran-US War','geopolitics',googleNewsFeed('site:reuters.com Iran (US OR "United States") (war OR strikes OR military OR blockade OR Hormuz) when:7d')],
+  ['AP Iran-US War','geopolitics',googleNewsFeed('site:apnews.com Iran (US OR "United States") (war OR strikes OR military OR blockade OR Hormuz) when:7d')],
+  ['BBC Iran-US War','geopolitics',googleNewsFeed('site:bbc.com/news Iran (US OR "United States") (war OR strikes OR military OR Hormuz) when:7d')],
+  ['Al Jazeera Iran-US War','geopolitics',googleNewsFeed('site:aljazeera.com Iran (US OR "United States") (war OR strikes OR military OR Hormuz) when:7d')],
+  ['CENTCOM Iran Updates','geopolitics',googleNewsFeed('site:centcom.mil Iran (strike OR military OR missile OR blockade OR Hormuz) when:14d')],
+  ['White House Iran Policy','geopolitics',googleNewsFeed('site:whitehouse.gov Iran (war OR military OR sanctions OR Hormuz OR ceasefire) when:14d')],
+  ['IRNA Iran-US Conflict','geopolitics',googleNewsFeed('site:en.irna.ir (US OR "United States") (war OR attack OR strike OR military OR Hormuz) when:14d')],
+  ['UN Iran-US Conflict','geopolitics',googleNewsFeed('site:news.un.org Iran (US OR "United States") (war OR conflict OR civilian OR ceasefire) when:14d')],
   ['Red Sea Shipping Risk','geopolitics','https://news.google.com/rss/search?q=Red%20Sea%20shipping%20Houthi%20oil%20trade%20supply%20when%3A14d&hl=en-US&gl=US&ceid=US:en'],
   ['Sanctions and Markets','geopolitics','https://news.google.com/rss/search?q=sanctions%20economy%20oil%20banks%20markets%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
   ['Reuters US Policy','geopolitics','https://news.google.com/rss/search?q=Reuters%20US%20policy%20tariffs%20Fed%20economy%20markets%20when%3A7d&hl=en-US&gl=US&ceid=US:en'],
@@ -77,6 +88,10 @@ export const FEEDS = [
   ['Central Bank of Iraq','iraq','https://news.google.com/rss/search?q=Central%20Bank%20of%20Iraq%20CBI%20dinar&hl=en-US&gl=US&ceid=US:en']
 ].map(([source, category, url]) => ({ source, category, url }));
 
+const MAX_FEEDS_PER_REQUEST = 45;
+const FETCH_CONCURRENCY = 6;
+const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
+
 const fallbackImages = {
   iraq: 'https://images.unsplash.com/photo-1569163139599-0f4517e36f51?auto=format&fit=crop&w=1200&q=80',
   oil: 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=1200&q=80',
@@ -87,7 +102,7 @@ const fallbackImages = {
   geopolitics: 'https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1200&q=80'
 };
 
-const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','sanction','sanctions','missile','drone','ceasefire','invasion','conflict','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi','somo','budget','salary','salaries','oil revenue','basra','ceyhan','rafidain','rasheed','ukraine','russia','israel','iran','gaza','lebanon','red sea','houthi','nato'];
+const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','airstrike','strike','strikes','sanction','sanctions','missile','drone','ceasefire','invasion','conflict','blockade','strait of hormuz','centcom','irgc','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi','somo','budget','salary','salaries','oil revenue','basra','ceyhan','rafidain','rasheed','ukraine','russia','israel','iran','tehran','gaza','lebanon','red sea','houthi','nato'];
 const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory','election','lawsuit','pipeline','exports','banking','investment','customs','taxes','ports','development road','private sector','electricity','gas imports','defense','military','shipping','supply chain','security','diplomacy'];
 const assetRules = [
   ['USD',['fed','dollar','rate','fomc','treasury','cpi','nfp','trump','tariff','white house','sanctions','war','iraq dinar','dollar auction']],
@@ -152,8 +167,8 @@ async function fetchFeed(feed){
     const res = await fetch(feed.url, { cf: { cacheTtl: 60, cacheEverything: false }, headers: { 'user-agent': 'HawaliAburiBot/1.5' }});
     if(!res.ok) throw new Error(String(res.status));
     const xml = await res.text();
-    const perFeedLimit = feed.category === 'iraq' ? 25 : 18;
-    return [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
+    const perFeedLimit = feed.category === 'iraq' ? 12 : 8;
+    const items = [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
       const entry = m[0];
       const rawTitle = extractTag(entry,'title');
       const title = cleanGoogleTitle(rawTitle);
@@ -165,7 +180,21 @@ async function fetchFeed(feed){
       const intel = analyze(base);
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
     }).filter(i=>i.title);
-  }catch(e){ return []; }
+    return { ok: true, items };
+  }catch(e){ return { ok: false, items: [] }; }
+}
+
+async function fetchFeeds(feeds){
+  const results = new Array(feeds.length);
+  let cursor = 0;
+  async function run(){
+    while(cursor < feeds.length){
+      const index = cursor++;
+      results[index] = await fetchFeed(feeds[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, feeds.length) }, run));
+  return results;
 }
 
 function fallback(){
@@ -174,6 +203,7 @@ function fallback(){
     ['Global economy, inflation and recession risks move markets','Global Economy','markets','https://news.google.com/search?q=global%20economy%20inflation%20recession%20markets'],
     ['War, sanctions and conflict headlines drive global risk sentiment','Global Conflict','geopolitics','https://news.google.com/search?q=war%20sanctions%20conflict%20markets'],
     ['Middle East and Red Sea risks remain important for oil and shipping','Middle East Conflict','geopolitics','https://news.google.com/search?q=Middle%20East%20war%20Red%20Sea%20oil%20shipping'],
+    ['Iran-US war, strikes and Strait of Hormuz updates','Iran-US War Live','geopolitics','https://news.google.com/search?q=Iran%20US%20war%20strikes%20Strait%20of%20Hormuz'],
     ['Kurdistan Region news from Erbil, Sulaimani and Duhok','Kurdistan Region','iraq','https://news.google.com/search?q=Kurdistan%20Region%20Erbil%20Sulaimani%20Duhok'],
     ['US economic policy and tariffs remain key for global markets','Reuters US Policy','geopolitics','https://news.google.com/search?q=US%20policy%20tariffs%20Fed%20economy%20markets'],
     ['Federal Reserve and inflation expectations remain key for global markets','Reuters Markets','markets','https://www.reuters.com/markets/'],
@@ -191,8 +221,11 @@ export async function onRequest({ request }) {
   const url = new URL(request.url);
   const q = (url.searchParams.get('q') || '').trim().toLowerCase();
   const limit = Math.min(Number(url.searchParams.get('limit') || 120), 180);
-  const batches = await Promise.all(FEEDS.map(fetchFeed));
-  const raw = batches.flat().filter(i => !q || itemText(i).includes(q));
+  const requestedBatch = Number(url.searchParams.get('batch') || 0);
+  const batch = Number.isInteger(requestedBatch) ? Math.max(0, Math.min(requestedBatch, BATCH_COUNT - 1)) : 0;
+  const selectedFeeds = FEEDS.filter((_, index) => index % BATCH_COUNT === batch);
+  const feedResults = await fetchFeeds(selectedFeeds);
+  const raw = feedResults.flatMap(result => result.items).filter(i => !q || itemText(i).includes(q));
   let items;
 
   if(q){
@@ -206,5 +239,14 @@ export async function onRequest({ request }) {
   }
 
   if(!items.length) items = fallback();
-  return Response.json({ updatedAt: new Date().toISOString(), count: items.length, translated: false, items }, { headers: { 'Cache-Control': 'public, max-age=60' } });
+  const succeeded = feedResults.filter(result => result.ok).length;
+  return Response.json({
+    updatedAt: new Date().toISOString(),
+    count: items.length,
+    translated: false,
+    batch,
+    batchCount: BATCH_COUNT,
+    feedStats: { total: FEEDS.length, requested: selectedFeeds.length, succeeded, failed: selectedFeeds.length - succeeded },
+    items
+  }, { headers: { 'Cache-Control': 'public, max-age=60' } });
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hawali-aburi-v9-shell';
+const CACHE_NAME = 'hawali-aburi-v10-iran-us-war';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg'];
 
 function shouldBypass(request, url) {
