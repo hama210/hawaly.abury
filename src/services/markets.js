@@ -10,7 +10,7 @@ export async function fetchMarkets() {
       { symbol: 'WTI', name: 'Oil', price: '—', changePct: 0, status: 'watch' },
       { symbol: 'BTC/USD', name: 'Bitcoin', price: '—', changePct: 0, status: 'watch' },
       { symbol: 'EUR/USD', name: 'Euro Dollar', price: '—', changePct: 0, status: 'watch' },
-      { symbol: 'USD/IQD', name: 'Iraqi Dinar', price: '—', changePct: 0, status: 'watch' }
+      { symbol: 'USD/IQD', name: 'Iraq local market · 100 USD', price: '—', changePct: 0, status: 'watch', marketKind: 'local', quoteAmount: 100 }
     ];
   }
 }

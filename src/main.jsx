@@ -55,13 +55,44 @@ function formatPrice(value) {
 function changeClass(v) { return Number(v) > 0 ? 'up' : Number(v) < 0 ? 'down' : 'flat'; }
 function changeSymbol(v, lang) { const L = tr(lang); return Number(v) > 0 ? `▲ ${L.positive}` : Number(v) < 0 ? `▼ ${L.negative}` : `• ${L.flat}`; }
 
+const localRateText = {
+  ku: { local:'بازاڕی ناوخۆ', per100:'بۆ 100 دۆلار', buy:'کڕین', sell:'فرۆشتن', erbil:'هەولێر', baghdad:'بەغدا' },
+  ar: { local:'السوق المحلي', per100:'لكل 100 دولار', buy:'شراء', sell:'بيع', erbil:'أربيل', baghdad:'بغداد' },
+  en: { local:'Local market', per100:'per 100 USD', buy:'Buy', sell:'Sell', erbil:'Erbil', baghdad:'Baghdad' }
+};
+function marketSymbol(market) {
+  return market?.quoteAmount === 100 ? `${market.symbol} · $100` : market?.symbol;
+}
+function marketName(market, lang) {
+  if (market?.marketKind !== 'local') return market?.name;
+  const copy = localRateText[lang] || localRateText.en;
+  return `${copy.local} · ${copy.per100}`;
+}
+function LocalRateDetails({ market, lang }) {
+  if (market?.marketKind !== 'local') return null;
+  const copy = localRateText[lang] || localRateText.en;
+  const rows = [
+    [copy.erbil, market.erbil],
+    [copy.baghdad, market.baghdad]
+  ].filter(([, rate]) => rate?.sell || rate?.buy || rate?.market);
+  if (!rows.length) return null;
+  return <div className="local-rate-details">
+    {rows.map(([place, rate]) => <div key={place}>
+      <b>{place}</b>
+      {rate.sell && <span>{copy.sell} {formatPrice(rate.sell)}</span>}
+      {rate.buy && <span>{copy.buy} {formatPrice(rate.buy)}</span>}
+      {!rate.sell && !rate.buy && rate.market && <span>{formatPrice(rate.market)}</span>}
+    </div>)}
+  </div>;
+}
+
 function MarketTicker({ markets, dict }) {
   const list = markets?.length ? markets : [];
   return <div className="market-ticker" aria-label={dict.marketTicker}>
     <div className="market-ticker-track">
       <b>📈 {dict.marketTicker}</b>
       {[...list, ...list].map((m, i) => <span className="market-tick" key={m.symbol + i}>
-        <strong>{m.symbol}</strong> <em>{formatPrice(m.price)}</em> <small className={changeClass(m.changePct)}>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small>
+        <strong>{marketSymbol(m)}</strong> <em>{formatPrice(m.price)}</em> <small className={changeClass(m.changePct)}>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small>
       </span>)}
     </div>
   </div>;
@@ -72,8 +103,9 @@ function MarketDashboard({ markets, dict, lang }) {
     <div className="section-head"><h2>📊 {dict.markets}</h2><span className="muted">60s</span></div>
     <div className="market-grid">
       {visible.map((m, idx) => <div className={`market-card ${changeClass(m.changePct)}`} key={m.symbol}>
-        <div className="market-card-top"><b>{m.symbol}</b><span>{m.name}</span></div>
+        <div className="market-card-top"><b>{marketSymbol(m)}</b><span>{marketName(m, lang)}</span></div>
         <div className="market-price">{formatPrice(m.price)}</div>
+        <LocalRateDetails market={m} lang={lang} />
         <div className="market-change"><span>{changeSymbol(m.changePct, lang)} {Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</span><small>{m.source}</small></div>
         <svg className="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline points={sparkPoints(Number(m.changePct), idx)} /></svg>
       </div>)}
@@ -102,12 +134,12 @@ function EconomicCalendar({ dict, lang }) {
   return <section className="panel calendar-panel"><h3>🗓️ {dict.calendarEvents || tr(lang).todayEvents}</h3>{events.map(([impact, title, affected]) => <div className="calendar-row" key={title}><span>{impact}</span><b>{title}</b><small>{affected}</small></div>)}</section>;
 }
 function Heatmap({ markets, dict }) {
-  return <section className="panel"><h3>🔥 {dict.heatmap}</h3><div className="heatmap">{markets.slice(0, 11).map(m => <button className={`heat ${changeClass(m.changePct)}`} key={m.symbol}><b>{m.symbol}</b><small>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small></button>)}</div></section>;
+  return <section className="panel"><h3>🔥 {dict.heatmap}</h3><div className="heatmap">{markets.slice(0, 11).map(m => <button className={`heat ${changeClass(m.changePct)}`} key={m.symbol}><b>{marketSymbol(m)}</b><small>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small></button>)}</div></section>;
 }
 function Watchlist({ markets, dict }) {
   const picks = ['XAU/USD', 'WTI', 'BTC/USD', 'EUR/USD', 'USD/IQD'];
   const rows = picks.map(p => markets.find(m => m.symbol === p)).filter(Boolean);
-  return <section className="panel"><h3>⭐ {dict.watchlist}</h3>{rows.map(m => <div className="watch-row" key={m.symbol}><b>{m.symbol}</b><span>{formatPrice(m.price)}</span><small className={changeClass(m.changePct)}>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small></div>)}</section>;
+  return <section className="panel"><h3>⭐ {dict.watchlist}</h3>{rows.map(m => <div className="watch-row" key={m.symbol}><b>{marketSymbol(m)}</b><span>{formatPrice(m.price)}</span><small className={changeClass(m.changePct)}>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small></div>)}</section>;
 }
 
 function countAssets(items) {
