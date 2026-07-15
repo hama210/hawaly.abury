@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hawali-aburi-v14-new-logo';
+const CACHE_NAME = 'hawali-aburi-v15-reliability';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/hawali-logo-96.webp', '/hawali-logo-192.png'];
 
 function shouldBypass(request, url) {

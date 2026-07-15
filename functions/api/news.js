@@ -104,6 +104,10 @@ const FULL_FEED_TIMEOUT_MS = 2500;
 const FAST_CACHE_TTL = 300;
 const FULL_CACHE_TTL = 300;
 const MAX_FEED_BYTES = 384 * 1024;
+const NEWS_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const NEWS_MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
+const IRAQ_TERMS = /\b(iraq|iraqi|baghdad|kurdistan|erbil|sulaimani|sulaymaniyah|duhok|dohuk|basra|mosul|dinar|iqd|cbi|somo|rafidain|rasheed|krg)\b|central bank of iraq|iraq business/i;
+const SPECIALIZED_IRAQ_FEEDS = new Set(['IraqiNews', 'Iraq Business News']);
 
 const fallbackImages = {
   iraq: 'https://images.unsplash.com/photo-1569163139599-0f4517e36f51?auto=format&fit=crop&w=1200&q=80',
@@ -142,14 +146,25 @@ function analyze(item){
 }
 
 function isIraqEconomy(item){
-  const text = `${item.title} ${item.summary} ${item.source} ${item.sourceGroup || ''} ${item.category}`.toLowerCase();
+  const text = `${item.title} ${item.summary} ${item.source}`.toLowerCase();
   const group = String(item.sourceGroup || item.source || '');
-  const iraqRelated = item.category === 'iraq'
-    || /\b(iraq|iraqi|baghdad|kurdistan|erbil|sulaimani|duhok|basra|mosul|dinar|iqd|cbi|somo|rafidain|rasheed|krg|shafaq|rudaw|kurdistan24)\b|central bank of iraq|iraq business/i.test(text)
-    || /INA Iraq/i.test(group);
+  const iraqRelated = IRAQ_TERMS.test(text) || /^(?:IraqiNews|Iraq Business News)$/i.test(group);
   const economyRelated = /\b(economy|economic|oil|gas|opec|somo|budget|salary|salaries|dinar|iqd|bank|banking|cbi|finance|financial|investment|trade|customs|tax|stock|isx|securities|exports|imports|pipeline|power|electricity|agriculture|wheat|water|development|project|port|railway|private sector|jobs|unemployment|revenue|payroll|deficit|loan|dollar)\b/i.test(text)
     || /Economy|Dinar|Budget|Oil|Business|Banking|Finance|Investment|Stock|Trade|Power|Gas|Agriculture|Private Sector|KRG Budget|SOMO|Ministry|EIA|MEES|Iraq Oil Report|Central Bank/i.test(group);
   return iraqRelated && economyRelated;
+}
+
+function isFreshNewsItem(item, now = Date.now()){
+  const publishedTime = Date.parse(item.publishedAt);
+  return Number.isFinite(publishedTime)
+    && publishedTime >= now - NEWS_MAX_AGE_MS
+    && publishedTime <= now + NEWS_MAX_FUTURE_MS;
+}
+
+function isRelevantToFeed(item, feed){
+  if(feed.category !== 'iraq') return true;
+  if(SPECIALIZED_IRAQ_FEEDS.has(feed.source) && !feed.url.includes('news.google.com')) return true;
+  return IRAQ_TERMS.test(`${item.title} ${item.summary}`);
 }
 
 function itemKey(item){
@@ -201,6 +216,7 @@ async function readFeedBody(response, itemLimit){
 }
 
 async function fetchFeed(feed, timeoutMs){
+  const startedAt = Date.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(()=>controller.abort('feed timeout'), timeoutMs);
   try{
@@ -218,15 +234,19 @@ async function fetchFeed(feed, timeoutMs){
       const title = cleanGoogleTitle(rawTitle);
       const link = extractTag(entry,'link') || extractTag(entry,'guid') || feed.url;
       const summary = extractTag(entry,'description') || extractTag(entry,'summary');
-      const publishedAt = extractTag(entry,'pubDate') || extractTag(entry,'published') || new Date().toISOString();
+      const publishedAt = extractTag(entry,'pubDate') || extractTag(entry,'published') || extractTag(entry,'updated') || extractTag(entry,'dc:date');
       const image = extractImage(entry) || fallbackImages[feed.category] || fallbackImages.markets;
       const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, source: sourceFromGoogleTitle(rawTitle, feed.source), sourceGroup: feed.source, category: feed.category, link, publishedAt, image };
       const intel = analyze(base);
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
-    }).filter(i=>i.title);
-    return { ok: true, items };
+    }).filter(i=>i.title && isFreshNewsItem(i)).filter(item=>isRelevantToFeed(item, feed));
+    if(!items.length){
+      return { source: feed.source, ok: false, items: [], durationMs: Date.now() - startedAt, error: 'no usable recent items' };
+    }
+    return { source: feed.source, ok: true, items, durationMs: Date.now() - startedAt };
   }catch(e){
-    return { ok: false, items: [] };
+    const message = e instanceof Error ? e.message : String(e);
+    return { source: feed.source, ok: false, items: [], durationMs: Date.now() - startedAt, error: message || 'feed request failed' };
   }finally{
     clearTimeout(timeoutId);
   }
@@ -281,8 +301,20 @@ function withHeader(response, name, value){
 
 export async function onRequest(context) {
   const startedAt = Date.now();
+  if(context.request.method !== 'GET'){
+    return Response.json({ ok: false, error: 'GET only', items: [] }, {
+      status: 405,
+      headers: { 'Allow': 'GET', 'Cache-Control': 'no-store' }
+    });
+  }
   const url = new URL(context.request.url);
   const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+  if(q){
+    return Response.json({ ok: false, error: 'News search is performed in the browser. Remove the q parameter.', items: [] }, {
+      status: 400,
+      headers: { 'Cache-Control': 'no-store' }
+    });
+  }
   const parsedLimit = Number(url.searchParams.get('limit'));
   const mode = url.searchParams.get('mode') === 'fast' ? 'fast' : 'full';
   const defaultLimit = mode === 'fast' ? 48 : 120;
@@ -290,7 +322,7 @@ export async function onRequest(context) {
   const requestedBatch = Number(url.searchParams.get('batch') || 0);
   const batch = Number.isInteger(requestedBatch) ? Math.max(0, Math.min(requestedBatch, BATCH_COUNT - 1)) : 0;
   const cache = globalThis.caches?.default;
-  const cacheKey = !q && cache ? cacheKeyFor(url, mode, batch, limit) : null;
+  const cacheKey = cache ? cacheKeyFor(url, mode, batch, limit) : null;
   if(cacheKey){
     const cached = await cache.match(cacheKey);
     if(cached) return withHeader(cached, 'X-News-Cache', 'HIT');
@@ -300,21 +332,28 @@ export async function onRequest(context) {
     ? FAST_FEED_SOURCES.map(source => FEEDS.find(feed => feed.source === source)).filter(Boolean)
     : FEEDS.filter((_, index) => index % BATCH_COUNT === batch);
   const feedResults = await fetchFeeds(selectedFeeds, mode === 'fast' ? FAST_FEED_TIMEOUT_MS : FULL_FEED_TIMEOUT_MS);
-  const raw = feedResults.flatMap(result => result.items).filter(i => !q || itemText(i).includes(q));
-  let items;
-
-  if(q){
-    items = newestFirst(dedupeItems(raw)).slice(0, limit);
-  }else{
-    const iraq = newestFirst(dedupeItems(raw.filter(isIraqEconomy)));
-    const reserved = Math.min(iraq.length, Math.max(20, Math.ceil(limit * 0.4)));
-    const seen = new Set(iraq.slice(0, reserved).map(itemKey));
-    const others = newestFirst(dedupeItems(raw.filter(item => !seen.has(itemKey(item))), seen));
-    items = newestFirst([...iraq.slice(0, reserved), ...others.slice(0, Math.max(0, limit - reserved))]);
-  }
+  const raw = feedResults.flatMap(result => result.items);
+  const iraq = newestFirst(dedupeItems(raw.filter(isIraqEconomy)));
+  const reserved = Math.min(iraq.length, Math.max(20, Math.ceil(limit * 0.4)));
+  const seen = new Set(iraq.slice(0, reserved).map(itemKey));
+  const others = newestFirst(dedupeItems(raw.filter(item => !seen.has(itemKey(item))), seen));
+  let items = newestFirst([...iraq.slice(0, reserved), ...others.slice(0, Math.max(0, limit - reserved))]);
 
   if(!items.length) items = fallback();
   const succeeded = feedResults.filter(result => result.ok).length;
+  const failures = feedResults
+    .filter(result => !result.ok)
+    .map(({ source, error, durationMs }) => ({ source, error, durationMs }));
+  if(failures.length){
+    console.warn(JSON.stringify({
+      event: 'news_feed_batch_incomplete',
+      mode,
+      batch: mode === 'fast' ? 'fast' : batch,
+      requested: selectedFeeds.length,
+      failed: failures.length,
+      failures
+    }));
+  }
   const ttl = mode === 'fast' ? FAST_CACHE_TTL : FULL_CACHE_TTL;
   const response = Response.json({
     updatedAt: new Date().toISOString(),
@@ -323,7 +362,7 @@ export async function onRequest(context) {
     mode,
     batch: mode === 'fast' ? 'fast' : batch,
     batchCount: BATCH_COUNT,
-    feedStats: { total: FEEDS.length, requested: selectedFeeds.length, succeeded, failed: selectedFeeds.length - succeeded },
+    feedStats: { total: FEEDS.length, requested: selectedFeeds.length, succeeded, failed: failures.length, failures },
     items
   }, { headers: {
     'Cache-Control': `public, max-age=${ttl}`,

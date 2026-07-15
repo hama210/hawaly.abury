@@ -16,13 +16,13 @@ const categoryMap = {
 };
 const labels = {
   ku: {
-    aiReady:'ئامادەی AI', riskMode:'دۆخی ڕیسک', marketSentiment:'هەستی بازاڕ', highImpact:'کاریگەری بەرز', iraqImpact:'کاریگەری عێراق', liveAssets:'دارایی زیندووەکان', critical:'هەواڵی گرنگ', localStories:'هەواڵی ئابوری ناوخۆ', trackedMarkets:'بازاڕی چاودێریکراو', mostImportant:'گرنگترین شت ئێستا', assetIntelligence:'زیرەکی دارایی', relatedStories:'هەواڵی پەیوەندیدار', highImpactLabel:'کاریگەری بەرز', normalRisk:'ڕیسکی ئاسایی', watch:'چاودێری', assistant:'یاریدەدەری زیرەکی بازاڕ', assistantHint:'پرسیار بکە، وەک: بۆچی زێڕ دەجووڵێت؟', assistantAnswer:'ئەم وەڵامە بە سیستەمی rule-based دروست دەکرێت. دواتر دەتوانین API key زیاد بکەین بۆ وەڵامی AI ڕاستەقینە.', aiIntro:'زیرەکی بازاڕ بە شێوازی rule-based کار دەکات؛ دواتر بە API key دەتوانرێت وەڵامی AI ڕاستەقینە زیاد بکرێت.', translating:'وەرگێڕانی هەواڵەکان...', allSources:'هەموو سەرچاوەکانی هەواڵ', loadingSources:'بارکردنی سەرچاوەکان', sourceNote:'ئەم ماڵپەڕە تەنها سەردێڕ، پوختە و لینکی هەواڵە گشتییەکان کۆدەکاتەوە. هەموو بابەت، وێنە و ڕاپۆرتەکان موڵکی سەرچاوە ڕەسەنەکانیانن.', contactNote:'بۆ داواکاری سەرچاوە یان لابردنەوە، پەیوەندی بە خاوەنی ماڵپەڕەوە بکە.', close:'داخستن', positive:'ئەرێنی', negative:'نەرێنی', flat:'بێگۆڕان', monitor:'چاودێری', active:'چالاک', sensitive:'هەستیار', neutral:'بێلایەن', usd:'دۆلار', gold:'زێڕ', oil:'نەوت', highAttention:'گرنگ', todayEvents:'ڕووداوە گرنگەکانی ئەمڕۆ'
+    aiReady:'ئامادەی AI', riskMode:'دۆخی ڕیسک', marketSentiment:'هەستی بازاڕ', highImpact:'کاریگەری بەرز', iraqImpact:'کاریگەری عێراق', liveAssets:'دارایی زیندووەکان', critical:'هەواڵی گرنگ', localStories:'هەواڵی ئابوری ناوخۆ', trackedMarkets:'بازاڕی چاودێریکراو', mostImportant:'گرنگترین شت ئێستا', assetIntelligence:'زیرەکی دارایی', relatedStories:'هەواڵی پەیوەندیدار', highImpactLabel:'کاریگەری بەرز', normalRisk:'ڕیسکی ئاسایی', watch:'چاودێری', assistant:'یاریدەدەری زیرەکی بازاڕ', assistantHint:'پرسیار بکە، وەک: بۆچی زێڕ دەجووڵێت؟', assistantAnswer:'ئەم وەڵامە بە سیستەمی rule-based دروست دەکرێت. دواتر دەتوانین API key زیاد بکەین بۆ وەڵامی AI ڕاستەقینە.', aiIntro:'زیرەکی بازاڕ بە شێوازی rule-based کار دەکات؛ دواتر بە API key دەتوانرێت وەڵامی AI ڕاستەقینە زیاد بکرێت.', translating:'وەرگێڕانی هەواڵەکان...', allSources:'هەموو سەرچاوەکانی هەواڵ', loadingSources:'بارکردنی سەرچاوەکان', sourceNote:'ئەم ماڵپەڕە تەنها سەردێڕ، پوختە و لینکی هەواڵە گشتییەکان کۆدەکاتەوە. هەموو بابەت، وێنە و ڕاپۆرتەکان موڵکی سەرچاوە ڕەسەنەکانیانن.', contactNote:'بۆ داواکاری سەرچاوە یان لابردنەوە، پەیوەندی بە خاوەنی ماڵپەڕەوە بکە.', close:'داخستن', positive:'ئەرێنی', negative:'نەرێنی', flat:'بێگۆڕان', monitor:'چاودێری', active:'چالاک', sensitive:'هەستیار', neutral:'بێلایەن', usd:'دۆلار', gold:'زێڕ', oil:'نەوت', highAttention:'گرنگ', todayEvents:'ڕووداوە گرنگەکانی ئەمڕۆ', staleData:'داتای کۆن', unavailableData:'بەردەست نییە'
   },
   ar: {
-    aiReady:'جاهز للذكاء الاصطناعي', riskMode:'وضع المخاطر', marketSentiment:'معنويات السوق', highImpact:'تأثير مرتفع', iraqImpact:'تأثير العراق', liveAssets:'الأصول المباشرة', critical:'عناوين حرجة', localStories:'أخبار الاقتصاد المحلي', trackedMarkets:'أسواق مراقبة', mostImportant:'الأهم الآن', assetIntelligence:'ذكاء الأصول', relatedStories:'أخبار مرتبطة', highImpactLabel:'تأثير مرتفع', normalRisk:'مخاطر طبيعية', watch:'مراقبة', assistant:'مساعد ذكاء السوق', assistantHint:'اسأل مثل: لماذا يتحرك الذهب؟', assistantAnswer:'هذه إجابة مبنية على قواعد. يمكن إضافة API key لاحقاً لتفعيل إجابات ذكاء اصطناعي حقيقية.', aiIntro:'ذكاء السوق يعمل حالياً بنظام مبني على قواعد؛ ويمكن لاحقاً إضافة API key لتفعيل ذكاء اصطناعي حقيقي.', translating:'جاري ترجمة الأخبار...', allSources:'كل مصادر الأخبار', loadingSources:'تحميل المصادر', sourceNote:'هذا الموقع يجمع فقط عناوين الأخبار العامة وملخصات قصيرة وروابط المصادر الأصلية. كل المقالات والصور والتقارير تعود لأصحابها.', contactNote:'لطلب إضافة مصدر أو إزالة محتوى، تواصل مع مالك الموقع.', close:'إغلاق', positive:'إيجابي', negative:'سلبي', flat:'ثابت', monitor:'مراقبة', active:'نشط', sensitive:'حساس', neutral:'محايد', usd:'الدولار', gold:'الذهب', oil:'النفط', highAttention:'مهم', todayEvents:'أحداث اليوم المهمة'
+    aiReady:'جاهز للذكاء الاصطناعي', riskMode:'وضع المخاطر', marketSentiment:'معنويات السوق', highImpact:'تأثير مرتفع', iraqImpact:'تأثير العراق', liveAssets:'الأصول المباشرة', critical:'عناوين حرجة', localStories:'أخبار الاقتصاد المحلي', trackedMarkets:'أسواق مراقبة', mostImportant:'الأهم الآن', assetIntelligence:'ذكاء الأصول', relatedStories:'أخبار مرتبطة', highImpactLabel:'تأثير مرتفع', normalRisk:'مخاطر طبيعية', watch:'مراقبة', assistant:'مساعد ذكاء السوق', assistantHint:'اسأل مثل: لماذا يتحرك الذهب؟', assistantAnswer:'هذه إجابة مبنية على قواعد. يمكن إضافة API key لاحقاً لتفعيل إجابات ذكاء اصطناعي حقيقية.', aiIntro:'ذكاء السوق يعمل حالياً بنظام مبني على قواعد؛ ويمكن لاحقاً إضافة API key لتفعيل ذكاء اصطناعي حقيقي.', translating:'جاري ترجمة الأخبار...', allSources:'كل مصادر الأخبار', loadingSources:'تحميل المصادر', sourceNote:'هذا الموقع يجمع فقط عناوين الأخبار العامة وملخصات قصيرة وروابط المصادر الأصلية. كل المقالات والصور والتقارير تعود لأصحابها.', contactNote:'لطلب إضافة مصدر أو إزالة محتوى، تواصل مع مالك الموقع.', close:'إغلاق', positive:'إيجابي', negative:'سلبي', flat:'ثابت', monitor:'مراقبة', active:'نشط', sensitive:'حساس', neutral:'محايد', usd:'الدولار', gold:'الذهب', oil:'النفط', highAttention:'مهم', todayEvents:'أحداث اليوم المهمة', staleData:'بيانات قديمة', unavailableData:'غير متاح'
   },
   en: {
-    aiReady:'AI-ready', riskMode:'Risk Mode', marketSentiment:'Market Sentiment', highImpact:'High Impact', iraqImpact:'Iraq Impact', liveAssets:'Live Assets', critical:'critical headlines', localStories:'local economy stories', trackedMarkets:'tracked markets', mostImportant:'Most important now', assetIntelligence:'Asset Intelligence', relatedStories:'related stories', highImpactLabel:'high impact', normalRisk:'normal risk', watch:'Watch', assistant:'AI Market Assistant', assistantHint:'Ask: why is gold moving?', assistantAnswer:'This is a rule-based assistant answer. Add an API key later for real AI responses.', aiIntro:'AI-ready rule-based intelligence. Add an API key later to enable real AI.', translating:'Translating news...', allSources:'All news sources', loadingSources:'Loading sources', sourceNote:'This site only collects public news headlines, short summaries, and links to original publishers in one place. All articles, names, logos, images, and reporting belong to their owners.', contactNote:'For source or removal requests, contact the site owner.', close:'Close', positive:'Positive', negative:'Negative', flat:'Flat', monitor:'Monitor', active:'Active', sensitive:'Sensitive', neutral:'Neutral', usd:'USD', gold:'Gold', oil:'Oil', highAttention:'High attention', todayEvents:'Today’s key events'
+    aiReady:'AI-ready', riskMode:'Risk Mode', marketSentiment:'Market Sentiment', highImpact:'High Impact', iraqImpact:'Iraq Impact', liveAssets:'Live Assets', critical:'critical headlines', localStories:'local economy stories', trackedMarkets:'tracked markets', mostImportant:'Most important now', assetIntelligence:'Asset Intelligence', relatedStories:'related stories', highImpactLabel:'high impact', normalRisk:'normal risk', watch:'Watch', assistant:'AI Market Assistant', assistantHint:'Ask: why is gold moving?', assistantAnswer:'This is a rule-based assistant answer. Add an API key later for real AI responses.', aiIntro:'AI-ready rule-based intelligence. Add an API key later to enable real AI.', translating:'Translating news...', allSources:'All news sources', loadingSources:'Loading sources', sourceNote:'This site only collects public news headlines, short summaries, and links to original publishers in one place. All articles, names, logos, images, and reporting belong to their owners.', contactNote:'For source or removal requests, contact the site owner.', close:'Close', positive:'Positive', negative:'Negative', flat:'Flat', monitor:'Monitor', active:'Active', sensitive:'Sensitive', neutral:'Neutral', usd:'USD', gold:'Gold', oil:'Oil', highAttention:'High attention', todayEvents:'Today’s key events', staleData:'Stale data', unavailableData:'Unavailable'
   }
 };
 const tr = lang => labels[lang] || labels.ku;
@@ -51,7 +51,7 @@ function translatedTitle(item, lang) { return getTitle(item || {}, lang) || item
 function translatedSummary(item, lang) { return getSummary(item || {}, lang) || localizeSummary(item || {}, lang); }
 
 function formatPrice(value) {
-  if (value === null || value === undefined || value === '?') return '?';
+  if (value === null || value === undefined || value === '?' || value === '—') return '—';
   const n = Number(value);
   if (!Number.isFinite(n)) return String(value);
   if (Math.abs(n) >= 1000) return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -59,7 +59,14 @@ function formatPrice(value) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 }
 function changeClass(v) { return Number(v) > 0 ? 'up' : Number(v) < 0 ? 'down' : 'flat'; }
-function changeSymbol(v, lang) { const L = tr(lang); return Number(v) > 0 ? `▲ ${L.positive}` : Number(v) < 0 ? `▼ ${L.negative}` : `• ${L.flat}`; }
+function changeSymbol(v, lang) { const L = tr(lang); return v === null || v === undefined ? `• ${L.unavailableData}` : Number(v) > 0 ? `▲ ${L.positive}` : Number(v) < 0 ? `▼ ${L.negative}` : `• ${L.flat}`; }
+function formatChange(value) { return value === null || value === undefined ? '—' : `${Number(value) > 0 ? '+' : ''}${value}%`; }
+function marketSourceLabel(market, lang) {
+  const L = tr(lang);
+  if (market.dataStatus === 'stale') return `⚠ ${L.staleData} · ${market.source || ''}`;
+  if (market.dataStatus === 'unavailable') return L.unavailableData;
+  return market.source || '';
+}
 
 const localRateText = {
   ku: { local:'بازاڕی ناوخۆ', per100:'بۆ 100 دۆلار', buy:'کڕین', sell:'فرۆشتن', erbil:'هەولێر', baghdad:'بەغدا' },
@@ -98,7 +105,7 @@ function MarketTicker({ markets, dict }) {
     <div className="market-ticker-track">
       <b>📈 {dict.marketTicker}</b>
       {[...list, ...list].map((m, i) => <span className="market-tick" key={m.symbol + i}>
-        <strong>{marketSymbol(m)}</strong> <em>{formatPrice(m.price)}</em> <small className={changeClass(m.changePct)}>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small>
+        <strong>{marketSymbol(m)}</strong> <em>{formatPrice(m.price)}</em> <small className={changeClass(m.changePct)}>{formatChange(m.changePct)}</small>
       </span>)}
     </div>
   </div>;
@@ -112,8 +119,8 @@ function MarketDashboard({ markets, dict, lang }) {
         <div className="market-card-top"><b>{marketSymbol(m)}</b><span>{marketName(m, lang)}</span></div>
         <div className="market-price">{formatPrice(m.price)}</div>
         <LocalRateDetails market={m} lang={lang} />
-        <div className="market-change"><span>{changeSymbol(m.changePct, lang)} {Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</span><small>{m.source}</small></div>
-        <svg className="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline points={sparkPoints(Number(m.changePct), idx)} /></svg>
+        <div className="market-change"><span>{changeSymbol(m.changePct, lang)} {formatChange(m.changePct)}</span><small>{marketSourceLabel(m, lang)}</small></div>
+        {m.dataStatus !== 'unavailable' && <svg className="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline points={sparkPoints(Number(m.changePct), idx)} /></svg>}
       </div>)}
     </div>
   </section>;
@@ -140,12 +147,12 @@ function EconomicCalendar({ dict, lang }) {
   return <section className="panel calendar-panel"><h3>🗓️ {dict.calendarEvents || tr(lang).todayEvents}</h3>{events.map(([impact, title, affected]) => <div className="calendar-row" key={title}><span>{impact}</span><b>{title}</b><small>{affected}</small></div>)}</section>;
 }
 function Heatmap({ markets, dict }) {
-  return <section className="panel"><h3>🔥 {dict.heatmap}</h3><div className="heatmap">{markets.slice(0, 11).map(m => <button className={`heat ${changeClass(m.changePct)}`} key={m.symbol}><b>{marketSymbol(m)}</b><small>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small></button>)}</div></section>;
+  return <section className="panel"><h3>🔥 {dict.heatmap}</h3><div className="heatmap">{markets.slice(0, 11).map(m => <button className={`heat ${changeClass(m.changePct)}`} key={m.symbol}><b>{marketSymbol(m)}</b><small>{formatChange(m.changePct)}</small></button>)}</div></section>;
 }
 function Watchlist({ markets, dict }) {
   const picks = ['XAU/USD', 'WTI', 'BTC/USD', 'EUR/USD', 'USD/IQD'];
   const rows = picks.map(p => markets.find(m => m.symbol === p)).filter(Boolean);
-  return <section className="panel"><h3>⭐ {dict.watchlist}</h3>{rows.map(m => <div className="watch-row" key={m.symbol}><b>{marketSymbol(m)}</b><span>{formatPrice(m.price)}</span><small className={changeClass(m.changePct)}>{Number(m.changePct) > 0 ? '+' : ''}{m.changePct ?? 0}%</small></div>)}</section>;
+  return <section className="panel"><h3>⭐ {dict.watchlist}</h3>{rows.map(m => <div className="watch-row" key={m.symbol}><b>{marketSymbol(m)}</b><span>{formatPrice(m.price)}</span><small className={changeClass(m.changePct)}>{formatChange(m.changePct)}</small></div>)}</section>;
 }
 
 function countAssets(items) {
@@ -363,6 +370,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260715-new-logo').catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260715-reliability').catch(() => {});
   });
 }
