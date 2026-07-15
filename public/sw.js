@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hawali-aburi-v12-fast-news';
+const CACHE_NAME = 'hawali-aburi-v13-developer-contact';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg'];
 
 function shouldBypass(request, url) {

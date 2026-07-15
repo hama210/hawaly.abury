@@ -26,6 +26,12 @@ const labels = {
   }
 };
 const tr = lang => labels[lang] || labels.ku;
+const developerCopy = {
+  ku: { developedBy:'گەشەپێدراوە لەلایەن', contact:'پەیوەندی', whatsapp:'واتساپ' },
+  ar: { developedBy:'تطوير', contact:'اتصال', whatsapp:'واتساب' },
+  en: { developedBy:'Developed by', contact:'Contact', whatsapp:'WhatsApp' }
+};
+const developer = { name:'Muhammad Muhsin', phone:'+9647763326510', whatsapp:'https://wa.me/9647763326510' };
 
 function Icon({ name }) { return <span aria-hidden="true">{name}</span>; }
 function timeAgo(value, lang) {
@@ -306,7 +312,7 @@ function SourcesDisclosure() {
         <button type="button" onClick={() => setOpen(false)} aria-label={L.close}>×</button>
       </div>
       <p className="sources-note">{L.sourceNote}</p>
-      <p className="sources-note compact">{L.contactNote}</p>
+      <p className="sources-note compact">{L.contactNote} <a href={`tel:${developer.phone}`} dir="ltr">{developer.phone}</a></p>
       <div className="sources-list" aria-label="Source names">
         {sources.length ? sources.map(source => <span key={source}>{source}</span>) : <span>{L.loadingSources}...</span>}
       </div>
@@ -315,6 +321,17 @@ function SourcesDisclosure() {
       <span>Sources</span><b>{countLabel}</b>
     </button>
   </aside>;
+}
+
+function SiteFooter({ lang }) {
+  const copy = developerCopy[lang] || developerCopy.en;
+  return <footer className="site-footer">
+    <div className="developer-credit"><span>{copy.developedBy}</span><strong>{developer.name}</strong></div>
+    <div className="developer-contact">
+      <a href={`tel:${developer.phone}`} aria-label={`${copy.contact} ${developer.phone}`} dir="ltr">☎ {developer.phone}</a>
+      <a href={developer.whatsapp} target="_blank" rel="noreferrer">{copy.whatsapp} ↗</a>
+    </div>
+  </footer>;
 }
 
 function App(){
@@ -334,7 +351,7 @@ function App(){
   const filtered=useMemo(()=>displayNews.filter(i=>{const q=query.trim().toLowerCase(); const text=`${i.title || ''} ${i.titleEn || ''} ${i.titleKu || ''} ${i.titleAr || ''} ${i.summary || ''} ${i.summaryEn || ''} ${i.summaryKu || ''} ${i.summaryAr || ''} ${i.source} ${i.sourceGroup || ''} ${i.category} ${i.intelligence?.assets?.join(' ')}`.toLowerCase(); const activeOk=active==='all'||text.includes(active)||i.category?.toLowerCase().includes(active); return (!q||text.includes(q))&&activeOk;}),[displayNews,query,active]);
   const hero=filtered[0]||displayNews[0];
   const rest=filtered.filter(i=>i.id!==hero?.id);
-  return <div className="app"><Sidebar active={active} setActive={setActive} dict={dict} lang={lang}/><main className="main"><Header lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict}/><MarketTicker markets={markets} dict={dict}/><Ticker items={displayNews} lang={lang} dict={dict}/><section className="hero-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/><div className="side-stack"><IntelligencePanel items={displayNews} lang={lang} dict={dict}/><Watchlist markets={markets} dict={dict}/></div></section><MarketDashboard markets={markets} dict={dict} lang={lang}/><section className="dash-two"><EconomicCalendar dict={dict} lang={lang}/><Heatmap markets={markets} dict={dict}/></section><IntelligenceDashboard items={displayNews} markets={markets} lang={lang} dict={dict} onAsset={(a)=>{setQuery(a);setActive('all')}}/><AssetIntelligence items={displayNews} markets={markets} lang={lang} onAsset={(a)=>{setQuery(a);setActive('all')}}/><IraqWidget dict={dict} lang={lang}/><AiAssistant items={displayNews} lang={lang}/><div className="section-head"><h2>{dict.latest}</h2>{translating && <span className="muted">{tr(lang).translating}</span>}<div className="filters">{nav.filter(n=>n!=='intelligence').map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{categoryMap[lang]?.[n]||n}</button>)}</div></div>{filtered.length===0?<div className="panel">{dict.noResults}</div>:<div className="news-grid">{rest.map(item=><NewsCard key={item.id} item={item} lang={lang} dict={dict} onOpen={setSelected} onAsset={(a)=>{setQuery(a);setActive('all')}} />)}</div>}<div style={{height:40}}/><ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/></main></div>;
+  return <div className="app"><Sidebar active={active} setActive={setActive} dict={dict} lang={lang}/><main className="main"><Header lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict}/><MarketTicker markets={markets} dict={dict}/><Ticker items={displayNews} lang={lang} dict={dict}/><section className="hero-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/><div className="side-stack"><IntelligencePanel items={displayNews} lang={lang} dict={dict}/><Watchlist markets={markets} dict={dict}/></div></section><MarketDashboard markets={markets} dict={dict} lang={lang}/><section className="dash-two"><EconomicCalendar dict={dict} lang={lang}/><Heatmap markets={markets} dict={dict}/></section><IntelligenceDashboard items={displayNews} markets={markets} lang={lang} dict={dict} onAsset={(a)=>{setQuery(a);setActive('all')}}/><AssetIntelligence items={displayNews} markets={markets} lang={lang} onAsset={(a)=>{setQuery(a);setActive('all')}}/><IraqWidget dict={dict} lang={lang}/><AiAssistant items={displayNews} lang={lang}/><div className="section-head"><h2>{dict.latest}</h2>{translating && <span className="muted">{tr(lang).translating}</span>}<div className="filters">{nav.filter(n=>n!=='intelligence').map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{categoryMap[lang]?.[n]||n}</button>)}</div></div>{filtered.length===0?<div className="panel">{dict.noResults}</div>:<div className="news-grid">{rest.map(item=><NewsCard key={item.id} item={item} lang={lang} dict={dict} onOpen={setSelected} onAsset={(a)=>{setQuery(a);setActive('all')}} />)}</div>}<SiteFooter lang={lang}/><ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/></main></div>;
 }
 
 createRoot(document.getElementById('root')).render(<><App/><SourcesDisclosure /></>);
@@ -346,6 +363,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260715-fast-news').catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260715-developer-contact').catch(() => {});
   });
 }
