@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hawali-aburi-v11-local-usd-iqd';
+const CACHE_NAME = 'hawali-aburi-v12-fast-news';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg'];
 
 function shouldBypass(request, url) {
@@ -20,11 +20,17 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (shouldBypass(event.request, url)) return;
+
+  const network = fetch(event.request).then(async response => {
+    if (response.ok && url.origin === self.location.origin) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(event.request, response.clone());
+    }
+    return response;
+  }).catch(() => null);
+
+  event.waitUntil(network.then(() => undefined));
   event.respondWith(
-    fetch(event.request).then(response => {
-      const copy = response.clone();
-      if (response.ok && (url.origin === self.location.origin)) caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-      return response;
-    }).catch(() => caches.match(event.request).then(cached => cached || caches.match('/')))
+    caches.match(event.request).then(cached => cached || network.then(response => response || caches.match('/')))
   );
 });

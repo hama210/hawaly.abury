@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
-import { fetchNews } from './services/news.js';
+import { fetchNews, getInitialNews } from './services/news.js';
 import { fetchMarkets } from './services/markets.js';
 import { useClientTranslator } from './hooks/useClientTranslator.js';
 import { LANGS, t } from './utils/i18n.js';
@@ -291,7 +291,7 @@ function SourcesDisclosure() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/sources?ts=' + Date.now(), { cache: 'no-store' })
+    fetch('/api/sources')
       .then(res => res.ok ? res.json() : Promise.reject(new Error('Sources unavailable')))
       .then(data => { if (!cancelled && Array.isArray(data.sources)) setSources(data.sources.filter(Boolean)); })
       .catch(() => { if (!cancelled) setSources([]); });
@@ -322,14 +322,14 @@ function App(){
   const [theme,setTheme]=useState(localStorage.getItem('theme')||'dark');
   const [active,setActive]=useState('all');
   const [query,setQuery]=useState('');
-  const [news,setNews]=useState([]);
+  const [news,setNews]=useState(getInitialNews);
   const [markets,setMarkets]=useState([]);
   const [selected,setSelected]=useState(null);
   const dict=t[lang] || t.ku;
   const { translatedNews, translating } = useClientTranslator(news, lang);
   const displayNews = translatedNews.length ? translatedNews : news;
   useEffect(()=>{document.documentElement.lang=lang;document.documentElement.dir=LANGS[lang].dir;document.documentElement.dataset.theme=theme;localStorage.setItem('lang',lang);localStorage.setItem('theme',theme)},[lang,theme]);
-  useEffect(()=>{let alive=true; const load=()=>fetchNews().then(items=>alive&&setNews(items)); load(); const id=setInterval(load,60000); return()=>{alive=false;clearInterval(id)}},[]);
+  useEffect(()=>{let alive=true; const update=items=>{if(alive)setNews(items)}; const load=()=>fetchNews(update).then(update); load(); const id=setInterval(load,300000); return()=>{alive=false;clearInterval(id)}},[]);
   useEffect(()=>{let alive=true; const load=()=>fetchMarkets().then(items=>alive&&setMarkets(items)); load(); const id=setInterval(load,60000); return()=>{alive=false;clearInterval(id)}},[]);
   const filtered=useMemo(()=>displayNews.filter(i=>{const q=query.trim().toLowerCase(); const text=`${i.title || ''} ${i.titleEn || ''} ${i.titleKu || ''} ${i.titleAr || ''} ${i.summary || ''} ${i.summaryEn || ''} ${i.summaryKu || ''} ${i.summaryAr || ''} ${i.source} ${i.sourceGroup || ''} ${i.category} ${i.intelligence?.assets?.join(' ')}`.toLowerCase(); const activeOk=active==='all'||text.includes(active)||i.category?.toLowerCase().includes(active); return (!q||text.includes(q))&&activeOk;}),[displayNews,query,active]);
   const hero=filtered[0]||displayNews[0];
@@ -346,6 +346,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260715-iran-us-war').catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260715-fast-news').catch(() => {});
   });
 }

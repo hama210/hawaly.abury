@@ -42,6 +42,10 @@ const fallback = fallbackSeeds.map(([title, source, category, link, kind], index
   publishedAt: new Date(Date.now() - index * 900000).toISOString()
 }));
 
+const NEWS_CACHE_KEY = 'hawali-aburi-news-v1';
+const NEWS_CACHE_MAX_AGE = 30 * 60 * 1000;
+const NEWS_LIMIT = 120;
+
 function withIntelligence(items, prefix = 'news') {
   return items.map((item, index) => ({
     id: item.id || `${prefix}-${index}-${item.title}`,
@@ -62,9 +66,42 @@ function mergeUnique(primary = [], backup = []) {
   return output;
 }
 
-async function fetchBatch(batch) {
+function newestFirst(items = []) {
+  return [...items].sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+}
+
+function readCachedNews() {
+  if (typeof localStorage === 'undefined') return [];
   try {
-    const res = await fetch(`/api/news?phase=4&limit=120&batch=${batch}&ts=${Date.now()}`, { cache: 'no-store' });
+    const saved = JSON.parse(localStorage.getItem(NEWS_CACHE_KEY) || 'null');
+    if (!saved || !Array.isArray(saved.items) || Date.now() - Number(saved.savedAt || 0) > NEWS_CACHE_MAX_AGE) return [];
+    return saved.items;
+  } catch {
+    return [];
+  }
+}
+
+function saveCachedNews(items) {
+  if (typeof localStorage === 'undefined' || !items.length) return;
+  try {
+    localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), items: items.slice(0, NEWS_LIMIT) }));
+  } catch {}
+}
+
+function prepareNews(primary = [], backup = []) {
+  const liveItems = newestFirst(mergeUnique(primary, backup)).slice(0, NEWS_LIMIT);
+  const items = liveItems.length >= 10 ? liveItems : mergeUnique(liveItems, fallback).slice(0, NEWS_LIMIT);
+  return withIntelligence(items, liveItems.length ? 'live' : 'fallback');
+}
+
+export function getInitialNews() {
+  const cached = readCachedNews();
+  return prepareNews(cached.length ? cached : fallback);
+}
+
+async function fetchPayload(path) {
+  try {
+    const res = await fetch(path);
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -72,21 +109,49 @@ async function fetchBatch(batch) {
   }
 }
 
-export async function fetchNews() {
+async function fetchBatch(batch) {
+  return fetchPayload(`/api/news?mode=full&limit=${NEWS_LIMIT}&batch=${batch}`);
+}
+
+export async function fetchNews(onUpdate) {
+  const cached = readCachedNews();
+  let fastItems = [];
+  let fullItems = [];
+  let latest = prepareNews(cached.length ? cached : fallback);
+
+  const publish = () => {
+    latest = prepareNews(fullItems, mergeUnique(fastItems, cached));
+    saveCachedNews(latest);
+    if (typeof onUpdate === 'function') onUpdate(latest);
+  };
+
   try {
-    const payloads = await Promise.all([0, 1].map(fetchBatch));
+    const fast = await fetchPayload('/api/news?mode=fast&limit=48');
+    fastItems = Array.isArray(fast?.items) ? fast.items : [];
+    if (fastItems.length) publish();
+
+    const payloads = await Promise.all([0, 1].map(async batch => {
+      const payload = await fetchBatch(batch);
+      if (Array.isArray(payload?.items) && payload.items.length) {
+        fullItems = mergeUnique(fullItems, payload.items);
+        publish();
+      }
+      return payload;
+    }));
     const batchCount = Math.max(1, ...payloads.map(data => Number(data?.batchCount) || 1));
     if (batchCount > payloads.length) {
       const remaining = Array.from({ length: batchCount - payloads.length }, (_, index) => index + payloads.length);
-      payloads.push(...await Promise.all(remaining.map(fetchBatch)));
+      payloads.push(...await Promise.all(remaining.map(async batch => {
+        const payload = await fetchBatch(batch);
+        if (Array.isArray(payload?.items) && payload.items.length) {
+          fullItems = mergeUnique(fullItems, payload.items);
+          publish();
+        }
+        return payload;
+      })));
     }
-    const combined = payloads.flatMap(data => Array.isArray(data?.items) ? data.items : []);
-    const liveItems = mergeUnique([], combined)
-      .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0))
-      .slice(0, 120);
-    const items = liveItems.length >= 10 ? liveItems : mergeUnique(liveItems, fallback);
-    return withIntelligence(items, liveItems.length ? 'live' : 'fallback');
+    return latest;
   } catch {
-    return withIntelligence(fallback, 'fallback');
+    return latest;
   }
 }

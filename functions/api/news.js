@@ -91,6 +91,19 @@ export const FEEDS = [
 const MAX_FEEDS_PER_REQUEST = 45;
 const FETCH_CONCURRENCY = 6;
 const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
+const FAST_FEED_SOURCES = [
+  'Reuters Markets',
+  'BBC World',
+  'Iran-US War Live',
+  'Iraq Latest',
+  'Kurdistan Region',
+  'Shafaq Economy'
+];
+const FAST_FEED_TIMEOUT_MS = 3200;
+const FULL_FEED_TIMEOUT_MS = 2500;
+const FAST_CACHE_TTL = 300;
+const FULL_CACHE_TTL = 300;
+const MAX_FEED_BYTES = 384 * 1024;
 
 const fallbackImages = {
   iraq: 'https://images.unsplash.com/photo-1569163139599-0f4517e36f51?auto=format&fit=crop&w=1200&q=80',
@@ -162,12 +175,43 @@ function newestFirst(items){
   return [...items].sort((a,b)=>new Date(b.publishedAt)-new Date(a.publishedAt));
 }
 
-async function fetchFeed(feed){
+async function readFeedBody(response, itemLimit){
+  if(!response.body) return '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+  let total = 0;
+  while(true){
+    const { done, value } = await reader.read();
+    if(done){
+      text += decoder.decode();
+      return text;
+    }
+    total += value.byteLength;
+    if(total > MAX_FEED_BYTES){
+      await reader.cancel('feed response too large');
+      throw new Error('feed response too large');
+    }
+    text += decoder.decode(value, { stream: true });
+    if((text.match(/<\/item>/gi) || []).length >= itemLimit){
+      await reader.cancel('enough feed items received');
+      return text;
+    }
+  }
+}
+
+async function fetchFeed(feed, timeoutMs){
+  const controller = new AbortController();
+  const timeoutId = setTimeout(()=>controller.abort('feed timeout'), timeoutMs);
   try{
-    const res = await fetch(feed.url, { cf: { cacheTtl: 60, cacheEverything: false }, headers: { 'user-agent': 'HawaliAburiBot/1.5' }});
+    const res = await fetch(feed.url, {
+      signal: controller.signal,
+      cf: { cacheTtl: 300, cacheEverything: false },
+      headers: { 'user-agent': 'HawaliAburiBot/1.6' }
+    });
     if(!res.ok) throw new Error(String(res.status));
-    const xml = await res.text();
     const perFeedLimit = feed.category === 'iraq' ? 12 : 8;
+    const xml = await readFeedBody(res, perFeedLimit);
     const items = [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
       const entry = m[0];
       const rawTitle = extractTag(entry,'title');
@@ -181,16 +225,20 @@ async function fetchFeed(feed){
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
     }).filter(i=>i.title);
     return { ok: true, items };
-  }catch(e){ return { ok: false, items: [] }; }
+  }catch(e){
+    return { ok: false, items: [] };
+  }finally{
+    clearTimeout(timeoutId);
+  }
 }
 
-async function fetchFeeds(feeds){
+async function fetchFeeds(feeds, timeoutMs){
   const results = new Array(feeds.length);
   let cursor = 0;
   async function run(){
     while(cursor < feeds.length){
       const index = cursor++;
-      results[index] = await fetchFeed(feeds[index]);
+      results[index] = await fetchFeed(feeds[index], timeoutMs);
     }
   }
   await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, feeds.length) }, run));
@@ -217,14 +265,41 @@ function fallback(){
   return base;
 }
 
-export async function onRequest({ request }) {
-  const url = new URL(request.url);
+function cacheKeyFor(url, mode, batch, limit){
+  const cacheUrl = new URL(url.origin + url.pathname);
+  cacheUrl.searchParams.set('mode', mode);
+  if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
+  cacheUrl.searchParams.set('limit', String(limit));
+  return new Request(cacheUrl.toString(), { method: 'GET' });
+}
+
+function withHeader(response, name, value){
+  const headers = new Headers(response.headers);
+  headers.set(name, value);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
+export async function onRequest(context) {
+  const startedAt = Date.now();
+  const url = new URL(context.request.url);
   const q = (url.searchParams.get('q') || '').trim().toLowerCase();
-  const limit = Math.min(Number(url.searchParams.get('limit') || 120), 180);
+  const parsedLimit = Number(url.searchParams.get('limit'));
+  const mode = url.searchParams.get('mode') === 'fast' ? 'fast' : 'full';
+  const defaultLimit = mode === 'fast' ? 48 : 120;
+  const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(Math.floor(parsedLimit), 180) : defaultLimit;
   const requestedBatch = Number(url.searchParams.get('batch') || 0);
   const batch = Number.isInteger(requestedBatch) ? Math.max(0, Math.min(requestedBatch, BATCH_COUNT - 1)) : 0;
-  const selectedFeeds = FEEDS.filter((_, index) => index % BATCH_COUNT === batch);
-  const feedResults = await fetchFeeds(selectedFeeds);
+  const cache = globalThis.caches?.default;
+  const cacheKey = !q && cache ? cacheKeyFor(url, mode, batch, limit) : null;
+  if(cacheKey){
+    const cached = await cache.match(cacheKey);
+    if(cached) return withHeader(cached, 'X-News-Cache', 'HIT');
+  }
+
+  const selectedFeeds = mode === 'fast'
+    ? FAST_FEED_SOURCES.map(source => FEEDS.find(feed => feed.source === source)).filter(Boolean)
+    : FEEDS.filter((_, index) => index % BATCH_COUNT === batch);
+  const feedResults = await fetchFeeds(selectedFeeds, mode === 'fast' ? FAST_FEED_TIMEOUT_MS : FULL_FEED_TIMEOUT_MS);
   const raw = feedResults.flatMap(result => result.items).filter(i => !q || itemText(i).includes(q));
   let items;
 
@@ -240,13 +315,29 @@ export async function onRequest({ request }) {
 
   if(!items.length) items = fallback();
   const succeeded = feedResults.filter(result => result.ok).length;
-  return Response.json({
+  const ttl = mode === 'fast' ? FAST_CACHE_TTL : FULL_CACHE_TTL;
+  const response = Response.json({
     updatedAt: new Date().toISOString(),
     count: items.length,
     translated: false,
-    batch,
+    mode,
+    batch: mode === 'fast' ? 'fast' : batch,
     batchCount: BATCH_COUNT,
     feedStats: { total: FEEDS.length, requested: selectedFeeds.length, succeeded, failed: selectedFeeds.length - succeeded },
     items
-  }, { headers: { 'Cache-Control': 'public, max-age=60' } });
+  }, { headers: {
+    'Cache-Control': `public, max-age=${ttl}`,
+    'X-News-Cache': 'MISS',
+    'X-News-Mode': mode,
+    'Server-Timing': `news;dur=${Date.now() - startedAt}`
+  }});
+
+  if(cacheKey){
+    const cacheWrite = cache.put(cacheKey, response.clone()).catch(error => {
+      console.warn(JSON.stringify({ event:'news_cache_write_failed', message:error instanceof Error ? error.message : String(error) }));
+    });
+    if(context.waitUntil) context.waitUntil(cacheWrite);
+    else await cacheWrite;
+  }
+  return response;
 }
