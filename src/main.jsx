@@ -216,7 +216,7 @@ function AiAssistant({ items, lang }) {
 
 function Header({ lang, setLang, theme, setTheme, query, setQuery, dict }) {
   return <header className="topbar">
-    <button className="iconbtn mobile-menu"><Icon name="☰" /></button>
+    <span className="mobile-menu mobile-logo" aria-label={dict.site}><img src="/hawali-logo-96.webp" alt="" /></span>
     <label className="search"><Icon name="⌕" /><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={dict.search} /></label>
     <select className="select" value={lang} onChange={e=>setLang(e.target.value)}>{Object.entries(LANGS).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select>
     <button className="iconbtn" onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?'☀️':'🌙'}</button>
@@ -227,7 +227,7 @@ function Sidebar({ active, setActive, dict, lang }) {
   const names={ all:'📰 '+dict.latest, iraq:'🇮🇶 '+dict.iraq, iran:'🇮🇷 '+dict.iran, geopolitics:'⚠️ '+dict.geopolitics, forex:'💱 '+dict.forex, calendar:'📅 '+dict.calendar, oil:'🛢️ '+dict.oil, stocks:'📈 '+dict.stocks, crypto:'₿ '+dict.crypto, central:'🏦 '+dict.central, intelligence:'🧠 '+dict.intelligence };
   const L = tr(lang);
   return <aside className="sidebar">
-    <div className="brand"><div className="logo">HA</div><div><h1>{dict.site}</h1><p>{dict.tagline}</p></div></div>
+    <div className="brand"><div className="logo"><img src="/hawali-logo-96.webp" alt="" /></div><div><h1>{dict.site}</h1><p>{dict.tagline}</p></div></div>
     <nav className="nav">{nav.map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{names[n]}</button>)}</nav>
     <div className="panel" style={{marginTop:22}}><h3>{dict.marketStatus}</h3><div className="status-grid"><Status label="Risk" value={L.neutral} /><Status label="USD" value={L.watch} /><Status label="Gold" value={L.active} /><Status label="Oil" value={L.sensitive} /></div></div>
   </aside>;
@@ -363,6 +363,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260715-developer-contact').catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260715-new-logo').catch(() => {});
   });
 }

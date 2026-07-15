@@ -1,5 +1,5 @@
-const CACHE_NAME = 'hawali-aburi-v13-developer-contact';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg'];
+const CACHE_NAME = 'hawali-aburi-v14-new-logo';
+const APP_SHELL = ['/', '/manifest.webmanifest', '/hawali-logo-96.webp', '/hawali-logo-192.png'];
 
 function shouldBypass(request, url) {
   return request.method !== 'GET'
