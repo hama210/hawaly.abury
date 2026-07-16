@@ -376,7 +376,7 @@ function SourcesDisclosure({ lang }) {
   }[lang];
   useEffect(() => {
     let alive = true;
-    fetch('/api/sources?v=strong-sources-v1').then(response => response.ok ? response.json() : Promise.reject()).then(data => {
+    fetch('/api/sources?v=strong-sources-v2').then(response => response.ok ? response.json() : Promise.reject()).then(data => {
       if (!alive) return;
       if (Array.isArray(data.details)) setSources(data.details.filter(item => item?.source));
       else if (Array.isArray(data.sources)) setSources(data.sources.filter(Boolean).map(source => ({ source, tier:'curated' })));
@@ -493,6 +493,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260716-strong-sources-v1', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260716-strong-sources-v2', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }

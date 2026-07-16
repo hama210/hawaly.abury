@@ -36,7 +36,7 @@ const fallback = fallbackSeeds.map(([title, source, category, link, kind], index
   publishedAt: new Date(Date.now() - index * 900000).toISOString()
 }));
 
-const NEWS_CACHE_KEY = 'hawali-aburi-news-v4-strong-sources';
+const NEWS_CACHE_KEY = 'hawali-aburi-news-v5-official-feeds';
 const NEWS_CACHE_MAX_AGE = 30 * 60 * 1000;
 const NEWS_LIMIT = 120;
 const TIER_WEIGHT = { official:36, major:32, local:28, specialist:22, curated:17 };
