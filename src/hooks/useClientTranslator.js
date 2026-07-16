@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 
 const memory = new Map()
-const CACHE_PREFIX = 'hawali_translate_v4_'
-const ARTICLES_PER_REQUEST = 15
+const CACHE_PREFIX = 'hawali_translate_v5_'
+// Each article produces two Google Translate subrequests (title + summary).
+// Keep each Worker invocation below Cloudflare's subrequest ceiling.
+const ARTICLES_PER_REQUEST = 5
+const REQUEST_CONCURRENCY = 2
 
 function clean(value = ''){
   return String(value || '').replace(/\s+/g, ' ').trim()
@@ -71,33 +74,52 @@ async function translateList(items, lang, update, signal){
   })
   update([...output])
 
-  for(let offset = 0; offset < pending.length; offset += ARTICLES_PER_REQUEST){
-    if(signal.aborted) return
-    const batch = pending.slice(offset, offset + ARTICLES_PER_REQUEST)
+  async function translateBatch(batch){
     const texts = batch.flatMap(({ item }) => [clean(item.titleEn), clean(item.summaryEn)])
-    try{
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lang, texts }),
-        signal
-      })
-      if(!response.ok) throw new Error('Translation request failed')
-      const data = await response.json()
-      if(data.ok === false || !Array.isArray(data.translated)) throw new Error(data.error || 'Translate failed')
-      batch.forEach(({ index, item, key }, batchIndex) => {
-        const fields = translatedFields(item, lang, data.translated[batchIndex * 2], data.translated[batchIndex * 2 + 1])
-        if(Object.keys(fields).length){
-          saveFields(key, fields)
-          output[index] = { ...output[index], ...fields }
+    const response = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lang, texts }),
+      signal
+    })
+    const data = await response.json().catch(() => ({}))
+    if(!response.ok || data.ok === false || !Array.isArray(data.translated) || data.translated.length !== texts.length){
+      throw new Error(data.error || 'Translation request failed')
+    }
+
+    batch.forEach(({ index, item, key }, batchIndex) => {
+      const fields = translatedFields(item, lang, data.translated[batchIndex * 2], data.translated[batchIndex * 2 + 1])
+      if(Object.keys(fields).length){
+        saveFields(key, fields)
+        output[index] = { ...output[index], ...fields }
+      }
+    })
+    update([...output])
+  }
+
+  const batches = []
+  for(let offset = 0; offset < pending.length; offset += ARTICLES_PER_REQUEST){
+    batches.push(pending.slice(offset, offset + ARTICLES_PER_REQUEST))
+  }
+  let cursor = 0
+  async function run(){
+    while(cursor < batches.length && !signal.aborted){
+      const batch = batches[cursor++]
+      try{
+        await translateBatch(batch)
+      }catch(error){
+        if(signal.aborted || error?.name === 'AbortError') return
+        // A single bad/large article must not stop all later translations.
+        for(const entry of batch){
+          if(signal.aborted) return
+          try{ await translateBatch([entry]) }catch(retryError){
+            if(signal.aborted || retryError?.name === 'AbortError') return
+          }
         }
-      })
-      update([...output])
-    }catch(error){
-      if(signal.aborted || error?.name === 'AbortError') return
-      break
+      }
     }
   }
+  await Promise.all(Array.from({ length: Math.min(REQUEST_CONCURRENCY, batches.length) }, run))
 }
 
 export function useClientTranslator(news, lang){

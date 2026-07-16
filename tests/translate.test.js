@@ -29,7 +29,7 @@ test('translation batches work concurrently and reuse edge-cached text', async (
   })
 
   try{
-    const texts = Array.from({ length: 12 }, (_, index) => `Market story ${index}`)
+    const texts = Array.from({ length: 10 }, (_, index) => `Market story ${index}`)
     const first = translationRequest(texts)
     const firstResponse = await onRequest(first.context)
     const firstPayload = await firstResponse.json()
@@ -61,4 +61,10 @@ test('translation accepts only same-origin POST requests and enforces the body l
 
   const oversized = translationRequest(['x'.repeat(66_000)])
   assert.equal((await onRequest(oversized.context)).status, 413)
+
+  const tooManyTexts = translationRequest(Array.from({ length: 11 }, (_, index) => `Story ${index}`))
+  const tooManyResponse = await onRequest(tooManyTexts.context)
+  const tooManyPayload = await tooManyResponse.json()
+  assert.equal(tooManyResponse.status, 413)
+  assert.match(tooManyPayload.error, /maximum of 10 texts/i)
 })

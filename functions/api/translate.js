@@ -4,7 +4,9 @@ const TARGETS = {
   en: ['en']
 };
 const MAX_BODY_BYTES = 64 * 1024;
-const MAX_TEXTS = 30;
+// A cache lookup, Google request and cache write all count as Cloudflare
+// subrequests. Ten texts remains safely below the per-invocation limit.
+const MAX_TEXTS = 10;
 const TRANSLATE_CONCURRENCY = 6;
 const TRANSLATE_TIMEOUT_MS = 5000;
 const TRANSLATION_CACHE_TTL = 7 * 24 * 60 * 60;
@@ -184,7 +186,10 @@ export async function onRequest(context){
     const lang = String(body.lang || 'ku');
     if(!TARGETS[lang]) return Response.json({ ok: false, error: 'Unsupported language', translated: [] }, { status: 400, headers });
     if(!Array.isArray(body.texts)) return Response.json({ ok: false, error: 'texts must be an array', translated: [] }, { status: 400, headers });
-    const texts = body.texts.slice(0, MAX_TEXTS).map(clean);
+    if(body.texts.length > MAX_TEXTS){
+      return Response.json({ ok: false, error: `A maximum of ${MAX_TEXTS} texts is allowed per request`, translated: [] }, { status: 413, headers });
+    }
+    const texts = body.texts.map(clean);
     const cache = globalThis.caches?.default;
     const cacheWrites = [];
     const results = await mapWithConcurrency(texts, TRANSLATE_CONCURRENCY, text => translateOne(text, TARGETS[lang], lang, request, cache, cacheWrites));

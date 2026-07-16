@@ -61,7 +61,7 @@ export default function App(){
     }catch{}
   }
   const selectAsset = asset => { setAdvanced(prev => ({ ...prev, asset })); window.scrollTo({ top: 0, behavior:'smooth' }) }
-  const statusText = translating ? 'translating news...' : `${t.updated}: ${updatedLabel}`
+  const statusText = translating ? t.translating : `${t.updated}: ${updatedLabel}`
 
   return <div className="app-shell">
     <Sidebar t={t} open={sidebarOpen} setOpen={setSidebarOpen} activeCategory={category} setActiveCategory={setCategory}/>
