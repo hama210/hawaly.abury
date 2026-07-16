@@ -8,24 +8,57 @@ import { LANGS, t } from './utils/i18n.js';
 import { analyzeArticle, localizeSummary } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
 
-const nav = ['all','iraq','iran','geopolitics','forex','calendar','oil','stocks','crypto','central','intelligence'];
+const categories = ['all', 'iraq', 'markets', 'geopolitics', 'oil', 'forex'];
 const categoryMap = {
-  ku: { all:'هەموو', iraq:'عێراق', iran:'ئێران', geopolitics:'جەنگ و جیوپۆلیتیک', forex:'فۆرێکس', calendar:'ڕۆژژمێر', oil:'نەوت', stocks:'پشکەکان', crypto:'کریپتۆ', central:'بانک', intelligence:'AI' },
-  ar: { all:'الكل', iraq:'العراق', iran:'إيران', geopolitics:'الحرب والجغرافيا السياسية', forex:'فوركس', calendar:'التقويم', oil:'النفط', stocks:'الأسهم', crypto:'كريبتو', central:'البنوك', intelligence:'AI' },
-  en: { all:'All', iraq:'Iraq', iran:'Iran', geopolitics:'War & Geopolitics', forex:'Forex', calendar:'Calendar', oil:'Oil', stocks:'Stocks', crypto:'Crypto', central:'Banks', intelligence:'AI' }
+  ku: { all:'هەموو', iraq:'عێراق', markets:'ئابووری', geopolitics:'جەنگ', oil:'نەوت و زێڕ', forex:'فۆرێکس' },
+  ar: { all:'الكل', iraq:'العراق', markets:'الاقتصاد', geopolitics:'الحرب', oil:'النفط والذهب', forex:'فوركس' },
+  en: { all:'All', iraq:'Iraq', markets:'Economy', geopolitics:'War', oil:'Oil & Gold', forex:'Forex' }
 };
-const labels = {
+const uiCopy = {
   ku: {
-    aiReady:'ئامادەی AI', riskMode:'دۆخی ڕیسک', marketSentiment:'هەستی بازاڕ', highImpact:'کاریگەری بەرز', iraqImpact:'کاریگەری عێراق', liveAssets:'دارایی زیندووەکان', critical:'هەواڵی گرنگ', localStories:'هەواڵی ئابوری ناوخۆ', trackedMarkets:'بازاڕی چاودێریکراو', mostImportant:'گرنگترین شت ئێستا', assetIntelligence:'زیرەکی دارایی', relatedStories:'هەواڵی پەیوەندیدار', highImpactLabel:'کاریگەری بەرز', normalRisk:'ڕیسکی ئاسایی', watch:'چاودێری', assistant:'یاریدەدەری زیرەکی بازاڕ', assistantHint:'پرسیار بکە، وەک: بۆچی زێڕ دەجووڵێت؟', assistantAnswer:'ئەم وەڵامە بە سیستەمی rule-based دروست دەکرێت. دواتر دەتوانین API key زیاد بکەین بۆ وەڵامی AI ڕاستەقینە.', aiIntro:'زیرەکی بازاڕ بە شێوازی rule-based کار دەکات؛ دواتر بە API key دەتوانرێت وەڵامی AI ڕاستەقینە زیاد بکرێت.', translating:'وەرگێڕانی هەواڵەکان...', allSources:'هەموو سەرچاوەکانی هەواڵ', loadingSources:'بارکردنی سەرچاوەکان', sourceNote:'ئەم ماڵپەڕە تەنها سەردێڕ، پوختە و لینکی هەواڵە گشتییەکان کۆدەکاتەوە. هەموو بابەت، وێنە و ڕاپۆرتەکان موڵکی سەرچاوە ڕەسەنەکانیانن.', contactNote:'بۆ داواکاری سەرچاوە یان لابردنەوە، پەیوەندی بە خاوەنی ماڵپەڕەوە بکە.', close:'داخستن', positive:'ئەرێنی', negative:'نەرێنی', flat:'بێگۆڕان', monitor:'چاودێری', active:'چالاک', sensitive:'هەستیار', neutral:'بێلایەن', usd:'دۆلار', gold:'زێڕ', oil:'نەوت', highAttention:'گرنگ', todayEvents:'ڕووداوە گرنگەکانی ئەمڕۆ', staleData:'داتای کۆن', unavailableData:'بەردەست نییە'
+    brandTagline:'هەواڵ و بازاڕی کوردستان', lead:'هەواڵی سەرەکی', localDollar:'نرخی دۆلار لە بازاڕی ناوخۆ',
+    sell100:'فرۆشتن / $100', calendar:'ڕۆژژمێری ئابووری', latest:'دوایین هەواڵەکان', allSections:'هەموو بەشەکان',
+    refresh:'نوێکردنەوە', theme:'گۆڕینی ڕەنگ', language:'زمان', search:'گەڕان', menu:'بەشەکانی هەواڵ',
+    home:'سەرەکی', markets:'بازاڕ', news:'هەواڵ', high:'گرنگ', medium:'مامناوەند', live:'زیندوو',
+    noMarket:'نرخی ناوخۆ بەردەست نییە', translating:'وەرگێڕانی هەواڵەکان...', close:'داخستن'
   },
   ar: {
-    aiReady:'جاهز للذكاء الاصطناعي', riskMode:'وضع المخاطر', marketSentiment:'معنويات السوق', highImpact:'تأثير مرتفع', iraqImpact:'تأثير العراق', liveAssets:'الأصول المباشرة', critical:'عناوين حرجة', localStories:'أخبار الاقتصاد المحلي', trackedMarkets:'أسواق مراقبة', mostImportant:'الأهم الآن', assetIntelligence:'ذكاء الأصول', relatedStories:'أخبار مرتبطة', highImpactLabel:'تأثير مرتفع', normalRisk:'مخاطر طبيعية', watch:'مراقبة', assistant:'مساعد ذكاء السوق', assistantHint:'اسأل مثل: لماذا يتحرك الذهب؟', assistantAnswer:'هذه إجابة مبنية على قواعد. يمكن إضافة API key لاحقاً لتفعيل إجابات ذكاء اصطناعي حقيقية.', aiIntro:'ذكاء السوق يعمل حالياً بنظام مبني على قواعد؛ ويمكن لاحقاً إضافة API key لتفعيل ذكاء اصطناعي حقيقي.', translating:'جاري ترجمة الأخبار...', allSources:'كل مصادر الأخبار', loadingSources:'تحميل المصادر', sourceNote:'هذا الموقع يجمع فقط عناوين الأخبار العامة وملخصات قصيرة وروابط المصادر الأصلية. كل المقالات والصور والتقارير تعود لأصحابها.', contactNote:'لطلب إضافة مصدر أو إزالة محتوى، تواصل مع مالك الموقع.', close:'إغلاق', positive:'إيجابي', negative:'سلبي', flat:'ثابت', monitor:'مراقبة', active:'نشط', sensitive:'حساس', neutral:'محايد', usd:'الدولار', gold:'الذهب', oil:'النفط', highAttention:'مهم', todayEvents:'أحداث اليوم المهمة', staleData:'بيانات قديمة', unavailableData:'غير متاح'
+    brandTagline:'أخبار وأسواق كردستان', lead:'الخبر الرئيسي', localDollar:'سعر الدولار في السوق المحلي',
+    sell100:'بيع / 100$', calendar:'التقويم الاقتصادي', latest:'أحدث الأخبار', allSections:'كل الأقسام',
+    refresh:'تحديث', theme:'تغيير المظهر', language:'اللغة', search:'بحث', menu:'أقسام الأخبار',
+    home:'الرئيسية', markets:'الأسواق', news:'الأخبار', high:'مهم', medium:'متوسط', live:'مباشر',
+    noMarket:'السعر المحلي غير متاح', translating:'جاري ترجمة الأخبار...', close:'إغلاق'
   },
   en: {
-    aiReady:'AI-ready', riskMode:'Risk Mode', marketSentiment:'Market Sentiment', highImpact:'High Impact', iraqImpact:'Iraq Impact', liveAssets:'Live Assets', critical:'critical headlines', localStories:'local economy stories', trackedMarkets:'tracked markets', mostImportant:'Most important now', assetIntelligence:'Asset Intelligence', relatedStories:'related stories', highImpactLabel:'high impact', normalRisk:'normal risk', watch:'Watch', assistant:'AI Market Assistant', assistantHint:'Ask: why is gold moving?', assistantAnswer:'This is a rule-based assistant answer. Add an API key later for real AI responses.', aiIntro:'AI-ready rule-based intelligence. Add an API key later to enable real AI.', translating:'Translating news...', allSources:'All news sources', loadingSources:'Loading sources', sourceNote:'This site only collects public news headlines, short summaries, and links to original publishers in one place. All articles, names, logos, images, and reporting belong to their owners.', contactNote:'For source or removal requests, contact the site owner.', close:'Close', positive:'Positive', negative:'Negative', flat:'Flat', monitor:'Monitor', active:'Active', sensitive:'Sensitive', neutral:'Neutral', usd:'USD', gold:'Gold', oil:'Oil', highAttention:'High attention', todayEvents:'Today’s key events', staleData:'Stale data', unavailableData:'Unavailable'
+    brandTagline:'Kurdistan news and markets', lead:'Lead Story', localDollar:'Local dollar market',
+    sell100:'Sell / $100', calendar:'Economic Calendar', latest:'Latest News', allSections:'All sections',
+    refresh:'Refresh', theme:'Change theme', language:'Language', search:'Search', menu:'News sections',
+    home:'Home', markets:'Markets', news:'News', high:'High', medium:'Medium', live:'Live',
+    noMarket:'Local rate unavailable', translating:'Translating news...', close:'Close'
   }
 };
-const tr = lang => labels[lang] || labels.ku;
+const localRateText = {
+  ku: { erbil:'هەولێر', baghdad:'بەغدا' },
+  ar: { erbil:'أربيل', baghdad:'بغداد' },
+  en: { erbil:'Erbil', baghdad:'Baghdad' }
+};
+const calendarEvents = {
+  ku: [
+    ['وتاری فیدراڵ ڕیزێرڤ', 'USD', 'high'],
+    ['کۆگای نەوتی ئەمریکا', 'WTI', 'medium'],
+    ['نوێکاری بودجەی عێراق', 'IQD', 'high']
+  ],
+  ar: [
+    ['خطاب الاحتياطي الفيدرالي', 'USD', 'high'],
+    ['مخزونات النفط الأمريكية', 'WTI', 'medium'],
+    ['تحديثات موازنة العراق', 'IQD', 'high']
+  ],
+  en: [
+    ['Federal Reserve speech', 'USD', 'high'],
+    ['US oil inventories', 'WTI', 'medium'],
+    ['Iraq budget update', 'IQD', 'high']
+  ]
+};
 const developerCopy = {
   ku: { developedBy:'گەشەپێدراوە لەلایەن', contact:'پەیوەندی', whatsapp:'واتساپ' },
   ar: { developedBy:'تطوير', contact:'اتصال', whatsapp:'واتساب' },
@@ -33,335 +66,331 @@ const developerCopy = {
 };
 const developer = { name:'Muhammad Muhsin', phone:'+9647763326510', whatsapp:'https://wa.me/9647763326510' };
 
-function Icon({ name }) { return <span aria-hidden="true">{name}</span>; }
 function timeAgo(value, lang) {
   const ts = new Date(value || Date.now()).getTime();
   const diff = Math.max(0, Date.now() - ts);
   const min = Math.max(1, Math.round(diff / 60000));
   if (min < 60) return lang === 'en' ? `${min}m ago` : lang === 'ar' ? `قبل ${min} دقيقة` : `${min} خولەک لەمەوبەر`;
-  const h = Math.round(min / 60);
-  if (h < 24) return lang === 'en' ? `${h}h ago` : lang === 'ar' ? `قبل ${h} ساعة` : `${h} کاتژمێر لەمەوبەر`;
-  const d = Math.round(h / 24);
-  return lang === 'en' ? `${d}d ago` : lang === 'ar' ? `قبل ${d} يوم` : `${d} ڕۆژ لەمەوبەر`;
+  const hours = Math.round(min / 60);
+  if (hours < 24) return lang === 'en' ? `${hours}h ago` : lang === 'ar' ? `قبل ${hours} ساعة` : `${hours} کاتژمێر لەمەوبەر`;
+  const days = Math.round(hours / 24);
+  return lang === 'en' ? `${days}d ago` : lang === 'ar' ? `قبل ${days} يوم` : `${days} ڕۆژ لەمەوبەر`;
 }
-function impactLabel(key, lang){ const dict=t[lang]; return key==='high'?dict.high:key==='medium'?dict.medium:dict.low; }
-function sentimentLabel(key, lang){ const dict=t[lang]; return key==='bullish'?dict.bullish:key==='bearish'?dict.bearish:dict.neutral; }
-function copyLink(url){ navigator.clipboard?.writeText(url || location.href); }
-function translatedTitle(item, lang) { return getTitle(item || {}, lang) || item?.title || ''; }
-function translatedSummary(item, lang) { return getSummary(item || {}, lang) || localizeSummary(item || {}, lang); }
+
+function translatedTitle(item, lang) {
+  return getTitle(item || {}, lang) || item?.title || '';
+}
+
+function translatedSummary(item, lang) {
+  return getSummary(item || {}, lang) || localizeSummary(item || {}, lang);
+}
 
 function formatPrice(value) {
   if (value === null || value === undefined || value === '?' || value === '—') return '—';
-  const n = Number(value);
-  if (!Number.isFinite(n)) return String(value);
-  if (Math.abs(n) >= 1000) return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
-  if (Math.abs(n) >= 10) return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
-  return n.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-}
-function changeClass(v) { return Number(v) > 0 ? 'up' : Number(v) < 0 ? 'down' : 'flat'; }
-function changeSymbol(v, lang) { const L = tr(lang); return v === null || v === undefined ? `• ${L.unavailableData}` : Number(v) > 0 ? `▲ ${L.positive}` : Number(v) < 0 ? `▼ ${L.negative}` : `• ${L.flat}`; }
-function formatChange(value) { return value === null || value === undefined ? '—' : `${Number(value) > 0 ? '+' : ''}${value}%`; }
-function marketSourceLabel(market, lang) {
-  const L = tr(lang);
-  if (market.dataStatus === 'stale') return `⚠ ${L.staleData} · ${market.source || ''}`;
-  if (market.dataStatus === 'unavailable') return L.unavailableData;
-  return market.source || '';
+  const number = Number(value);
+  if (!Number.isFinite(number)) return String(value);
+  if (Math.abs(number) >= 1000) return number.toLocaleString('en-US', { maximumFractionDigits:2 });
+  if (Math.abs(number) >= 10) return number.toLocaleString('en-US', { maximumFractionDigits:2 });
+  return number.toLocaleString('en-US', { minimumFractionDigits:4, maximumFractionDigits:4 });
 }
 
-const localRateText = {
-  ku: { local:'بازاڕی ناوخۆ', per100:'بۆ 100 دۆلار', buy:'کڕین', sell:'فرۆشتن', erbil:'هەولێر', baghdad:'بەغدا' },
-  ar: { local:'السوق المحلي', per100:'لكل 100 دولار', buy:'شراء', sell:'بيع', erbil:'أربيل', baghdad:'بغداد' },
-  en: { local:'Local market', per100:'per 100 USD', buy:'Buy', sell:'Sell', erbil:'Erbil', baghdad:'Baghdad' }
-};
-function marketSymbol(market) {
-  return market?.quoteAmount === 100 ? `${market.symbol} · $100` : market?.symbol;
-}
-function marketName(market, lang) {
-  if (market?.marketKind !== 'local') return market?.name;
-  const copy = localRateText[lang] || localRateText.en;
-  return `${copy.local} · ${copy.per100}`;
-}
-function LocalRateDetails({ market, lang }) {
-  if (market?.marketKind !== 'local') return null;
-  const copy = localRateText[lang] || localRateText.en;
-  const rows = [
-    [copy.erbil, market.erbil],
-    [copy.baghdad, market.baghdad]
-  ].filter(([, rate]) => rate?.sell || rate?.buy || rate?.market);
-  if (!rows.length) return null;
-  return <div className="local-rate-details">
-    {rows.map(([place, rate]) => <div key={place}>
-      <b>{place}</b>
-      {rate.sell && <span>{copy.sell} {formatPrice(rate.sell)}</span>}
-      {rate.buy && <span>{copy.buy} {formatPrice(rate.buy)}</span>}
-      {!rate.sell && !rate.buy && rate.market && <span>{formatPrice(rate.market)}</span>}
-    </div>)}
-  </div>;
+function formatChange(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return '—';
+  return `${Number(value) > 0 ? '+' : ''}${value}%`;
 }
 
-function MarketTicker({ markets, dict }) {
-  const list = markets?.length ? markets : [];
-  return <div className="market-ticker" aria-label={dict.marketTicker}>
-    <div className="market-ticker-track">
-      <b>📈 {dict.marketTicker}</b>
-      {[...list, ...list].map((m, i) => <span className="market-tick" key={m.symbol + i}>
-        <strong>{marketSymbol(m)}</strong> <em>{formatPrice(m.price)}</em> <small className={changeClass(m.changePct)}>{formatChange(m.changePct)}</small>
-      </span>)}
-    </div>
-  </div>;
-}
-function MarketDashboard({ markets, dict, lang }) {
-  const visible = markets.slice(0, 8);
-  return <section>
-    <div className="section-head"><h2>📊 {dict.markets}</h2><span className="muted">60s</span></div>
-    <div className="market-grid">
-      {visible.map((m, idx) => <div className={`market-card ${changeClass(m.changePct)}`} key={m.symbol}>
-        <div className="market-card-top"><b>{marketSymbol(m)}</b><span>{marketName(m, lang)}</span></div>
-        <div className="market-price">{formatPrice(m.price)}</div>
-        <LocalRateDetails market={m} lang={lang} />
-        <div className="market-change"><span>{changeSymbol(m.changePct, lang)} {formatChange(m.changePct)}</span><small>{marketSourceLabel(m, lang)}</small></div>
-        {m.dataStatus !== 'unavailable' && <svg className="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline points={sparkPoints(Number(m.changePct), idx)} /></svg>}
-      </div>)}
-    </div>
-  </section>;
-}
-function sparkPoints(change, seed) {
-  const points = [];
-  for (let i = 0; i < 9; i++) {
-    const x = i * 15;
-    const drift = change >= 0 ? -i * 1.2 : i * 1.2;
-    const wave = Math.sin(i + seed) * 5;
-    const y = 21 + drift + wave;
-    points.push(`${x},${Math.max(5, Math.min(30, y)).toFixed(1)}`);
-  }
-  return points.join(' ');
-}
-function EconomicCalendar({ dict, lang }) {
-  const events = [
-    ['High', 'FOMC / Fed Speech', 'USD, Gold, Stocks'],
-    ['High', 'US CPI / Inflation', 'USD, Gold, BTC'],
-    ['Medium', 'OPEC / Oil Inventories', 'Oil, IQD'],
-    ['Medium', 'ECB / BOE Updates', 'EUR/USD, GBP/USD'],
-    ['Medium', 'Iraq Budget / CBI', 'IQD, Banking']
-  ];
-  return <section className="panel calendar-panel"><h3>🗓️ {dict.calendarEvents || tr(lang).todayEvents}</h3>{events.map(([impact, title, affected]) => <div className="calendar-row" key={title}><span>{impact}</span><b>{title}</b><small>{affected}</small></div>)}</section>;
-}
-function Heatmap({ markets, dict }) {
-  return <section className="panel"><h3>🔥 {dict.heatmap}</h3><div className="heatmap">{markets.slice(0, 11).map(m => <button className={`heat ${changeClass(m.changePct)}`} key={m.symbol}><b>{marketSymbol(m)}</b><small>{formatChange(m.changePct)}</small></button>)}</div></section>;
-}
-function Watchlist({ markets, dict }) {
-  const picks = ['XAU/USD', 'WTI', 'BTC/USD', 'EUR/USD', 'USD/IQD'];
-  const rows = picks.map(p => markets.find(m => m.symbol === p)).filter(Boolean);
-  return <section className="panel"><h3>⭐ {dict.watchlist}</h3>{rows.map(m => <div className="watch-row" key={m.symbol}><b>{marketSymbol(m)}</b><span>{formatPrice(m.price)}</span><small className={changeClass(m.changePct)}>{formatChange(m.changePct)}</small></div>)}</section>;
+function changeClass(value) {
+  return Number(value) > 0 ? 'up' : Number(value) < 0 ? 'down' : 'flat';
 }
 
-function countAssets(items) {
-  const map = new Map();
-  items.forEach(item => (item.intelligence?.assets || []).forEach(asset => map.set(asset, (map.get(asset) || 0) + 1)));
-  return [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8).map(([asset,count])=>({asset,count}));
-}
-function IntelligenceDashboard({ items, markets, lang, dict, onAsset }) {
-  const L = tr(lang);
-  const high = items.filter(i => i.intelligence?.impact === 'high');
-  const iraq = items.filter(i => i.intelligence?.iraqImpact);
-  const bullish = items.filter(i => i.intelligence?.sentiment === 'bullish').length;
-  const bearish = items.filter(i => i.intelligence?.sentiment === 'bearish').length;
-  const riskLevel = high.length >= 5 ? 'Critical' : high.length >= 2 ? 'Elevated' : 'Normal';
-  const sentiment = bullish > bearish ? sentimentLabel('bullish', lang) : bearish > bullish ? sentimentLabel('bearish', lang) : sentimentLabel('neutral', lang);
-  const assets = countAssets(items);
-  const headline = high[0] || items[0];
-  return <section className="ai-command panel">
-    <div className="ai-head">
-      <div><span className="eyebrow">🧠 AI INTELLIGENCE</span><h2>{dict.intelligence}</h2><p>{L.aiIntro}</p></div>
-      <div className="ai-score"><b>{riskLevel}</b><small>{L.riskMode}</small></div>
-    </div>
-    <div className="ai-grid">
-      <div className="ai-metric"><small>{L.marketSentiment}</small><b>{sentiment}</b><span className={bullish>=bearish?'up':'down'}>{bullish} bullish / {bearish} bearish</span></div>
-      <div className="ai-metric"><small>{L.highImpact}</small><b>{high.length}</b><span>{L.critical}</span></div>
-      <div className="ai-metric"><small>{L.iraqImpact}</small><b>{iraq.length}</b><span>{L.localStories}</span></div>
-      <div className="ai-metric"><small>{L.liveAssets}</small><b>{markets.length}</b><span>{L.trackedMarkets}</span></div>
-    </div>
-    {headline && <div className="ai-brief">
-      <h3>⭐ {L.mostImportant}</h3>
-      <p>{translatedTitle(headline, lang)}</p>
-      <div className="assets">{(headline.intelligence?.assets||[]).map(a=><button className="asset" key={a} onClick={()=>onAsset(a)}>{a}</button>)}</div>
-      <small>{headline.intelligence?.why}</small>
-    </div>}
-    <div className="asset-cloud">
-      {assets.map(a => <button key={a.asset} onClick={()=>onAsset(a.asset)}><b>{a.asset}</b><span>{a.count}</span></button>)}
-    </div>
-  </section>;
-}
-function AssetIntelligence({ items, markets, lang, onAsset }) {
-  const L = tr(lang);
-  const assets = countAssets(items);
-  return <section><div className="section-head"><h2>💼 {L.assetIntelligence}</h2><span className="muted">{L.aiReady}</span></div><div className="asset-intel-grid">
-    {assets.slice(0,6).map(a=>{
-      const market = markets.find(m => m.symbol?.includes(a.asset) || m.name?.toLowerCase().includes(a.asset.toLowerCase()));
-      const related = items.filter(i => (i.intelligence?.assets||[]).includes(a.asset));
-      const high = related.filter(i=>i.intelligence?.impact==='high').length;
-      return <button className="asset-intel-card" key={a.asset} onClick={()=>onAsset(a.asset)}>
-        <div><b>{a.asset}</b><small>{a.count} {L.relatedStories}</small></div>
-        <strong>{market ? formatPrice(market.price) : L.watch}</strong>
-        <span className={high?'down':'up'}>{high ? `${high} ${L.highImpactLabel}` : L.normalRisk}</span>
-      </button>
-    })}
-  </div></section>;
-}
-function AiAssistant({ items, lang }) {
-  const L = tr(lang);
-  const [q,setQ]=useState('');
-  const [answer,setAnswer]=useState('');
-  function ask(){
-    const query=q.toLowerCase();
-    const related=items.filter(i=>`${translatedTitle(i, lang)} ${i.title || ''} ${i.titleEn || ''} ${i.titleKu || ''} ${i.titleAr || ''} ${i.source} ${i.category} ${(i.intelligence?.assets||[]).join(' ')}`.toLowerCase().includes(query.split(' ')[0]||query)).slice(0,3);
-    const base=related[0]||items[0];
-    setAnswer(`${L.assistantAnswer}\n\n${base ? translatedTitle(base, lang) : ''}\n${base?.intelligence?.why || ''}`);
-  }
-  return <section className="panel assistant-panel"><h3>🤖 {L.assistant}</h3><div className="assistant-box"><input value={q} onChange={e=>setQ(e.target.value)} placeholder={L.assistantHint} onKeyDown={e=>{if(e.key==='Enter')ask()}}/><button className="btn gold" onClick={ask}>Ask</button></div>{answer && <pre>{answer}</pre>}</section>;
+function impactLabel(key, lang) {
+  const dict = t[lang] || t.ku;
+  return key === 'high' ? dict.high : key === 'medium' ? dict.medium : dict.low;
 }
 
-function Header({ lang, setLang, theme, setTheme, query, setQuery, dict }) {
-  return <header className="topbar">
-    <span className="mobile-menu mobile-logo" aria-label={dict.site}><img src="/hawali-logo-96.webp" alt="" /></span>
-    <label className="search"><Icon name="⌕" /><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={dict.search} /></label>
-    <select className="select" value={lang} onChange={e=>setLang(e.target.value)}>{Object.entries(LANGS).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select>
-    <button className="iconbtn" onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?'☀️':'🌙'}</button>
-    <button className="iconbtn">↻</button>
+function sentimentLabel(key, lang) {
+  const dict = t[lang] || t.ku;
+  return key === 'bullish' ? dict.bullish : key === 'bearish' ? dict.bearish : dict.neutral;
+}
+
+function copyLink(url) {
+  navigator.clipboard?.writeText(url || location.href);
+}
+
+function imageFallback(event) {
+  if (event.currentTarget.dataset.fallback) return;
+  event.currentTarget.dataset.fallback = 'true';
+  event.currentTarget.src = '/hawali-logo-512.png';
+}
+
+function articleText(item) {
+  return `${item.title || ''} ${item.titleEn || ''} ${item.titleKu || ''} ${item.titleAr || ''} ${item.summary || ''} ${item.summaryEn || ''} ${item.summaryKu || ''} ${item.summaryAr || ''} ${item.source || ''} ${item.sourceGroup || ''} ${item.category || ''} ${(item.intelligence?.assets || []).join(' ')}`.toLowerCase();
+}
+
+function matchesCategory(item, category) {
+  if (category === 'all') return true;
+  const text = articleText(item);
+  const aliases = {
+    iraq:['iraq', 'iqd', 'cbi', 'baghdad', 'kurdistan', 'kurdish'],
+    markets:['market', 'econom', 'business', 'stock', 'bank', 'finance', 'inflation'],
+    geopolitics:['geopolit', 'war', 'conflict', 'iran', 'strike', 'military', 'shipping', 'red sea'],
+    oil:['oil', 'gold', 'xau', 'wti', 'opec', 'energy', 'crude'],
+    forex:['forex', 'currency', 'dollar', 'usd', 'eur', 'gbp', 'exchange rate']
+  };
+  return aliases[category]?.some(term => text.includes(term)) || false;
+}
+
+function selectMarketItems(markets) {
+  const targets = ['USD/IQD', 'XAU/USD', 'WTI', 'BTC/USD', 'EUR/USD'];
+  const selected = targets.map(symbol => markets.find(item => item.symbol === symbol)).filter(Boolean);
+  return [...selected, ...markets.filter(item => !selected.includes(item))].slice(0, 5);
+}
+
+function Header({ lang, setLang, theme, setTheme, query, setQuery, dict, refreshing, onRefresh }) {
+  const copy = uiCopy[lang] || uiCopy.ku;
+  return <header className="site-header">
+    <a className="brand" href="#top" aria-label={dict.site}>
+      <span className="brand-mark"><img src="/hawali-logo-96.webp" alt="" /></span>
+      <span className="brand-copy"><strong>{dict.site}</strong><small>{copy.brandTagline}</small></span>
+    </a>
+    <label className="search-wrap">
+      <span aria-hidden="true">⌕</span>
+      <span className="sr-only">{copy.search}</span>
+      <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={dict.search} />
+    </label>
+    <div className="header-tools">
+      <label className="language-control">
+        <span className="sr-only">{copy.language}</span>
+        <select value={lang} onChange={event => setLang(event.target.value)} aria-label={copy.language}>
+          {Object.entries(LANGS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
+        </select>
+      </label>
+      <button className="icon-button" type="button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={copy.theme}>{theme === 'dark' ? '☀' : '☾'}</button>
+      <button className={`icon-button refresh-button ${refreshing ? 'is-loading' : ''}`} type="button" onClick={onRefresh} disabled={refreshing} aria-label={copy.refresh}>↻</button>
+    </div>
   </header>;
 }
-function Sidebar({ active, setActive, dict, lang }) {
-  const names={ all:'📰 '+dict.latest, iraq:'🇮🇶 '+dict.iraq, iran:'🇮🇷 '+dict.iran, geopolitics:'⚠️ '+dict.geopolitics, forex:'💱 '+dict.forex, calendar:'📅 '+dict.calendar, oil:'🛢️ '+dict.oil, stocks:'📈 '+dict.stocks, crypto:'₿ '+dict.crypto, central:'🏦 '+dict.central, intelligence:'🧠 '+dict.intelligence };
-  const L = tr(lang);
-  return <aside className="sidebar">
-    <div className="brand"><div className="logo"><img src="/hawali-logo-96.webp" alt="" /></div><div><h1>{dict.site}</h1><p>{dict.tagline}</p></div></div>
-    <nav className="nav">{nav.map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{names[n]}</button>)}</nav>
-    <div className="panel" style={{marginTop:22}}><h3>{dict.marketStatus}</h3><div className="status-grid"><Status label="Risk" value={L.neutral} /><Status label="USD" value={L.watch} /><Status label="Gold" value={L.active} /><Status label="Oil" value={L.sensitive} /></div></div>
-  </aside>;
+
+function MarketStrip({ markets, lang }) {
+  const copy = uiCopy[lang] || uiCopy.ku;
+  const localCopy = localRateText[lang] || localRateText.en;
+  return <section className="market-strip" id="markets" aria-label={copy.markets}>
+    {selectMarketItems(markets).map(market => <div className="market-item" key={market.symbol}>
+      <span className="market-symbol">{market.symbol.replace('/USD', '')}</span>
+      <span className="market-value">
+        <strong>{formatPrice(market.price)}</strong>
+        {market.marketKind === 'local'
+          ? <small>{localCopy.erbil}</small>
+          : <small className={changeClass(market.changePct)}>{formatChange(market.changePct)}</small>}
+      </span>
+    </div>)}
+    {!markets.length && Array.from({ length:5 }, (_, index) => <div className="market-item market-skeleton" key={index}><span>—</span><strong>—</strong></div>)}
+  </section>;
 }
-function Status({ label, value }){return <div className="status"><small>{label}</small><b>{value}</b></div>;}
-function Ticker({ items, lang, dict }) {
-  const top = items.filter(i=>i.intelligence?.impact==='high').slice(0,8);
-  const list = top.length ? top : items.slice(0,8);
-  return <div className="ticker"><div className="ticker-track"><b>⚡ {dict.breaking}</b>{[...list,...list].map((i,idx)=><span key={idx}> • {translatedTitle(i, lang)}</span>)}</div></div>;
+
+function BreakingBar({ items, lang, dict }) {
+  const highImpact = items.filter(item => item.intelligence?.impact === 'high');
+  const stories = (highImpact.length ? highImpact : items).slice(0, 2);
+  return <section className="breaking-bar" aria-label={dict.breaking}>
+    <strong className="breaking-label"><span className="live-dot" />{dict.breaking}</strong>
+    <div className="breaking-copy">{stories.map((item, index) => <span key={item.id || index}>{translatedTitle(item, lang)}</span>)}</div>
+  </section>;
 }
+
+function CategoryTabs({ active, setActive, lang }) {
+  const copy = uiCopy[lang] || uiCopy.ku;
+  return <nav className="category-tabs" aria-label={copy.menu}>
+    {categories.map(category => <button type="button" key={category} className={active === category ? 'active' : ''} aria-pressed={active === category} onClick={() => setActive(category)}>{categoryMap[lang]?.[category] || category}</button>)}
+  </nav>;
+}
+
 function Hero({ item, lang, dict, onOpen }) {
-  if (!item) return <div className="hero skeleton" />;
-  const intel = item.intelligence || analyzeArticle(item);
-  return <article className="hero" onClick={()=>onOpen(item)}>
-    <img src={item.image} alt="" /><div className="shade" />
-    <div className="hero-content">
-      <div className="meta"><span className={`badge ${intel.impact}`}>{dict.impact}: {impactLabel(intel.impact, lang)}</span><span>{item.source}</span><span>{timeAgo(item.publishedAt, lang)}</span></div>
-      <h2>{translatedTitle(item, lang)}</h2>
-      <p className="summary">{translatedSummary(item, lang)}</p>
-      <div className="assets">{intel.assets.map(a=><span className="asset" key={a}>{a}</span>)}{intel.iraqImpact && <span className="asset">🇮🇶 {dict.iraqImpact}</span>}</div>
-      <div className="actions"><button className="btn gold">{dict.open}</button><button className="btn">{dict.why}</button></div>
-    </div>
-  </article>;
-}
-function IntelligencePanel({ items, lang, dict }) {
-  const high = items.filter(i=>i.intelligence?.impact==='high').length;
-  const iraq = items.filter(i=>i.intelligence?.iraqImpact).length;
-  const bearish = items.filter(i=>i.intelligence?.sentiment==='bearish').length;
-  const bullish = items.filter(i=>i.intelligence?.sentiment==='bullish').length;
-  return <div className="side-stack">
-    <section className="panel"><h3>🧠 {dict.intelligence}</h3><div className="status-grid"><Status label={dict.impact} value={`${high} ${dict.high}`} /><Status label={dict.iraqImpact} value={iraq} /><Status label={dict.sentiment} value={bullish>=bearish?sentimentLabel('bullish',lang):sentimentLabel('bearish',lang)} /><Status label={dict.risk} value={high>3?dict.high:dict.medium} /></div></section>
-    <section className="panel"><h3>⚠️ {dict.highImpactToday}</h3>{items.filter(i=>i.intelligence?.impact==='high').slice(0,4).map(i=><div key={i.id} style={{padding:'10px 0',borderBottom:'1px solid var(--line)'}}><b style={{fontSize:13}}>{translatedTitle(i, lang)}</b><div className="meta"><span>{i.source}</span><span>{timeAgo(i.publishedAt,lang)}</span></div></div>)}</section>
-  </div>;
-}
-function NewsCard({ item, lang, dict, onOpen, onAsset }) {
-  const intel = item.intelligence || analyzeArticle(item);
-  return <article className="card">
-    <div className="thumb" onClick={()=>onOpen(item)}><img src={item.image} alt="" loading="lazy" /></div>
-    <div className="card-body">
-      <div className="meta"><span className={`badge ${intel.impact}`}>{impactLabel(intel.impact, lang)}</span><span>{item.source}</span><span>{timeAgo(item.publishedAt, lang)}</span></div>
-      <h3 onClick={()=>onOpen(item)}>{translatedTitle(item, lang)}</h3>
-      <p className="summary">{translatedSummary(item, lang)}</p>
-      <div className="assets">{intel.assets.slice(0,4).map(a=><button className="asset" key={a} onClick={()=>onAsset(a)}>{a}</button>)}</div>
-      <div className="actions"><button className="btn gold" onClick={()=>onOpen(item)}>{dict.open}</button><a className="btn" href={item.link} target="_blank" rel="noreferrer">{dict.original}</a><button className="btn" onClick={()=>copyLink(item.link)}>{dict.share}</button><button className="btn">☆</button></div>
-    </div>
-  </article>;
-}
-function IraqWidget({ dict, lang }) {
-  const L = tr(lang);
-  const cards=[['CBI','USD/IQD & banking'],[L.oil,'Exports and revenue'],['Budget','Government spending'],['Banking','Payments and cards'],['Risk','Regional headlines']];
-  return <section><div className="section-head"><h2>🇮🇶 {dict.iraq}</h2></div><div className="iraq-grid">{cards.map(([a,b])=><div className="iraq-card" key={a}><b>{a}</b><span>{b}</span></div>)}</div></section>;
-}
-function ArticleModal({ item, lang, dict, onClose }) {
   if (!item) return null;
   const intel = item.intelligence || analyzeArticle(item);
-  return <div className="modal-backdrop" onClick={onClose}><div className="modal" onClick={e=>e.stopPropagation()}>
-    <div className="modal-img"><img src={item.image} alt="" /></div>
-    <div className="modal-content"><button className="btn close" onClick={onClose}>×</button><div className="meta"><span className={`badge ${intel.impact}`}>{dict.impact}: {impactLabel(intel.impact, lang)}</span><span>{item.source}</span><span>{timeAgo(item.publishedAt, lang)}</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment,lang)}</span></div><h2 style={{fontSize:34,lineHeight:1.35}}>{translatedTitle(item, lang)}</h2><p className="summary">{translatedSummary(item, lang)}</p><h3>{dict.why}</h3><p className="summary">{intel.why}</p><h3>{dict.affected}</h3><div className="assets">{intel.assets.map(a=><span className="asset" key={a}>{a}</span>)}{intel.iraqImpact && <span className="asset">🇮🇶 {dict.iraqImpact}</span>}</div><div className="actions"><a className="btn gold" href={item.link} target="_blank" rel="noreferrer">{dict.original}</a><button className="btn" onClick={()=>copyLink(item.link)}>{dict.share}</button><button className="btn">☆ {dict.save}</button></div></div>
-  </div></div>;
+  return <article className="lead-story" role="button" tabIndex="0" onClick={() => onOpen(item)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') onOpen(item); }}>
+    <img src={item.image} alt="" onError={imageFallback} />
+    <div className="lead-overlay" />
+    <div className="lead-copy">
+      <span className="lead-label">{uiCopy[lang]?.lead || uiCopy.ku.lead}</span>
+      <h1>{translatedTitle(item, lang)}</h1>
+      <p>{translatedSummary(item, lang)}</p>
+      <div className="story-meta"><span>{item.source}</span><span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
+    </div>
+  </article>;
 }
 
-function SourcesDisclosure() {
+function LocalRatePanel({ markets, lang }) {
+  const copy = uiCopy[lang] || uiCopy.ku;
+  const places = localRateText[lang] || localRateText.en;
+  const local = markets.find(market => market.marketKind === 'local' || market.symbol === 'USD/IQD');
+  const rows = [
+    [places.erbil, local?.erbil?.sell || local?.erbil?.market || local?.erbil?.buy || local?.price],
+    [places.baghdad, local?.baghdad?.sell || local?.baghdad?.market || local?.baghdad?.buy || local?.price]
+  ];
+  return <section className="side-panel rate-panel">
+    <div className="panel-title"><h2>{copy.localDollar}</h2><span>{copy.live}</span></div>
+    {local ? <div className="rate-grid">{rows.map(([place, value]) => <div className="rate-box" key={place}><small>{place}</small><strong>{formatPrice(value)}</strong><span>{copy.sell100}</span></div>)}</div> : <p className="empty-note">{copy.noMarket}</p>}
+  </section>;
+}
+
+function CalendarPanel({ lang }) {
+  const copy = uiCopy[lang] || uiCopy.ku;
+  return <section className="side-panel calendar-panel">
+    <h2>{copy.calendar}</h2>
+    <div className="event-list">{calendarEvents[lang].map(([title, asset, impact]) => <div className="event-row" key={title}><span>{title}</span><small>{asset} • {impact === 'high' ? copy.high : copy.medium}</small></div>)}</div>
+  </section>;
+}
+
+function NewsCard({ item, lang, onOpen }) {
+  const intel = item.intelligence || analyzeArticle(item);
+  return <article className="story-card">
+    <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={translatedTitle(item, lang)}><img src={item.image} alt="" loading="lazy" onError={imageFallback} /></button>
+    <div className="story-copy">
+      <div className="story-source"><span>{item.source}</span><span>{timeAgo(item.publishedAt, lang)}</span></div>
+      <button className="story-title" type="button" onClick={() => onOpen(item)}>{translatedTitle(item, lang)}</button>
+      <div className="story-tags"><span>{item.category || impactLabel(intel.impact, lang)}</span>{intel.assets?.slice(0, 2).map(asset => <span key={asset}>{asset}</span>)}</div>
+    </div>
+  </article>;
+}
+
+function ArticleModal({ item, lang, dict, onClose }) {
+  useEffect(() => {
+    if (!item) return undefined;
+    const handleKey = event => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [item, onClose]);
+  if (!item) return null;
+  const intel = item.intelligence || analyzeArticle(item);
+  return <div className="modal-backdrop" onClick={onClose} role="presentation"><article className="article-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={event => event.stopPropagation()}>
+    <div className="modal-image"><img src={item.image} alt="" onError={imageFallback} /></div>
+    <div className="modal-content">
+      <button className="modal-close" type="button" onClick={onClose} aria-label={uiCopy[lang]?.close}>×</button>
+      <div className="story-meta"><span>{item.source}</span><span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>
+      <h2 id="modal-title">{translatedTitle(item, lang)}</h2>
+      <p>{translatedSummary(item, lang)}</p>
+      <h3>{dict.why}</h3><p>{intel.why}</p>
+      <div className="modal-assets">{intel.assets?.map(asset => <span key={asset}>{asset}</span>)}</div>
+      <div className="modal-actions"><a className="primary-button" href={item.link} target="_blank" rel="noreferrer">{dict.original} ↗</a><button type="button" onClick={() => copyLink(item.link)}>{dict.share}</button></div>
+    </div>
+  </article></div>;
+}
+
+function SourcesDisclosure({ lang }) {
   const [open, setOpen] = useState(false);
   const [sources, setSources] = useState([]);
-  const lang = localStorage.getItem('lang') || 'ku';
-  const L = tr(lang);
-
+  const copy = uiCopy[lang] || uiCopy.ku;
+  const disclosure = {
+    ku: { all:'هەموو سەرچاوەکانی هەواڵ', loading:'بارکردنی سەرچاوەکان', note:'ئەم ماڵپەڕە تەنها سەردێڕ، پوختە و لینکی هەواڵە گشتییەکان کۆدەکاتەوە. ناوەڕۆک موڵکی سەرچاوە ڕەسەنەکانیەتی.', contact:'بۆ داواکاری سەرچاوە یان لابردنەوە، پەیوەندی بکە.' },
+    ar: { all:'كل مصادر الأخبار', loading:'تحميل المصادر', note:'يجمع هذا الموقع عناوين الأخبار العامة وملخصات قصيرة وروابط المصادر الأصلية. المحتوى يعود إلى ناشريه الأصليين.', contact:'لطلب إضافة مصدر أو إزالة محتوى، تواصل معنا.' },
+    en: { all:'All news sources', loading:'Loading sources', note:'This site collects public headlines, short summaries, and links to original publishers. Content belongs to its original publishers.', contact:'For source or removal requests, contact us.' }
+  }[lang];
   useEffect(() => {
-    let cancelled = false;
-    fetch('/api/sources')
-      .then(res => res.ok ? res.json() : Promise.reject(new Error('Sources unavailable')))
-      .then(data => { if (!cancelled && Array.isArray(data.sources)) setSources(data.sources.filter(Boolean)); })
-      .catch(() => { if (!cancelled) setSources([]); });
-    return () => { cancelled = true; };
+    let alive = true;
+    fetch('/api/sources').then(response => response.ok ? response.json() : Promise.reject()).then(data => { if (alive && Array.isArray(data.sources)) setSources(data.sources.filter(Boolean)); }).catch(() => { if (alive) setSources([]); });
+    return () => { alive = false; };
   }, []);
-
-  const countLabel = sources.length ? String(sources.length) : '...';
-  return <aside className={`sources-corner ${open ? 'is-open' : ''}`} aria-label="News sources and attribution">
-    {open && <div className="sources-panel" role="dialog" aria-label="All news sources">
-      <div className="sources-head">
-        <div><strong>{L.allSources}</strong><small>{sources.length ? `${sources.length} ${t[lang]?.sources || 'sources'}` : L.loadingSources}</small></div>
-        <button type="button" onClick={() => setOpen(false)} aria-label={L.close}>×</button>
-      </div>
-      <p className="sources-note">{L.sourceNote}</p>
-      <p className="sources-note compact">{L.contactNote} <a href={`tel:${developer.phone}`} dir="ltr">{developer.phone}</a></p>
-      <div className="sources-list" aria-label="Source names">
-        {sources.length ? sources.map(source => <span key={source}>{source}</span>) : <span>{L.loadingSources}...</span>}
-      </div>
+  return <aside className={`sources-corner ${open ? 'is-open' : ''}`}>
+    {open && <div className="sources-panel" role="dialog" aria-label={disclosure.all}>
+      <div className="sources-head"><div><strong>{disclosure.all}</strong><small>{sources.length ? `${sources.length} ${t[lang]?.sources}` : disclosure.loading}</small></div><button type="button" onClick={() => setOpen(false)} aria-label={copy.close}>×</button></div>
+      <p>{disclosure.note}</p><p className="source-contact">{disclosure.contact} <a href={`tel:${developer.phone}`} dir="ltr">{developer.phone}</a></p>
+      <div className="sources-list">{sources.length ? sources.map(source => <span key={source}>{source}</span>) : <span>{disclosure.loading}...</span>}</div>
     </div>}
-    <button className="sources-toggle" type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}>
-      <span>Sources</span><b>{countLabel}</b>
-    </button>
+    <button className="sources-toggle" type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}><span>Sources</span><b>{sources.length || '...'}</b></button>
   </aside>;
 }
 
 function SiteFooter({ lang }) {
   const copy = developerCopy[lang] || developerCopy.en;
-  return <footer className="site-footer">
-    <div className="developer-credit"><span>{copy.developedBy}</span><strong>{developer.name}</strong></div>
-    <div className="developer-contact">
-      <a href={`tel:${developer.phone}`} aria-label={`${copy.contact} ${developer.phone}`} dir="ltr">☎ {developer.phone}</a>
-      <a href={developer.whatsapp} target="_blank" rel="noreferrer">{copy.whatsapp} ↗</a>
-    </div>
-  </footer>;
+  return <footer className="site-footer"><div><span>{copy.developedBy}</span><strong>{developer.name}</strong></div><nav><a href={`tel:${developer.phone}`} dir="ltr">☎ {developer.phone}</a><a href={developer.whatsapp} target="_blank" rel="noreferrer">{copy.whatsapp} ↗</a></nav></footer>;
 }
 
-function App(){
-  const [lang,setLang]=useState(localStorage.getItem('lang')||'ku');
-  const [theme,setTheme]=useState(localStorage.getItem('theme')||'dark');
-  const [active,setActive]=useState('all');
-  const [query,setQuery]=useState('');
-  const [news,setNews]=useState(getInitialNews);
-  const [markets,setMarkets]=useState([]);
-  const [selected,setSelected]=useState(null);
-  const dict=t[lang] || t.ku;
+function MobileNav({ lang }) {
+  const copy = uiCopy[lang] || uiCopy.ku;
+  const go = id => document.getElementById(id)?.scrollIntoView({ behavior:'smooth', block:'start' });
+  return <nav className="mobile-nav" aria-label="Mobile navigation"><button type="button" onClick={() => go('top')}><span>⌂</span>{copy.home}</button><button type="button" onClick={() => go('markets')}><span>⌁</span>{copy.markets}</button><button type="button" onClick={() => go('latest')}><span>▤</span>{copy.news}</button></nav>;
+}
+
+function App() {
+  const [lang, setLang] = useState(localStorage.getItem('lang') || 'ku');
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [active, setActive] = useState('all');
+  const [query, setQuery] = useState('');
+  const [news, setNews] = useState(getInitialNews);
+  const [markets, setMarkets] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const dict = t[lang] || t.ku;
+  const copy = uiCopy[lang] || uiCopy.ku;
   const { translatedNews, translating } = useClientTranslator(news, lang);
   const displayNews = translatedNews.length ? translatedNews : news;
-  useEffect(()=>{document.documentElement.lang=lang;document.documentElement.dir=LANGS[lang].dir;document.documentElement.dataset.theme=theme;localStorage.setItem('lang',lang);localStorage.setItem('theme',theme)},[lang,theme]);
-  useEffect(()=>{let alive=true; const update=items=>{if(alive)setNews(items)}; const load=()=>fetchNews(update).then(update); load(); const id=setInterval(load,300000); return()=>{alive=false;clearInterval(id)}},[]);
-  useEffect(()=>{let alive=true; const load=()=>fetchMarkets().then(items=>alive&&setMarkets(items)); load(); const id=setInterval(load,60000); return()=>{alive=false;clearInterval(id)}},[]);
-  const filtered=useMemo(()=>displayNews.filter(i=>{const q=query.trim().toLowerCase(); const text=`${i.title || ''} ${i.titleEn || ''} ${i.titleKu || ''} ${i.titleAr || ''} ${i.summary || ''} ${i.summaryEn || ''} ${i.summaryKu || ''} ${i.summaryAr || ''} ${i.source} ${i.sourceGroup || ''} ${i.category} ${i.intelligence?.assets?.join(' ')}`.toLowerCase(); const activeOk=active==='all'||text.includes(active)||i.category?.toLowerCase().includes(active); return (!q||text.includes(q))&&activeOk;}),[displayNews,query,active]);
-  const hero=filtered[0]||displayNews[0];
-  const rest=filtered.filter(i=>i.id!==hero?.id);
-  return <div className="app"><Sidebar active={active} setActive={setActive} dict={dict} lang={lang}/><main className="main"><Header lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict}/><MarketTicker markets={markets} dict={dict}/><Ticker items={displayNews} lang={lang} dict={dict}/><section className="hero-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/><div className="side-stack"><IntelligencePanel items={displayNews} lang={lang} dict={dict}/><Watchlist markets={markets} dict={dict}/></div></section><MarketDashboard markets={markets} dict={dict} lang={lang}/><section className="dash-two"><EconomicCalendar dict={dict} lang={lang}/><Heatmap markets={markets} dict={dict}/></section><IntelligenceDashboard items={displayNews} markets={markets} lang={lang} dict={dict} onAsset={(a)=>{setQuery(a);setActive('all')}}/><AssetIntelligence items={displayNews} markets={markets} lang={lang} onAsset={(a)=>{setQuery(a);setActive('all')}}/><IraqWidget dict={dict} lang={lang}/><AiAssistant items={displayNews} lang={lang}/><div className="section-head"><h2>{dict.latest}</h2>{translating && <span className="muted">{tr(lang).translating}</span>}<div className="filters">{nav.filter(n=>n!=='intelligence').map(n=><button key={n} className={active===n?'active':''} onClick={()=>setActive(n)}>{categoryMap[lang]?.[n]||n}</button>)}</div></div>{filtered.length===0?<div className="panel">{dict.noResults}</div>:<div className="news-grid">{rest.map(item=><NewsCard key={item.id} item={item} lang={lang} dict={dict} onOpen={setSelected} onAsset={(a)=>{setQuery(a);setActive('all')}} />)}</div>}<SiteFooter lang={lang}/><ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/></main></div>;
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = LANGS[lang].dir;
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('lang', lang);
+    localStorage.setItem('theme', theme);
+  }, [lang, theme]);
+
+  useEffect(() => {
+    let alive = true;
+    const update = items => { if (alive && items?.length) setNews(items); };
+    const load = () => fetchNews(update).then(update);
+    load();
+    const interval = setInterval(load, 300000);
+    return () => { alive = false; clearInterval(interval); };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    const load = () => fetchMarkets().then(items => { if (alive) setMarkets(items); });
+    load();
+    const interval = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(interval); };
+  }, []);
+
+  async function refreshAll() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const [latest, nextMarkets] = await Promise.all([fetchNews(items => { if (items?.length) setNews(items); }), fetchMarkets()]);
+      if (latest?.length) setNews(latest);
+      setMarkets(nextMarkets);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const filtered = useMemo(() => displayNews.filter(item => {
+    const search = query.trim().toLowerCase();
+    return (!search || articleText(item).includes(search)) && matchesCategory(item, active);
+  }), [displayNews, query, active]);
+  const hero = filtered[0];
+  const rest = filtered.slice(1);
+
+  return <div className="page" id="top">
+    <div className="shell">
+      <Header lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} />
+      <MarketStrip markets={markets} lang={lang} />
+      <BreakingBar items={displayNews} lang={lang} dict={dict} />
+      <CategoryTabs active={active} setActive={setActive} lang={lang} />
+      {filtered.length ? <>
+        <section className="main-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected} /><aside className="home-side"><LocalRatePanel markets={markets} lang={lang} /><CalendarPanel lang={lang} /></aside></section>
+        <section className="latest-section" id="latest">
+          <div className="section-heading"><h2>{copy.latest}</h2><span>{translating ? copy.translating : active === 'all' ? copy.allSections : categoryMap[lang]?.[active]}</span></div>
+          {rest.length ? <div className="news-grid" aria-live="polite">{rest.map(item => <NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected} />)}</div> : <div className="empty-state">{dict.noResults}</div>}
+        </section>
+      </> : <div className="empty-state page-empty">{dict.noResults}</div>}
+      <SiteFooter lang={lang} />
+    </div>
+    <MobileNav lang={lang} />
+    <SourcesDisclosure lang={lang} />
+    <ArticleModal item={selected} lang={lang} dict={dict} onClose={() => setSelected(null)} />
+  </div>;
 }
 
-createRoot(document.getElementById('root')).render(<><App/><SourcesDisclosure /></>);
+createRoot(document.getElementById('root')).render(<App />);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -370,8 +399,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260716-translation', { updateViaCache:'none' })
-      .then(registration => registration.update())
-      .catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260716-redesign', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }
