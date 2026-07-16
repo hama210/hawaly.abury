@@ -5,7 +5,9 @@ const CACHE_PREFIX = 'hawali_translate_v5_'
 // Each article produces two Google Translate subrequests (title + summary).
 // Keep each Worker invocation below Cloudflare's subrequest ceiling.
 const ARTICLES_PER_REQUEST = 5
-const REQUEST_CONCURRENCY = 2
+// One client queue prevents an aborted language's Worker requests from
+// overwhelming Google when the user immediately selects another language.
+const REQUEST_CONCURRENCY = 1
 
 function clean(value = ''){
   return String(value || '').replace(/\s+/g, ' ').trim()
