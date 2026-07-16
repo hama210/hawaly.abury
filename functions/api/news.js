@@ -5,9 +5,11 @@ export const FEEDS = [
   ['Reuters Forex','forex',googleNewsFeed('site:reuters.com (EUR/USD OR GBP/USD OR euro OR sterling OR dollar) when:7d'),'major'],
   ['Reuters Metals','metals',googleNewsFeed('site:reuters.com (gold OR silver OR XAU OR XAG) markets when:7d'),'major'],
   ['Reuters US Indices','indices',googleNewsFeed('site:reuters.com (Nasdaq OR "Dow Jones" OR "Wall Street") when:7d'),'major'],
+  ['Bloomberg Markets','markets',googleNewsFeed('site:bloomberg.com (dollar OR gold OR silver OR Nasdaq OR "Dow Jones" OR "Federal Reserve") when:3d'),'major',7000],
   ['BBC Business','markets','https://feeds.bbci.co.uk/news/business/rss.xml','major'],
   ['CNBC Markets','indices','https://www.cnbc.com/id/100003114/device/rss/rss.html','major'],
   ['MarketWatch','indices','https://feeds.content.dowjones.io/public/rss/mw_topstories','major'],
+  ['Nasdaq Commodities','metals','https://www.nasdaq.com/feed/rssoutbound?category=Commodities','specialist',12000],
   ['Financial Times Markets','indices','https://www.ft.com/markets?format=rss','major',8000],
   ['FXStreet','forex','https://www.fxstreet.com/rss/news','specialist'],
   ['ForexLive','forex','https://www.forexlive.com/feed/news','specialist'],
@@ -18,6 +20,7 @@ export const FEEDS = [
   ['US Employment (BLS)','markets','https://www.bls.gov/feed/empsit.rss','official',11000],
   ['US Economy (BEA)','markets','https://apps.bea.gov/rss/rss.xml','official',11000],
   ['Reuters Global Conflict','geopolitics',googleNewsFeed('site:reuters.com (war OR strikes OR missile OR ceasefire OR sanctions) when:7d'),'major'],
+  ['US Treasury Sanctions','geopolitics','https://home.treasury.gov/news/press-releases','official',12000,'treasury-html'],
   ['AP Global Conflict','geopolitics',googleNewsFeed('site:apnews.com (war OR strikes OR missile OR ceasefire OR sanctions) when:7d'),'major'],
   ['BBC War','geopolitics',googleNewsFeed('site:bbc.com/news (war OR strikes OR missile OR ceasefire) when:7d'),'major'],
   ['Al Jazeera War','geopolitics',googleNewsFeed('site:aljazeera.com (war OR strikes OR missile OR ceasefire) when:7d'),'major'],
@@ -38,7 +41,7 @@ export const FEEDS = [
   ['Kurdistan24 Economy','iraq',googleNewsFeed('site:kurdistan24.net/en Iraq Kurdistan (economy OR oil OR budget OR salaries) when:30d'),'local'],
   ['Iraq Business News','iraq','https://www.iraq-businessnews.com/feed/','specialist'],
   ['Central Bank of Iraq','iraq',googleNewsFeed('site:cbi.iq (dinar OR banking OR monetary OR dollar) when:60d'),'official']
-].map(([source, category, url, tier, timeoutMs]) => ({ source, category, url, tier, timeoutMs }));
+].map(([source, category, url, tier, timeoutMs, format]) => ({ source, category, url, tier, timeoutMs, format }));
 
 const MAX_FEEDS_PER_REQUEST = 20;
 const FETCH_CONCURRENCY = 6;
@@ -69,7 +72,7 @@ const fallbackImages = {
   geopolitics: 'https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1200&q=80'
 };
 
-const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','airstrike','strike','strikes','sanction','sanctions','missile','drone','ceasefire','invasion','conflict','blockade','strait of hormuz','centcom','irgc','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi','somo','budget','salary','salaries','oil revenue','basra','ceyhan','rafidain','rasheed','ukraine','russia','israel','iran','tehran','gaza','lebanon','red sea','houthi','nato'];
+const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','airstrike','strike','strikes','sanction','sanctions','missile','drone','weapon','weapons','terrorism','terrorist','ceasefire','invasion','conflict','blockade','strait of hormuz','centcom','irgc','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi','somo','budget','salary','salaries','oil revenue','basra','ceyhan','rafidain','rasheed','ukraine','russia','israel','iran','tehran','gaza','lebanon','red sea','houthi','nato'];
 const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory','election','lawsuit','pipeline','exports','banking','investment','customs','taxes','ports','development road','private sector','electricity','gas imports','defense','military','shipping','supply chain','security','diplomacy'];
 const assetRules = [
   ['USD/IQD',['iraq','baghdad','kurdistan','dinar','iqd','cbi','central bank of iraq','budget','salary','salaries','banking','oil revenue','erbil','sulaimani','duhok']],
@@ -80,9 +83,9 @@ const assetRules = [
   ['DOW JONES',['dow','dow jones','djia','industrial average','wall street']],
   ['NASDAQ',['nasdaq','technology stocks','tech stocks','wall street']]
 ];
-const WAR_TERMS = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|invasion|ceasefire|truce|blockade|military|sanction|sanctions|houthi|nato|centcom|irgc)\b|strait of hormuz|red sea/i;
+const WAR_TERMS = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|weapon|weapons|arms|terrorism|terrorist|invasion|ceasefire|truce|blockade|military|sanction|sanctions|houthi|nato|centcom|irgc)\b|strait of hormuz|red sea/i;
 const FOCUS_MARKET_TERMS = /\b(iqd|dinar|cbi|iraq|baghdad|kurdistan|euro|ecb|sterling|pound|boe|gold|silver|xau|xag|bullion|nasdaq|dow|djia|stocks|equities|inflation|cpi|nfp|fomc|fed|rates|dollar|forex|tariff|recession|gdp|opec|pce|employment|payrolls)\b|eur\/usd|gbp\/usd|usd\/iqd|interest rate|central bank|wall street|oil revenue|federal reserve|bank of england|european central bank|personal income|trade deficit|economic growth|gross domestic product/i;
-const TRUSTED_PUBLISHERS = /\b(reuters|associated press|ap news|bbc|al jazeera|bloomberg|cnbc|financial times|wall street journal|washington post|new york times|guardian|dw|france 24|cnn|nbc news|cbs news|abc news|npr|pbs|euronews|the national|shafaq|rudaw|kurdistan24|iraqi news agency|ina|iraq business news)\b/i;
+const TRUSTED_PUBLISHERS = /\b(reuters|associated press|ap news|bbc|al jazeera|bloomberg|cnbc|financial times|wall street journal|washington post|new york times|guardian|dw|france 24|cnn|nbc news|cbs news|abc news|npr|pbs|euronews|the national|u\.s\. department of the treasury|shafaq|rudaw|kurdistan24|iraqi news agency|ina|iraq business news)\b/i;
 const FOREX_TERMS = /\b(euro|ecb|eurozone|sterling|pound|boe|britain|british|uk economy)\b|eur\/usd|gbp\/usd|european central bank|bank of england/i;
 const METAL_TERMS = /\b(gold|silver|xau|xag|bullion)\b|precious metals|safe haven/i;
 const INDEX_TERMS = /\b(nasdaq|dow|djia|stocks|equities|earnings|wall street)\b|dow jones|industrial average|technology stocks/i;
@@ -237,6 +240,17 @@ async function readFeedBody(response, itemLimit){
   }
 }
 
+function treasuryHtmlToFeedXml(html, feedUrl){
+  const items = [...html.matchAll(/<div>\s*<span class="date-format"><time datetime="([^"]+)"[\s\S]*?<h3 class="featured-stories__headline"><a href="([^"]+)"[^>]*>([\s\S]*?)<\/a><\/h3>/gi)]
+    .slice(0, 12)
+    .map(([, publishedAt, path, rawTitle]) => {
+      const title = decode(rawTitle).replaceAll(']]>', '] ]>');
+      const link = new URL(path, feedUrl).toString().replaceAll('&', '&amp;');
+      return `<item><title><![CDATA[${title}]]></title><link>${link}</link><description><![CDATA[${title}]]></description><pubDate>${publishedAt}</pubDate></item>`;
+    });
+  return `<rss><channel>${items.join('')}</channel></rss>`;
+}
+
 async function fetchFeed(feed, timeoutMs){
   const startedAt = Date.now();
   const controller = new AbortController();
@@ -249,7 +263,8 @@ async function fetchFeed(feed, timeoutMs){
     });
     if(!res.ok) throw new Error(String(res.status));
     const perFeedLimit = feed.category === 'iraq' ? 12 : 8;
-    const xml = await readFeedBody(res, perFeedLimit);
+    let xml = await readFeedBody(res, perFeedLimit);
+    if(feed.format === 'treasury-html') xml = treasuryHtmlToFeedXml(xml, feed.url);
     const items = [...xml.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
       const entry = m[0];
       const rawTitle = extractTag(entry,'title');
@@ -293,7 +308,7 @@ async function fetchFeeds(feeds, timeoutMs){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'fresh-latest-v3');
+  cacheUrl.searchParams.set('version', 'fresh-latest-v4-sources');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));

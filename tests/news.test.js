@@ -149,12 +149,40 @@ test('news parses official Atom feeds and decodes numeric headline entities', as
   }
 })
 
+test('news parses current Treasury press releases from the official HTML listing', async () => {
+  const restoreCaches = replaceGlobal('caches', { default: new MemoryCache() })
+  const restoreWarn = silenceWarnings()
+  const published = new Date().toISOString()
+  const treasury = `<div><span class="date-format"><time datetime="${published}" class="datetime">Today</time></span><span></span><h3 class="featured-stories__headline"><a href="/news/press-releases/test-release" hreflang="en">Treasury Targets Weapons Network Supporting Terrorism</a></h3></div>`
+  const restoreFetch = replaceGlobal('fetch', async url => String(url) === 'https://home.treasury.gov/news/press-releases'
+    ? new Response(treasury, { status: 200, headers: { 'content-type':'text/html' } })
+    : new Response('unavailable', { status: 503 }))
+
+  try {
+    const request = requestContext('https://example.com/api/news?mode=full&batch=1&limit=40')
+    const response = await onRequest(request.context)
+    const payload = await response.json()
+    await request.settle()
+    assert.equal(response.status, 200)
+    assert.equal(payload.items[0].source, 'US Treasury Sanctions')
+    assert.equal(payload.items[0].sourceTier, 'official')
+    assert.equal(payload.items[0].link, 'https://home.treasury.gov/news/press-releases/test-release')
+  } finally {
+    restoreFetch()
+    restoreWarn()
+    restoreCaches()
+  }
+})
+
 test('news sources are curated around the focused markets and wars', () => {
   const names = FEEDS.map(feed => feed.source)
   assert.ok(FEEDS.length < 45)
   assert.ok(names.includes('Reuters Forex'))
   assert.ok(names.includes('Reuters Metals'))
   assert.ok(names.includes('Reuters US Indices'))
+  assert.ok(names.includes('Bloomberg Markets'))
+  assert.ok(names.includes('Nasdaq Commodities'))
+  assert.ok(names.includes('US Treasury Sanctions'))
   assert.ok(names.includes('Shafaq Economy'))
   assert.ok(names.includes('Reuters Global Conflict'))
   assert.ok(names.includes('Financial Times Markets'))
@@ -164,6 +192,10 @@ test('news sources are curated around the focused markets and wars', () => {
   assert.equal(FEEDS.find(feed => feed.source === 'Federal Reserve')?.url, 'https://www.federalreserve.gov/feeds/press_monetary.xml')
   assert.equal(FEEDS.find(feed => feed.source === 'European Central Bank')?.url, 'https://www.ecb.europa.eu/rss/press.html')
   assert.equal(FEEDS.find(feed => feed.source === 'Bank of England')?.url, 'https://www.bankofengland.co.uk/rss/news')
+  assert.equal(FEEDS.find(feed => feed.source === 'US Treasury Sanctions')?.tier, 'official')
+  assert.equal(FEEDS.find(feed => feed.source === 'US Treasury Sanctions')?.format, 'treasury-html')
+  assert.equal(FEEDS.find(feed => feed.source === 'Bloomberg Markets')?.tier, 'major')
+  assert.equal(FEEDS.find(feed => feed.source === 'Nasdaq Commodities')?.url, 'https://www.nasdaq.com/feed/rssoutbound?category=Commodities')
   assert.ok(!names.includes('Wall Street Journal Markets'))
   assert.ok(!names.includes('Gold and Silver'))
   assert.ok(!names.includes('Global Conflict'))
