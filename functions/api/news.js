@@ -53,10 +53,11 @@ const FAST_FEED_SOURCES = [
 ];
 const FAST_FEED_TIMEOUT_MS = 4500;
 const FULL_FEED_TIMEOUT_MS = 4500;
-const FAST_CACHE_TTL = 300;
-const FULL_CACHE_TTL = 300;
+const FAST_CACHE_TTL = 60;
+const FULL_CACHE_TTL = 120;
+const SOURCE_CACHE_TTL = 60;
 const MAX_FEED_BYTES = 384 * 1024;
-const NEWS_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+const NEWS_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 const NEWS_MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 const IRAQ_TERMS = /\b(iraq|iraqi|baghdad|kurdistan|erbil|sulaimani|sulaymaniyah|duhok|dohuk|basra|mosul|dinar|iqd|cbi|somo|rafidain|rasheed|krg)\b|central bank of iraq|iraq business/i;
 const fallbackImages = {
@@ -205,10 +206,10 @@ function storyStrength(item, now = Date.now()){
   return Math.max(0, Math.round((TIER_WEIGHT[item.sourceTier] || 14) + recency + impact + effects + complete + localFocus));
 }
 
-function rankedFirst(items){
+function latestFirst(items){
   return [...items]
     .map(item => ({ ...item, strengthScore: storyStrength(item) }))
-    .sort((a,b)=>b.strengthScore-a.strengthScore || new Date(b.publishedAt)-new Date(a.publishedAt));
+    .sort((a,b)=>Date.parse(b.publishedAt)-Date.parse(a.publishedAt) || b.strengthScore-a.strengthScore);
 }
 
 async function readFeedBody(response, itemLimit){
@@ -243,8 +244,8 @@ async function fetchFeed(feed, timeoutMs){
   try{
     const res = await fetch(feed.url, {
       signal: controller.signal,
-      cf: { cacheTtl: 300, cacheEverything: false },
-      headers: { 'user-agent': 'HawaliAburiBot/1.6' }
+      cf: { cacheTtl: SOURCE_CACHE_TTL, cacheEverything: false },
+      headers: { 'user-agent': 'HawaliAburiBot/1.7' }
     });
     if(!res.ok) throw new Error(String(res.status));
     const perFeedLimit = feed.category === 'iraq' ? 12 : 8;
@@ -290,28 +291,9 @@ async function fetchFeeds(feeds, timeoutMs){
   return results;
 }
 
-function fallback(){
-  const base = [
-    ['Iraq latest economy, dinar, banking and oil updates','Iraq Latest','iraq','https://news.google.com/search?q=Iraq%20economy%20dinar%20oil%20banking'],
-    ['Federal Reserve and inflation expectations move the dollar, metals and US indices','Reuters Markets','markets','https://www.reuters.com/markets/'],
-    ['War, sanctions and conflict headlines drive global risk sentiment','Reuters Global Conflict','geopolitics','https://www.reuters.com/world/'],
-    ['Middle East and Red Sea risks pressure currencies, metals and US indices','Middle East Conflict','geopolitics','https://news.google.com/search?q=Middle%20East%20war%20Red%20Sea%20markets'],
-    ['Iran-US war, strikes and Strait of Hormuz updates','Iran-US War Live','geopolitics','https://news.google.com/search?q=Iran%20US%20war%20strikes%20Strait%20of%20Hormuz'],
-    ['EUR/USD and GBP/USD traders monitor central-bank policy','Reuters Forex','forex','https://www.reuters.com/markets/currencies/'],
-    ['Gold and silver react to the dollar, rates and safe-haven demand','Reuters Metals','metals','https://www.reuters.com/markets/commodities/'],
-    ['Nasdaq and Dow Jones track rates, earnings and risk sentiment','Reuters US Indices','indices','https://www.reuters.com/markets/us/']
-  ].map(([title, source, category, link], idx)=>{
-    const summary = 'Market-moving update from a focused, trusted source.';
-    const base = { id:`fallback-${idx}`, title, titleEn:title, summary, summaryEn:summary, content:summary, contentEn:summary, source, sourceTier:'curated', category, link, image:fallbackImages[category], publishedAt:new Date(Date.now()-idx*900000).toISOString() };
-    const intel = analyze(base);
-    return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
-  });
-  return base;
-}
-
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'strong-sources-v2');
+  cacheUrl.searchParams.set('version', 'fresh-latest-v3');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
@@ -346,9 +328,10 @@ export async function onRequest(context) {
   const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(Math.floor(parsedLimit), 180) : defaultLimit;
   const requestedBatch = Number(url.searchParams.get('batch') || 0);
   const batch = Number.isInteger(requestedBatch) ? Math.max(0, Math.min(requestedBatch, BATCH_COUNT - 1)) : 0;
+  const forceRefresh = url.searchParams.get('refresh') === '1';
   const cache = globalThis.caches?.default;
   const cacheKey = cache ? cacheKeyFor(url, mode, batch, limit) : null;
-  if(cacheKey){
+  if(cacheKey && !forceRefresh){
     const cached = await cache.match(cacheKey);
     if(cached) return withHeader(cached, 'X-News-Cache', 'HIT');
   }
@@ -359,13 +342,11 @@ export async function onRequest(context) {
     .sort((a,b)=>(Number(b.timeoutMs) || 0) - (Number(a.timeoutMs) || 0));
   const feedResults = await fetchFeeds(selectedFeeds, mode === 'fast' ? FAST_FEED_TIMEOUT_MS : FULL_FEED_TIMEOUT_MS);
   const raw = feedResults.flatMap(result => result.items);
-  const iraq = rankedFirst(dedupeItems(raw.filter(isIraqEconomy)));
+  const iraq = latestFirst(dedupeItems(raw.filter(isIraqEconomy)));
   const reserved = Math.min(iraq.length, Math.max(12, Math.ceil(limit * 0.28)));
   const seen = new Set(iraq.slice(0, reserved).map(itemKey));
-  const others = rankedFirst(dedupeItems(raw.filter(item => !seen.has(itemKey(item))), seen));
-  let items = rankedFirst([...iraq.slice(0, reserved), ...others.slice(0, Math.max(0, limit - reserved))]);
-
-  if(!items.length) items = fallback();
+  const others = latestFirst(dedupeItems(raw.filter(item => !seen.has(itemKey(item))), seen));
+  const items = latestFirst([...iraq.slice(0, reserved), ...others.slice(0, Math.max(0, limit - reserved))]);
   const succeeded = feedResults.filter(result => result.ok).length;
   const failures = feedResults
     .filter(result => !result.ok)
@@ -383,6 +364,8 @@ export async function onRequest(context) {
   const ttl = mode === 'fast' ? FAST_CACHE_TTL : FULL_CACHE_TTL;
   const response = Response.json({
     updatedAt: new Date().toISOString(),
+    status: items.length ? 'live' : 'unavailable',
+    order: 'latest-first',
     count: items.length,
     translated: false,
     mode,
@@ -391,9 +374,10 @@ export async function onRequest(context) {
     feedStats: { total: FEEDS.length, requested: selectedFeeds.length, succeeded, failed: failures.length, failures },
     items
   }, { headers: {
-    'Cache-Control': `public, max-age=${ttl}`,
+    'Cache-Control': `public, max-age=${ttl}, must-revalidate`,
     'X-News-Cache': 'MISS',
     'X-News-Mode': mode,
+    'X-News-Order': 'latest-first',
     'Server-Timing': `news;dur=${Date.now() - startedAt}`
   }});
 

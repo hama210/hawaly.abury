@@ -19,7 +19,7 @@ const uiCopy = {
     brandTagline:'هەواڵ و بازاڕی کوردستان', lead:'هەواڵی سەرەکی', localDollar:'نرخی دۆلار لە بازاڕی ناوخۆ',
     sell100:'فرۆشتن / $100', calendar:'ڕۆژژمێری ئابووری', latest:'دوایین هەواڵەکان', allSections:'هەموو بەشەکان',
     refresh:'نوێکردنەوە', theme:'گۆڕینی ڕەنگ', language:'زمان', search:'گەڕان', menu:'بەشەکانی هەواڵ',
-    home:'سەرەکی', markets:'بازاڕ', news:'هەواڵ', high:'گرنگ', medium:'مامناوەند', live:'زیندوو',
+    home:'سەرەکی', markets:'بازاڕ', news:'هەواڵ', high:'گرنگ', medium:'مامناوەند', live:'زیندوو', fresh:'نوێ',
     noMarket:'نرخی ناوخۆ بەردەست نییە', translating:'وەرگێڕانی هەواڵەکان...', close:'داخستن',
     effects:'کاریگەری لەسەر بازاڕ', content:'ناوەڕۆکی هەواڵ', loadingContent:'وەرگێڕانی ناوەڕۆک...', up:'فشاری بەرەو سەرەو', down:'فشاری بەرەو خوارەوە', watch:'چاودێری', effectNotice:'ئەمە هەڵسەنگاندنی ئاڕاستەی بازاڕە، نەک سیگناڵی مامەڵەکردن.'
   },
@@ -27,7 +27,7 @@ const uiCopy = {
     brandTagline:'أخبار وأسواق كردستان', lead:'الخبر الرئيسي', localDollar:'سعر الدولار في السوق المحلي',
     sell100:'بيع / 100$', calendar:'التقويم الاقتصادي', latest:'أحدث الأخبار', allSections:'كل الأقسام',
     refresh:'تحديث', theme:'تغيير المظهر', language:'اللغة', search:'بحث', menu:'أقسام الأخبار',
-    home:'الرئيسية', markets:'الأسواق', news:'الأخبار', high:'مهم', medium:'متوسط', live:'مباشر',
+    home:'الرئيسية', markets:'الأسواق', news:'الأخبار', high:'مهم', medium:'متوسط', live:'مباشر', fresh:'جديد',
     noMarket:'السعر المحلي غير متاح', translating:'جاري ترجمة الأخبار...', close:'إغلاق',
     effects:'التأثير في الأسواق', content:'محتوى الخبر', loadingContent:'جاري ترجمة المحتوى...', up:'ضغط صعودي', down:'ضغط هبوطي', watch:'مراقبة', effectNotice:'هذا تقدير لاتجاه ضغط السوق وليس إشارة تداول.'
   },
@@ -35,7 +35,7 @@ const uiCopy = {
     brandTagline:'Kurdistan news and markets', lead:'Lead Story', localDollar:'Local dollar market',
     sell100:'Sell / $100', calendar:'Economic Calendar', latest:'Latest News', allSections:'All sections',
     refresh:'Refresh', theme:'Change theme', language:'Language', search:'Search', menu:'News sections',
-    home:'Home', markets:'Markets', news:'News', high:'High', medium:'Medium', live:'Live',
+    home:'Home', markets:'Markets', news:'News', high:'High', medium:'Medium', live:'Live', fresh:'New',
     noMarket:'Local rate unavailable', translating:'Translating news...', close:'Close',
     effects:'Market Effects', content:'News Content', loadingContent:'Translating content...', up:'Upward pressure', down:'Downward pressure', watch:'Watch', effectNotice:'This is directional market context, not a trading signal.'
   }
@@ -51,9 +51,9 @@ const sourceTierCopy = {
   en: { official:'Official', major:'Major', local:'Local', specialist:'Specialist', curated:'Curated' }
 };
 const trustBarCopy = {
-  ku: { title:'سەرچاوە باوەڕپێکراوەکان', note:'فەرمی، جیهانی و پسپۆڕ · هەواڵی گرنگ لەپێشەوە' },
-  ar: { title:'مصادر موثوقة', note:'رسمية وعالمية ومتخصصة · الأخبار الأهم أولاً' },
-  en: { title:'Trusted sources', note:'Official, major and specialist · strongest stories first' }
+  ku: { title:'سەرچاوە باوەڕپێکراوەکان', note:'فەرمی، جیهانی و پسپۆڕ · نوێترین هەواڵ لەپێشەوە' },
+  ar: { title:'مصادر موثوقة', note:'رسمية وعالمية ومتخصصة · الأحدث أولاً' },
+  en: { title:'Trusted sources', note:'Official, major and specialist · newest first' }
 };
 const trustBarSources = ['Federal Reserve', 'ECB', 'BoE', 'BLS', 'BEA', 'Reuters', 'FT', 'CNBC', 'CBI', 'Shafaq'];
 const calendarEvents = {
@@ -87,7 +87,8 @@ const developerCopy = {
 const developer = { name:'Muhammad Muhsin', phone:'+9647763326510', whatsapp:'https://wa.me/9647763326510' };
 
 function timeAgo(value, lang) {
-  const ts = new Date(value || Date.now()).getTime();
+  const ts = Date.parse(value);
+  if (!Number.isFinite(ts)) return '—';
   const diff = Math.max(0, Date.now() - ts);
   const min = Math.max(1, Math.round(diff / 60000));
   if (min < 60) return lang === 'en' ? `${min}m ago` : lang === 'ar' ? `قبل ${min} دقيقة` : `${min} خولەک لەمەوبەر`;
@@ -95,6 +96,11 @@ function timeAgo(value, lang) {
   if (hours < 24) return lang === 'en' ? `${hours}h ago` : lang === 'ar' ? `قبل ${hours} ساعة` : `${hours} کاتژمێر لەمەوبەر`;
   const days = Math.round(hours / 24);
   return lang === 'en' ? `${days}d ago` : lang === 'ar' ? `قبل ${days} يوم` : `${days} ڕۆژ لەمەوبەر`;
+}
+
+function isNewStory(item) {
+  const publishedAt = Date.parse(item?.publishedAt);
+  return Number.isFinite(publishedAt) && Date.now() - publishedAt <= 90 * 60 * 1000;
 }
 
 function translatedTitle(item, lang) {
@@ -267,7 +273,7 @@ function Hero({ item, lang, dict, onOpen }) {
       <h1>{translatedTitle(item, lang)}</h1>
       <p>{translatedSummary(item, lang)}</p>
       <div className="hero-effects">{intel.effects?.slice(0, 4).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
-      <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
+      <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span>{isNewStory(item) && <span className="fresh-pill">{uiCopy[lang]?.fresh}</span>}<span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
     </div>
   </article>;
 }
@@ -299,7 +305,7 @@ function NewsCard({ item, lang, onOpen }) {
   return <article className="story-card">
     <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={translatedTitle(item, lang)}><img src={item.image} alt="" loading="lazy" onError={imageFallback} /></button>
     <div className="story-copy">
-      <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>{timeAgo(item.publishedAt, lang)}</span></div>
+      <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}{timeAgo(item.publishedAt, lang)}</span></div>
       <button className="story-title" type="button" onClick={() => onOpen(item)}>{translatedTitle(item, lang)}</button>
       <div className="card-effects">{intel.effects?.slice(0, 3).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
     </div>
@@ -376,7 +382,7 @@ function SourcesDisclosure({ lang }) {
   }[lang];
   useEffect(() => {
     let alive = true;
-    fetch('/api/sources?v=strong-sources-v2').then(response => response.ok ? response.json() : Promise.reject()).then(data => {
+    fetch('/api/sources?v=fresh-latest-v3', { cache:'no-store' }).then(response => response.ok ? response.json() : Promise.reject()).then(data => {
       if (!alive) return;
       if (Array.isArray(data.details)) setSources(data.details.filter(item => item?.source));
       else if (Array.isArray(data.sources)) setSources(data.sources.filter(Boolean).map(source => ({ source, tier:'curated' })));
@@ -431,7 +437,7 @@ function App() {
     const update = items => { if (alive && items?.length) setNews(items); };
     const load = () => fetchNews(update).then(update);
     load();
-    const interval = setInterval(load, 300000);
+    const interval = setInterval(load, 120000);
     return () => { alive = false; clearInterval(interval); };
   }, []);
 
@@ -447,7 +453,7 @@ function App() {
     if (refreshing) return;
     setRefreshing(true);
     try {
-      const [latest, nextMarkets] = await Promise.all([fetchNews(items => { if (items?.length) setNews(items); }), fetchMarkets()]);
+      const [latest, nextMarkets] = await Promise.all([fetchNews(items => { if (items?.length) setNews(items); }, { force:true }), fetchMarkets()]);
       if (latest?.length) setNews(latest);
       setMarkets(nextMarkets);
     } finally {
@@ -493,6 +499,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260716-strong-sources-v2', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260716-fresh-latest-v3', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }

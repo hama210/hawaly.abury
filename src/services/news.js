@@ -1,43 +1,9 @@
 import { analyzeArticle } from '../utils/intelligence.js';
 
-const image = {
-  markets: 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80',
-  iraq: 'https://images.unsplash.com/photo-1569163139599-0f4517e36f51?auto=format&fit=crop&w=1200&q=80',
-  metals: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=1200&q=80',
-  indices: 'https://images.unsplash.com/photo-1642790551116-18e150f248e0?auto=format&fit=crop&w=1200&q=80',
-  forex: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=80',
-  geopolitics: 'https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1200&q=80'
-};
-
-const fallbackSeeds = [
-  ['Federal Reserve policy moves currencies, metals and US indices','Reuters Markets','markets','https://www.reuters.com/markets/','markets'],
-  ['Iraq dinar and CBI banking reforms stay in focus','Central Bank of Iraq','iraq','https://cbi.iq/','iraq'],
-  ['Iraq budget, banking and oil revenue affect the local dollar market','Iraq Business News','iraq','https://www.iraq-businessnews.com/','iraq'],
-  ['EUR/USD traders monitor ECB policy and euro-area data','Reuters Forex','forex','https://www.reuters.com/markets/currencies/','forex'],
-  ['GBP/USD traders monitor Bank of England policy','FXStreet','forex','https://www.fxstreet.com/','forex'],
-  ['Gold reacts to dollar moves, rates and geopolitical risk','Reuters Metals','metals','https://www.reuters.com/markets/commodities/','metals'],
-  ['Silver follows precious-metal demand and industrial expectations','Reuters Metals','metals','https://www.reuters.com/markets/commodities/','metals'],
-  ['Dow Jones and Nasdaq track rates, earnings and risk appetite','CNBC Markets','indices','https://www.cnbc.com/markets/','indices'],
-  ['Middle East war risk can move USD/IQD, gold and US indices','Reuters Global Conflict','geopolitics','https://www.reuters.com/world/middle-east/','geopolitics'],
-  ['Ukraine and global sanctions remain important for market risk','AP Global Conflict','geopolitics','https://apnews.com/hub/russia-ukraine','geopolitics']
-];
-
-const fallback = fallbackSeeds.map(([title, source, category, link, kind], index) => ({
-  title,
-  titleEn: title,
-  summary: 'Focused market-moving update from a trusted source.',
-  summaryEn: 'Focused market-moving update from a trusted source.',
-  content: 'Focused market-moving update from a trusted source.',
-  contentEn: 'Focused market-moving update from a trusted source.',
-  source,
-  category,
-  link,
-  image: image[kind] || image.markets,
-  publishedAt: new Date(Date.now() - index * 900000).toISOString()
-}));
-
-const NEWS_CACHE_KEY = 'hawali-aburi-news-v5-official-feeds';
-const NEWS_CACHE_MAX_AGE = 30 * 60 * 1000;
+const NEWS_CACHE_KEY = 'hawali-aburi-news-v6-live-latest';
+const NEWS_CACHE_MAX_AGE = 5 * 60 * 1000;
+const NEWS_DISPLAY_MAX_AGE = 3 * 24 * 60 * 60 * 1000;
+const NEWS_MAX_FUTURE_AGE = 10 * 60 * 1000;
 const NEWS_LIMIT = 120;
 const TIER_WEIGHT = { official:36, major:32, local:28, specialist:22, curated:17 };
 
@@ -72,18 +38,30 @@ function strengthScore(item) {
   return Math.max(0, Math.round((TIER_WEIGHT[item.sourceTier] || 14) + recency + impact + effects + complete + localFocus));
 }
 
-function rankedFirst(items = []) {
+function isFreshLiveItem(item, now = Date.now()) {
+  const publishedAt = Date.parse(item?.publishedAt);
+  return !item?.isFallback
+    && Number.isFinite(publishedAt)
+    && publishedAt >= now - NEWS_DISPLAY_MAX_AGE
+    && publishedAt <= now + NEWS_MAX_FUTURE_AGE;
+}
+
+function latestFirst(items = []) {
   return [...items]
+    .filter(item => isFreshLiveItem(item))
     .map(item => ({ ...item, strengthScore: strengthScore(item) }))
-    .sort((a, b) => b.strengthScore - a.strengthScore || new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+    .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt) || b.strengthScore - a.strengthScore);
 }
 
 function readCachedNews() {
   if (typeof localStorage === 'undefined') return [];
   try {
     const saved = JSON.parse(localStorage.getItem(NEWS_CACHE_KEY) || 'null');
-    if (!saved || !Array.isArray(saved.items) || Date.now() - Number(saved.savedAt || 0) > NEWS_CACHE_MAX_AGE) return [];
-    return saved.items;
+    if (!saved || !Array.isArray(saved.items) || Date.now() - Number(saved.savedAt || 0) > NEWS_CACHE_MAX_AGE) {
+      localStorage.removeItem(NEWS_CACHE_KEY);
+      return [];
+    }
+    return latestFirst(saved.items);
   } catch {
     return [];
   }
@@ -97,19 +75,19 @@ function saveCachedNews(items) {
 }
 
 function prepareNews(primary = [], backup = []) {
-  const liveItems = rankedFirst(mergeUnique(primary, backup)).slice(0, NEWS_LIMIT);
-  const items = liveItems.length >= 10 ? liveItems : mergeUnique(liveItems, fallback).slice(0, NEWS_LIMIT);
-  return withIntelligence(items, liveItems.length ? 'live' : 'fallback');
+  return withIntelligence(latestFirst(mergeUnique(primary, backup)).slice(0, NEWS_LIMIT), 'live');
 }
 
 export function getInitialNews() {
   const cached = readCachedNews();
-  return prepareNews(cached.length ? cached : fallback);
+  return prepareNews(cached);
 }
 
-async function fetchPayload(path) {
+async function fetchPayload(path, force = false) {
   try {
-    const res = await fetch(path);
+    const separator = path.includes('?') ? '&' : '?';
+    const requestUrl = `${path}${separator}client_ts=${Date.now()}${force ? '&refresh=1' : ''}`;
+    const res = await fetch(requestUrl, { cache:'no-store', headers:{ 'Cache-Control':'no-cache' } });
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -117,15 +95,15 @@ async function fetchPayload(path) {
   }
 }
 
-async function fetchBatch(batch) {
-  return fetchPayload(`/api/news?mode=full&limit=${NEWS_LIMIT}&batch=${batch}`);
+async function fetchBatch(batch, force) {
+  return fetchPayload(`/api/news?mode=full&limit=${NEWS_LIMIT}&batch=${batch}`, force);
 }
 
-export async function fetchNews(onUpdate) {
+export async function fetchNews(onUpdate, { force = false } = {}) {
   const cached = readCachedNews();
   let fastItems = [];
   let fullItems = [];
-  let latest = prepareNews(cached.length ? cached : fallback);
+  let latest = prepareNews(cached);
 
   const publish = () => {
     latest = prepareNews(fullItems, mergeUnique(fastItems, cached));
@@ -134,11 +112,11 @@ export async function fetchNews(onUpdate) {
   };
 
   try {
-    const fast = await fetchPayload('/api/news?mode=fast&limit=48');
+    const fast = await fetchPayload('/api/news?mode=fast&limit=48', force);
     fastItems = Array.isArray(fast?.items) ? fast.items : [];
     if (fastItems.length) publish();
 
-    const firstPayload = await fetchBatch(0);
+    const firstPayload = await fetchBatch(0, force);
     const payloads = [firstPayload];
     if (Array.isArray(firstPayload?.items) && firstPayload.items.length) {
       fullItems = mergeUnique(fullItems, firstPayload.items);
@@ -148,7 +126,7 @@ export async function fetchNews(onUpdate) {
     if (batchCount > 1) {
       const remaining = Array.from({ length: batchCount - 1 }, (_, index) => index + 1);
       payloads.push(...await Promise.all(remaining.map(async batch => {
-        const payload = await fetchBatch(batch);
+        const payload = await fetchBatch(batch, force);
         if (Array.isArray(payload?.items) && payload.items.length) {
           fullItems = mergeUnique(fullItems, payload.items);
           publish();

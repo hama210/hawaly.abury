@@ -23,9 +23,11 @@ test('news keeps recent Iraq stories, removes stale and unrelated feed results, 
   const restoreCaches = replaceGlobal('caches', { default: cache })
   const restoreWarn = silenceWarnings()
   const fresh = new Date().toUTCString()
+  const fourDaysOld = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toUTCString()
   const old = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toUTCString()
   const xml = `<rss><channel>
     ${rssItem('Dollar rises in Baghdad as Iraq central bank updates dinar policy', 'Iraq banking and budget reforms continue.', fresh)}
+    ${rssItem('Four-day-old Iraq budget update', 'Iraq budget and banking update.', fourDaysOld)}
     ${rssItem('Old Iraq oil report - Test Source', 'Iraq oil exports.', old)}
     ${rssItem('Libya oil exports rise - MEES', 'Libya production and shipping update.', fresh)}
   </channel></rss>`
@@ -58,7 +60,63 @@ test('news keeps recent Iraq stories, removes stale and unrelated feed results, 
     const secondResponse = await onRequest(second.context)
     assert.equal(secondResponse.headers.get('x-news-cache'), 'HIT')
     assert.equal(fetchCount, callsAfterFirst)
+
+    const forced = requestContext('https://example.com/api/news?mode=fast&limit=48&refresh=1')
+    const forcedResponse = await onRequest(forced.context)
+    await forced.settle()
+    assert.equal(forcedResponse.headers.get('x-news-cache'), 'MISS')
+    assert.ok(fetchCount > callsAfterFirst)
   }finally{
+    restoreFetch()
+    restoreWarn()
+    restoreCaches()
+  }
+})
+
+test('news is ordered by publication time even when an older story has a stronger impact score', async () => {
+  const restoreCaches = replaceGlobal('caches', { default: new MemoryCache() })
+  const restoreWarn = silenceWarnings()
+  const newest = new Date().toUTCString()
+  const older = new Date(Date.now() - 2 * 60 * 60 * 1000).toUTCString()
+  const forex = `<rss><channel>${rssItem('EUR/USD holds steady in quiet trading', 'Euro currency markets remain stable.', newest)}</channel></rss>`
+  const war = `<rss><channel>${rssItem('Iran war attack raises global market risk - Al Jazeera', 'Missile conflict and sanctions pressure world markets.', older)}</channel></rss>`
+  const restoreFetch = replaceGlobal('fetch', async url => {
+    if(String(url).includes('fxstreet.com/rss/news')) return new Response(forex, { status: 200 })
+    if(String(url).includes('aljazeera.com')) return new Response(war, { status: 200 })
+    return new Response('unavailable', { status: 503 })
+  })
+
+  try {
+    const request = requestContext('https://example.com/api/news?mode=fast&limit=48')
+    const response = await onRequest(request.context)
+    const payload = await response.json()
+    await request.settle()
+    assert.equal(payload.order, 'latest-first')
+    assert.equal(response.headers.get('x-news-order'), 'latest-first')
+    assert.deepEqual(payload.items.map(item => item.title), [
+      'EUR/USD holds steady in quiet trading',
+      'Iran war attack raises global market risk'
+    ])
+    assert.ok(payload.items[0].strengthScore < payload.items[1].strengthScore)
+  } finally {
+    restoreFetch()
+    restoreWarn()
+    restoreCaches()
+  }
+})
+
+test('news does not invent fresh fallback stories when every feed is unavailable', async () => {
+  const restoreCaches = replaceGlobal('caches', { default: new MemoryCache() })
+  const restoreWarn = silenceWarnings()
+  const restoreFetch = replaceGlobal('fetch', async () => new Response('unavailable', { status: 503 }))
+  try {
+    const request = requestContext('https://example.com/api/news?mode=fast&limit=48')
+    const response = await onRequest(request.context)
+    const payload = await response.json()
+    await request.settle()
+    assert.equal(payload.status, 'unavailable')
+    assert.deepEqual(payload.items, [])
+  } finally {
     restoreFetch()
     restoreWarn()
     restoreCaches()
