@@ -5,11 +5,11 @@ export const FEEDS = [
   ['Reuters Forex','forex',googleNewsFeed('site:reuters.com (EUR/USD OR GBP/USD OR euro OR sterling OR dollar) when:7d'),'major'],
   ['Reuters Metals','metals',googleNewsFeed('site:reuters.com (gold OR silver OR XAU OR XAG) markets when:7d'),'major'],
   ['Reuters US Indices','indices',googleNewsFeed('site:reuters.com (Nasdaq OR "Dow Jones" OR "Wall Street") when:7d'),'major'],
-  ['Bloomberg Markets','markets',googleNewsFeed('site:bloomberg.com (dollar OR gold OR silver OR Nasdaq OR "Dow Jones" OR "Federal Reserve") when:3d'),'major',7000],
   ['BBC Business','markets','https://feeds.bbci.co.uk/news/business/rss.xml','major'],
+  ['DW Business','markets','https://rss.dw.com/rdf/rss-en-bus','major',8000],
   ['CNBC Markets','indices','https://www.cnbc.com/id/100003114/device/rss/rss.html','major'],
   ['MarketWatch','indices','https://feeds.content.dowjones.io/public/rss/mw_topstories','major'],
-  ['Nasdaq Commodities','metals','https://www.nasdaq.com/feed/rssoutbound?category=Commodities','specialist',12000],
+  ['Euronews Business','indices','https://www.euronews.com/rss?level=theme&name=business','major',8000],
   ['Financial Times Markets','indices','https://www.ft.com/markets?format=rss','major',8000],
   ['FXStreet','forex','https://www.fxstreet.com/rss/news','specialist'],
   ['ForexLive','forex','https://www.forexlive.com/feed/news','specialist'],
@@ -308,7 +308,7 @@ async function fetchFeeds(feeds, timeoutMs){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'fresh-latest-v4-sources');
+  cacheUrl.searchParams.set('version', 'fresh-latest-v5-sources');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
