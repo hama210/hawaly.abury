@@ -9,7 +9,6 @@ export const FEEDS = [
   ['CNBC Markets','indices','https://www.cnbc.com/id/100003114/device/rss/rss.html','major'],
   ['MarketWatch','indices','https://feeds.content.dowjones.io/public/rss/mw_topstories','major'],
   ['Financial Times Markets','indices','https://www.ft.com/markets?format=rss','major',8000],
-  ['Wall Street Journal Markets','indices','https://feeds.a.dj.com/rss/RSSMarketsMain.xml','major',7000],
   ['FXStreet','forex','https://www.fxstreet.com/rss/news','specialist'],
   ['ForexLive','forex','https://www.forexlive.com/feed/news','specialist'],
   ['Federal Reserve','markets','https://www.federalreserve.gov/feeds/press_monetary.xml','official',8000],
@@ -81,7 +80,7 @@ const assetRules = [
   ['NASDAQ',['nasdaq','technology stocks','tech stocks','wall street']]
 ];
 const WAR_TERMS = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|invasion|ceasefire|truce|blockade|military|sanction|sanctions|houthi|nato|centcom|irgc)\b|strait of hormuz|red sea/i;
-const FOCUS_MARKET_TERMS = /\b(iqd|dinar|cbi|iraq|baghdad|kurdistan|euro|ecb|sterling|pound|boe|gold|silver|xau|xag|bullion|nasdaq|dow|djia|stocks|equities|inflation|cpi|nfp|fomc|fed|rates|dollar|forex|tariff|recession|gdp|opec)\b|eur\/usd|gbp\/usd|usd\/iqd|interest rate|central bank|wall street|oil revenue|federal reserve|bank of england|european central bank/i;
+const FOCUS_MARKET_TERMS = /\b(iqd|dinar|cbi|iraq|baghdad|kurdistan|euro|ecb|sterling|pound|boe|gold|silver|xau|xag|bullion|nasdaq|dow|djia|stocks|equities|inflation|cpi|nfp|fomc|fed|rates|dollar|forex|tariff|recession|gdp|opec|pce|employment|payrolls)\b|eur\/usd|gbp\/usd|usd\/iqd|interest rate|central bank|wall street|oil revenue|federal reserve|bank of england|european central bank|personal income|trade deficit|economic growth|gross domestic product/i;
 const TRUSTED_PUBLISHERS = /\b(reuters|associated press|ap news|bbc|al jazeera|bloomberg|cnbc|financial times|wall street journal|washington post|new york times|guardian|dw|france 24|cnn|nbc news|cbs news|abc news|npr|pbs|euronews|the national|shafaq|rudaw|kurdistan24|iraqi news agency|ina|iraq business news)\b/i;
 const FOREX_TERMS = /\b(euro|ecb|eurozone|sterling|pound|boe|britain|british|uk economy)\b|eur\/usd|gbp\/usd|european central bank|bank of england/i;
 const METAL_TERMS = /\b(gold|silver|xau|xag|bullion)\b|precious metals|safe haven/i;
@@ -89,8 +88,9 @@ const INDEX_TERMS = /\b(nasdaq|dow|djia|stocks|equities|earnings|wall street)\b|
 const US_MACRO_TERMS = /\b(fed|fomc|inflation|cpi|ppi|payroll|payrolls|jobs|employment|unemployment|gdp|retail sales|treasury|tariff|recession)\b|federal reserve|interest rate|rate cut|rate hike/i;
 const TIER_WEIGHT = { official:36, major:32, local:28, specialist:22, curated:17 };
 
-const decode = (str='') => str.replace(/<!\[CDATA\[(.*?)\]\]>/gs,'$1').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'').trim();
+const decode = (str='') => str.replace(/<!\[CDATA\[(.*?)\]\]>/gs,'$1').replace(/&#x([0-9a-f]+);/gi,(_,value)=>String.fromCodePoint(Number.parseInt(value,16))).replace(/&#(\d+);/g,(_,value)=>String.fromCodePoint(Number(value))).replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'').trim();
 const extractTag = (xml, tag) => decode(xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1] || '');
+const extractLink = xml => extractTag(xml,'link') || decode(xml.match(/<link[^>]+href=["']([^"']+)/i)?.[1] || '');
 const extractImage = xml => xml.match(/<media:content[^>]+url=["']([^"']+)/i)?.[1] || xml.match(/<enclosure[^>]+url=["']([^"']+)/i)?.[1] || xml.match(/<img[^>]+src=["']([^"']+)/i)?.[1] || '';
 const cleanGoogleTitle = title => title.replace(/\s+-\s+[^-]{2,80}$/,'').trim();
 const sourceFromGoogleTitle = (title, fallback) => title.split(' - ').length > 1 ? title.split(' - ').at(-1).trim() : fallback;
@@ -229,7 +229,7 @@ async function readFeedBody(response, itemLimit){
       throw new Error('feed response too large');
     }
     text += decoder.decode(value, { stream: true });
-    if((text.match(/<\/item>/gi) || []).length >= itemLimit){
+    if((text.match(/<\/(?:item|entry)>/gi) || []).length >= itemLimit){
       await reader.cancel('enough feed items received');
       return text;
     }
@@ -249,13 +249,13 @@ async function fetchFeed(feed, timeoutMs){
     if(!res.ok) throw new Error(String(res.status));
     const perFeedLimit = feed.category === 'iraq' ? 12 : 8;
     const xml = await readFeedBody(res, perFeedLimit);
-    const items = [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
+    const items = [...xml.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
       const entry = m[0];
       const rawTitle = extractTag(entry,'title');
       const isGoogleFeed = feed.url.includes('news.google.com');
       const title = isGoogleFeed ? cleanGoogleTitle(rawTitle) : rawTitle;
-      const link = extractTag(entry,'link') || extractTag(entry,'guid') || feed.url;
-      const description = extractTag(entry,'description') || extractTag(entry,'summary');
+      const link = extractLink(entry) || extractTag(entry,'guid') || extractTag(entry,'id') || feed.url;
+      const description = extractTag(entry,'description') || extractTag(entry,'summary') || extractTag(entry,'content');
       const content = (extractTag(entry,'content:encoded') || description).replace(/\s+/g, ' ').trim().slice(0, 1600);
       const summary = (description || content).replace(/\s+/g, ' ').trim().slice(0, 900);
       const publishedAt = extractTag(entry,'pubDate') || extractTag(entry,'published') || extractTag(entry,'updated') || extractTag(entry,'dc:date');

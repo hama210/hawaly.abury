@@ -65,6 +65,32 @@ test('news keeps recent Iraq stories, removes stale and unrelated feed results, 
   }
 })
 
+test('news parses official Atom feeds and decodes numeric headline entities', async () => {
+  const restoreCaches = replaceGlobal('caches', { default: new MemoryCache() })
+  const restoreWarn = silenceWarnings()
+  const published = new Date().toISOString()
+  const atom = `<feed><entry><title>US payrolls rise &#x2014; Fed outlook in focus</title><link href="https://www.bls.gov/example"/><content>Official US employment and payrolls report.</content><published>${published}</published></entry></feed>`
+  const restoreFetch = replaceGlobal('fetch', async url => String(url).includes('/feed/empsit.rss')
+    ? new Response(atom, { status: 200, headers: { 'content-type':'application/atom+xml' } })
+    : new Response('unavailable', { status: 503 }))
+
+  try {
+    const request = requestContext('https://example.com/api/news?mode=full&batch=0&limit=40')
+    const response = await onRequest(request.context)
+    const payload = await response.json()
+    await request.settle()
+    assert.equal(response.status, 200)
+    assert.equal(payload.items[0].title, 'US payrolls rise — Fed outlook in focus')
+    assert.equal(payload.items[0].source, 'US Employment (BLS)')
+    assert.equal(payload.items[0].sourceTier, 'official')
+    assert.equal(payload.items[0].link, 'https://www.bls.gov/example')
+  } finally {
+    restoreFetch()
+    restoreWarn()
+    restoreCaches()
+  }
+})
+
 test('news sources are curated around the focused markets and wars', () => {
   const names = FEEDS.map(feed => feed.source)
   assert.ok(FEEDS.length < 45)
@@ -74,13 +100,13 @@ test('news sources are curated around the focused markets and wars', () => {
   assert.ok(names.includes('Shafaq Economy'))
   assert.ok(names.includes('Reuters Global Conflict'))
   assert.ok(names.includes('Financial Times Markets'))
-  assert.ok(names.includes('Wall Street Journal Markets'))
   assert.ok(names.includes('US Inflation (BLS)'))
   assert.ok(names.includes('US Employment (BLS)'))
   assert.ok(names.includes('US Economy (BEA)'))
   assert.equal(FEEDS.find(feed => feed.source === 'Federal Reserve')?.url, 'https://www.federalreserve.gov/feeds/press_monetary.xml')
   assert.equal(FEEDS.find(feed => feed.source === 'European Central Bank')?.url, 'https://www.ecb.europa.eu/rss/press.html')
   assert.equal(FEEDS.find(feed => feed.source === 'Bank of England')?.url, 'https://www.bankofengland.co.uk/rss/news')
+  assert.ok(!names.includes('Wall Street Journal Markets'))
   assert.ok(!names.includes('Gold and Silver'))
   assert.ok(!names.includes('Global Conflict'))
   assert.ok(!names.includes('Yahoo Finance'))

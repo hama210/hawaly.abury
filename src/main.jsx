@@ -55,7 +55,7 @@ const trustBarCopy = {
   ar: { title:'مصادر موثوقة', note:'رسمية وعالمية ومتخصصة · الأخبار الأهم أولاً' },
   en: { title:'Trusted sources', note:'Official, major and specialist · strongest stories first' }
 };
-const trustBarSources = ['Federal Reserve', 'ECB', 'BoE', 'BLS', 'Reuters', 'FT', 'WSJ', 'CNBC', 'CBI', 'Shafaq'];
+const trustBarSources = ['Federal Reserve', 'ECB', 'BoE', 'BLS', 'BEA', 'Reuters', 'FT', 'CNBC', 'CBI', 'Shafaq'];
 const calendarEvents = {
   ku: [
     ['وتاری فیدراڵ ڕیزێرڤ', 'USD • XAU', 'high'],
