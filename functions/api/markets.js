@@ -1,13 +1,9 @@
 const SYMBOLS = [
   { symbol: 'GC=F', pair: 'XAU/USD', name: 'Gold', type: 'commodity' },
-  { symbol: 'CL=F', pair: 'WTI', name: 'Crude Oil', type: 'commodity' },
-  { symbol: 'BTC-USD', pair: 'BTC/USD', name: 'Bitcoin', type: 'crypto' },
-  { symbol: 'ETH-USD', pair: 'ETH/USD', name: 'Ethereum', type: 'crypto' },
+  { symbol: 'SI=F', pair: 'XAG/USD', name: 'Silver', type: 'commodity' },
   { symbol: 'EURUSD=X', pair: 'EUR/USD', name: 'Euro / Dollar', type: 'forex' },
   { symbol: 'GBPUSD=X', pair: 'GBP/USD', name: 'Pound / Dollar', type: 'forex' },
-  { symbol: 'JPY=X', pair: 'USD/JPY', name: 'Dollar / Yen', type: 'forex' },
-  { symbol: 'DX-Y.NYB', pair: 'DXY', name: 'Dollar Index', type: 'index' },
-  { symbol: '^GSPC', pair: 'US500', name: 'S&P 500', type: 'index' },
+  { symbol: '^DJI', pair: 'DOW JONES', name: 'Dow Jones', type: 'index' },
   { symbol: '^IXIC', pair: 'NASDAQ', name: 'Nasdaq', type: 'index' }
 ];
 
@@ -256,7 +252,7 @@ function staleItem(item) {
 
 function cacheKeyFor(url, kind) {
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('__hawali_cache', `markets-${kind}-v2`);
+  cacheUrl.searchParams.set('__hawali_cache', `markets-${kind}-v3`);
   return new Request(cacheUrl.toString(), { method: 'GET' });
 }
 
@@ -336,7 +332,7 @@ export async function onRequest(context) {
     });
   });
   const usdIndex = items.findIndex(item => item.symbol === USD_IQD.symbol);
-  if (usdIndex > 2) items.splice(2, 0, items.splice(usdIndex, 1)[0]);
+  if (usdIndex > 0) items.unshift(items.splice(usdIndex, 1)[0]);
 
   const liveCount = items.filter(item => item.dataStatus === 'live').length;
   const staleCount = items.filter(item => item.dataStatus === 'stale').length;

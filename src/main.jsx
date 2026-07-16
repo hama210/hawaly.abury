@@ -8,11 +8,11 @@ import { LANGS, t } from './utils/i18n.js';
 import { analyzeArticle, localizeSummary } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
 
-const categories = ['all', 'iraq', 'markets', 'geopolitics', 'oil', 'forex'];
+const categories = ['all', 'iraq', 'forex', 'metals', 'indices', 'geopolitics'];
 const categoryMap = {
-  ku: { all:'هەموو', iraq:'عێراق', markets:'ئابووری', geopolitics:'جەنگ', oil:'نەوت و زێڕ', forex:'فۆرێکس' },
-  ar: { all:'الكل', iraq:'العراق', markets:'الاقتصاد', geopolitics:'الحرب', oil:'النفط والذهب', forex:'فوركس' },
-  en: { all:'All', iraq:'Iraq', markets:'Economy', geopolitics:'War', oil:'Oil & Gold', forex:'Forex' }
+  ku: { all:'هەموو', iraq:'USD/IQD', forex:'EUR و GBP', metals:'زێڕ و زیو', indices:'Dow و Nasdaq', geopolitics:'جەنگ' },
+  ar: { all:'الكل', iraq:'USD/IQD', forex:'EUR و GBP', metals:'الذهب والفضة', indices:'Dow و Nasdaq', geopolitics:'الحروب' },
+  en: { all:'All', iraq:'USD/IQD', forex:'EUR & GBP', metals:'Gold & Silver', indices:'Dow & Nasdaq', geopolitics:'Wars' }
 };
 const uiCopy = {
   ku: {
@@ -20,21 +20,24 @@ const uiCopy = {
     sell100:'فرۆشتن / $100', calendar:'ڕۆژژمێری ئابووری', latest:'دوایین هەواڵەکان', allSections:'هەموو بەشەکان',
     refresh:'نوێکردنەوە', theme:'گۆڕینی ڕەنگ', language:'زمان', search:'گەڕان', menu:'بەشەکانی هەواڵ',
     home:'سەرەکی', markets:'بازاڕ', news:'هەواڵ', high:'گرنگ', medium:'مامناوەند', live:'زیندوو',
-    noMarket:'نرخی ناوخۆ بەردەست نییە', translating:'وەرگێڕانی هەواڵەکان...', close:'داخستن'
+    noMarket:'نرخی ناوخۆ بەردەست نییە', translating:'وەرگێڕانی هەواڵەکان...', close:'داخستن',
+    effects:'کاریگەری لەسەر بازاڕ', content:'ناوەڕۆکی هەواڵ', loadingContent:'وەرگێڕانی ناوەڕۆک...', up:'فشاری بەرەو سەرەو', down:'فشاری بەرەو خوارەوە', watch:'چاودێری', effectNotice:'ئەمە هەڵسەنگاندنی ئاڕاستەی بازاڕە، نەک سیگناڵی مامەڵەکردن.'
   },
   ar: {
     brandTagline:'أخبار وأسواق كردستان', lead:'الخبر الرئيسي', localDollar:'سعر الدولار في السوق المحلي',
     sell100:'بيع / 100$', calendar:'التقويم الاقتصادي', latest:'أحدث الأخبار', allSections:'كل الأقسام',
     refresh:'تحديث', theme:'تغيير المظهر', language:'اللغة', search:'بحث', menu:'أقسام الأخبار',
     home:'الرئيسية', markets:'الأسواق', news:'الأخبار', high:'مهم', medium:'متوسط', live:'مباشر',
-    noMarket:'السعر المحلي غير متاح', translating:'جاري ترجمة الأخبار...', close:'إغلاق'
+    noMarket:'السعر المحلي غير متاح', translating:'جاري ترجمة الأخبار...', close:'إغلاق',
+    effects:'التأثير في الأسواق', content:'محتوى الخبر', loadingContent:'جاري ترجمة المحتوى...', up:'ضغط صعودي', down:'ضغط هبوطي', watch:'مراقبة', effectNotice:'هذا تقدير لاتجاه ضغط السوق وليس إشارة تداول.'
   },
   en: {
     brandTagline:'Kurdistan news and markets', lead:'Lead Story', localDollar:'Local dollar market',
     sell100:'Sell / $100', calendar:'Economic Calendar', latest:'Latest News', allSections:'All sections',
     refresh:'Refresh', theme:'Change theme', language:'Language', search:'Search', menu:'News sections',
     home:'Home', markets:'Markets', news:'News', high:'High', medium:'Medium', live:'Live',
-    noMarket:'Local rate unavailable', translating:'Translating news...', close:'Close'
+    noMarket:'Local rate unavailable', translating:'Translating news...', close:'Close',
+    effects:'Market Effects', content:'News Content', loadingContent:'Translating content...', up:'Upward pressure', down:'Downward pressure', watch:'Watch', effectNotice:'This is directional market context, not a trading signal.'
   }
 };
 const localRateText = {
@@ -44,20 +47,26 @@ const localRateText = {
 };
 const calendarEvents = {
   ku: [
-    ['وتاری فیدراڵ ڕیزێرڤ', 'USD', 'high'],
-    ['کۆگای نەوتی ئەمریکا', 'WTI', 'medium'],
-    ['نوێکاری بودجەی عێراق', 'IQD', 'high']
+    ['وتاری فیدراڵ ڕیزێرڤ', 'USD • XAU', 'high'],
+    ['بڕیاری ECB و BoE', 'EUR • GBP', 'high'],
+    ['نوێکاری CBI و بودجەی عێراق', 'USD/IQD', 'high']
   ],
   ar: [
-    ['خطاب الاحتياطي الفيدرالي', 'USD', 'high'],
-    ['مخزونات النفط الأمريكية', 'WTI', 'medium'],
-    ['تحديثات موازنة العراق', 'IQD', 'high']
+    ['خطاب الاحتياطي الفيدرالي', 'USD • XAU', 'high'],
+    ['قرارات ECB وBoE', 'EUR • GBP', 'high'],
+    ['تحديثات CBI وموازنة العراق', 'USD/IQD', 'high']
   ],
   en: [
-    ['Federal Reserve speech', 'USD', 'high'],
-    ['US oil inventories', 'WTI', 'medium'],
-    ['Iraq budget update', 'IQD', 'high']
+    ['Federal Reserve speech', 'USD • XAU', 'high'],
+    ['ECB and BoE decisions', 'EUR • GBP', 'high'],
+    ['CBI and Iraq budget update', 'USD/IQD', 'high']
   ]
+};
+
+const effectReasonCopy = {
+  ku: { safeHaven:'مەترسی جەنگ داواکاری پەنابەری ئارام زیاد دەکات', riskOff:'مەترسی جەنگ هەستی ڕیسک لاواز دەکات', regionalRisk:'مەترسی ناوچەکە داواکاری دۆلار زیاد دەکات', deescalation:'کەمبوونەوەی گرژی هەستی ڕیسک باشتر دەکات', usRates:'گۆڕانی چاوەڕوانی نرخی سوودی ئەمریکا', euroPolicy:'سیاسەتی ECB و داتای ناوچەی یۆرۆ', ukPolicy:'سیاسەتی BoE و داتای بەریتانیا', iraqPolicy:'CBI، بودجە و داهاتی نەوتی عێراق', preciousMetals:'دۆلار، سوود و داواکاری پەنابەر', indexNews:'سوود، قازانج و هەستی Wall Street', marketNews:'هەستی گشتی بازاڕ' },
+  ar: { safeHaven:'مخاطر الحرب ترفع طلب الملاذ الآمن', riskOff:'مخاطر الحرب تضعف شهية المخاطرة', regionalRisk:'المخاطر الإقليمية تزيد طلب الدولار', deescalation:'تراجع التوتر يحسن شهية المخاطرة', usRates:'تغير توقعات الفائدة الأمريكية', euroPolicy:'سياسة ECB وبيانات منطقة اليورو', ukPolicy:'سياسة BoE وبيانات بريطانيا', iraqPolicy:'CBI والموازنة وإيرادات نفط العراق', preciousMetals:'الدولار والفائدة وطلب الملاذ الآمن', indexNews:'الفائدة والأرباح ومعنويات وول ستريت', marketNews:'معنويات السوق العامة' },
+  en: { safeHaven:'War risk can lift safe-haven demand', riskOff:'War risk can weaken risk appetite', regionalRisk:'Regional risk can increase dollar demand', deescalation:'Lower tension can improve risk appetite', usRates:'Changing US interest-rate expectations', euroPolicy:'ECB policy and euro-area data', ukPolicy:'BoE policy and UK data', iraqPolicy:'CBI policy, budget and Iraqi oil revenue', preciousMetals:'Dollar, rates and safe-haven demand', indexNews:'Rates, earnings and Wall Street sentiment', marketNews:'Broad market sentiment' }
 };
 const developerCopy = {
   ku: { developedBy:'گەشەپێدراوە لەلایەن', contact:'پەیوەندی', whatsapp:'واتساپ' },
@@ -124,7 +133,7 @@ function imageFallback(event) {
 }
 
 function articleText(item) {
-  return `${item.title || ''} ${item.titleEn || ''} ${item.titleKu || ''} ${item.titleAr || ''} ${item.summary || ''} ${item.summaryEn || ''} ${item.summaryKu || ''} ${item.summaryAr || ''} ${item.source || ''} ${item.sourceGroup || ''} ${item.category || ''} ${(item.intelligence?.assets || []).join(' ')}`.toLowerCase();
+  return `${item.title || ''} ${item.titleEn || ''} ${item.titleKu || ''} ${item.titleAr || ''} ${item.summary || ''} ${item.summaryEn || ''} ${item.summaryKu || ''} ${item.summaryAr || ''} ${item.content || ''} ${item.source || ''} ${item.sourceGroup || ''} ${item.category || ''} ${(item.intelligence?.assets || []).join(' ')}`.toLowerCase();
 }
 
 function matchesCategory(item, category) {
@@ -132,18 +141,37 @@ function matchesCategory(item, category) {
   const text = articleText(item);
   const aliases = {
     iraq:['iraq', 'iqd', 'cbi', 'baghdad', 'kurdistan', 'kurdish'],
-    markets:['market', 'econom', 'business', 'stock', 'bank', 'finance', 'inflation'],
+    forex:['forex', 'currency', 'dollar', 'usd', 'eur', 'gbp', 'euro', 'sterling', 'ecb', 'boe'],
+    metals:['metals', 'gold', 'silver', 'xau', 'xag', 'bullion'],
+    indices:['indices', 'index', 'nasdaq', 'dow', 'djia', 'wall street'],
     geopolitics:['geopolit', 'war', 'conflict', 'iran', 'strike', 'military', 'shipping', 'red sea'],
-    oil:['oil', 'gold', 'xau', 'wti', 'opec', 'energy', 'crude'],
-    forex:['forex', 'currency', 'dollar', 'usd', 'eur', 'gbp', 'exchange rate']
   };
   return aliases[category]?.some(term => text.includes(term)) || false;
 }
 
 function selectMarketItems(markets) {
-  const targets = ['USD/IQD', 'XAU/USD', 'WTI', 'BTC/USD', 'EUR/USD'];
+  const targets = ['USD/IQD', 'EUR/USD', 'GBP/USD', 'XAU/USD', 'XAG/USD', 'DOW JONES', 'NASDAQ'];
   const selected = targets.map(symbol => markets.find(item => item.symbol === symbol)).filter(Boolean);
-  return [...selected, ...markets.filter(item => !selected.includes(item))].slice(0, 5);
+  return [...selected, ...markets.filter(item => !selected.includes(item))].slice(0, 7);
+}
+
+function directionSymbol(direction) {
+  return direction === 'up' ? '▲' : direction === 'down' ? '▼' : '●';
+}
+
+function EffectBadge({ effect, lang, detailed = false }) {
+  const copy = uiCopy[lang] || uiCopy.ku;
+  const reasons = effectReasonCopy[lang] || effectReasonCopy.en;
+  return <span className={`effect-badge effect-${effect.direction || 'watch'} ${detailed ? 'detailed' : ''}`}>
+    <b>{directionSymbol(effect.direction)} {effect.asset}</b>
+    {detailed && <small>{copy[effect.direction] || copy.watch} · {reasons[effect.reason] || reasons.marketNews}</small>}
+  </span>;
+}
+
+function focusedIntelligence(item) {
+  const analyzed = analyzeArticle(item || {});
+  const stored = item?.intelligence || {};
+  return { ...analyzed, ...stored, effects: stored.effects?.length ? stored.effects : analyzed.effects, assets: stored.assets?.length ? stored.assets : analyzed.assets };
 }
 
 function Header({ lang, setLang, theme, setTheme, query, setQuery, dict, refreshing, onRefresh }) {
@@ -184,7 +212,7 @@ function MarketStrip({ markets, lang }) {
           : <small className={changeClass(market.changePct)}>{formatChange(market.changePct)}</small>}
       </span>
     </div>)}
-    {!markets.length && Array.from({ length:5 }, (_, index) => <div className="market-item market-skeleton" key={index}><span>—</span><strong>—</strong></div>)}
+    {!markets.length && Array.from({ length:7 }, (_, index) => <div className="market-item market-skeleton" key={index}><span>—</span><strong>—</strong></div>)}
   </section>;
 }
 
@@ -206,7 +234,7 @@ function CategoryTabs({ active, setActive, lang }) {
 
 function Hero({ item, lang, dict, onOpen }) {
   if (!item) return null;
-  const intel = item.intelligence || analyzeArticle(item);
+  const intel = focusedIntelligence(item);
   return <article className="lead-story" role="button" tabIndex="0" onClick={() => onOpen(item)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') onOpen(item); }}>
     <img src={item.image} alt="" onError={imageFallback} />
     <div className="lead-overlay" />
@@ -214,6 +242,7 @@ function Hero({ item, lang, dict, onOpen }) {
       <span className="lead-label">{uiCopy[lang]?.lead || uiCopy.ku.lead}</span>
       <h1>{translatedTitle(item, lang)}</h1>
       <p>{translatedSummary(item, lang)}</p>
+      <div className="hero-effects">{intel.effects?.slice(0, 4).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
       <div className="story-meta"><span>{item.source}</span><span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
     </div>
   </article>;
@@ -242,35 +271,71 @@ function CalendarPanel({ lang }) {
 }
 
 function NewsCard({ item, lang, onOpen }) {
-  const intel = item.intelligence || analyzeArticle(item);
+  const intel = focusedIntelligence(item);
   return <article className="story-card">
     <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={translatedTitle(item, lang)}><img src={item.image} alt="" loading="lazy" onError={imageFallback} /></button>
     <div className="story-copy">
       <div className="story-source"><span>{item.source}</span><span>{timeAgo(item.publishedAt, lang)}</span></div>
       <button className="story-title" type="button" onClick={() => onOpen(item)}>{translatedTitle(item, lang)}</button>
-      <div className="story-tags"><span>{item.category || impactLabel(intel.impact, lang)}</span>{intel.assets?.slice(0, 2).map(asset => <span key={asset}>{asset}</span>)}</div>
+      <div className="card-effects">{intel.effects?.slice(0, 3).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
     </div>
   </article>;
 }
 
 function ArticleModal({ item, lang, dict, onClose }) {
+  const [body, setBody] = useState('');
+  const [loadingBody, setLoadingBody] = useState(false);
   useEffect(() => {
     if (!item) return undefined;
     const handleKey = event => { if (event.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [item, onClose]);
+  useEffect(() => {
+    const controller = new AbortController();
+    if (!item) {
+      setBody('');
+      setLoadingBody(false);
+      return () => controller.abort();
+    }
+    const original = String(item.contentEn || item.content || item.summaryEn || item.summary || '').trim();
+    const originalSummary = String(item.summaryEn || item.summary || '').trim();
+    const localizedSummary = translatedSummary(item, lang);
+    if (lang === 'en' || !original) {
+      setBody(original || localizedSummary);
+      setLoadingBody(false);
+      return () => controller.abort();
+    }
+    if (original.length <= originalSummary.length + 60) {
+      setBody(localizedSummary);
+      setLoadingBody(false);
+      return () => controller.abort();
+    }
+    setBody(localizedSummary);
+    setLoadingBody(true);
+    fetch('/api/translate', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ lang, texts:[original] }),
+      signal:controller.signal
+    }).then(response => response.ok ? response.json() : Promise.reject()).then(data => {
+      if (!controller.signal.aborted && data.translated?.[0]) setBody(data.translated[0]);
+    }).catch(() => {}).finally(() => { if (!controller.signal.aborted) setLoadingBody(false); });
+    return () => controller.abort();
+  }, [item, lang]);
   if (!item) return null;
-  const intel = item.intelligence || analyzeArticle(item);
+  const intel = focusedIntelligence(item);
+  const copy = uiCopy[lang] || uiCopy.ku;
   return <div className="modal-backdrop" onClick={onClose} role="presentation"><article className="article-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={event => event.stopPropagation()}>
     <div className="modal-image"><img src={item.image} alt="" onError={imageFallback} /></div>
     <div className="modal-content">
       <button className="modal-close" type="button" onClick={onClose} aria-label={uiCopy[lang]?.close}>×</button>
       <div className="story-meta"><span>{item.source}</span><span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>
       <h2 id="modal-title">{translatedTitle(item, lang)}</h2>
-      <p>{translatedSummary(item, lang)}</p>
-      <h3>{dict.why}</h3><p>{intel.why}</p>
-      <div className="modal-assets">{intel.assets?.map(asset => <span key={asset}>{asset}</span>)}</div>
+      <h3>{copy.content}</h3><p className="article-body">{loadingBody ? copy.loadingContent : body || translatedSummary(item, lang)}</p>
+      <h3>{copy.effects}</h3>
+      <div className="effect-grid">{intel.effects?.map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} detailed />)}</div>
+      <p className="effect-notice">{copy.effectNotice}</p>
       <div className="modal-actions"><a className="primary-button" href={item.link} target="_blank" rel="noreferrer">{dict.original} ↗</a><button type="button" onClick={() => copyLink(item.link)}>{dict.share}</button></div>
     </div>
   </article></div>;
@@ -281,13 +346,13 @@ function SourcesDisclosure({ lang }) {
   const [sources, setSources] = useState([]);
   const copy = uiCopy[lang] || uiCopy.ku;
   const disclosure = {
-    ku: { all:'هەموو سەرچاوەکانی هەواڵ', loading:'بارکردنی سەرچاوەکان', note:'ئەم ماڵپەڕە تەنها سەردێڕ، پوختە و لینکی هەواڵە گشتییەکان کۆدەکاتەوە. ناوەڕۆک موڵکی سەرچاوە ڕەسەنەکانیەتی.', contact:'بۆ داواکاری سەرچاوە یان لابردنەوە، پەیوەندی بکە.' },
-    ar: { all:'كل مصادر الأخبار', loading:'تحميل المصادر', note:'يجمع هذا الموقع عناوين الأخبار العامة وملخصات قصيرة وروابط المصادر الأصلية. المحتوى يعود إلى ناشريه الأصليين.', contact:'لطلب إضافة مصدر أو إزالة محتوى، تواصل معنا.' },
-    en: { all:'All news sources', loading:'Loading sources', note:'This site collects public headlines, short summaries, and links to original publishers. Content belongs to its original publishers.', contact:'For source or removal requests, contact us.' }
+    ku: { all:'سەرچاوە گرنگ و هەڵبژێردراوەکان', loading:'بارکردنی سەرچاوەکان', note:'تەنها سەرچاوە گرنگە فەرمی، جیهانی، دارایی و ناوخۆییەکان بۆ USD/IQD، دراو، کانزا، پێوەرەکان و جەنگ هەڵبژێردراون. ناوەڕۆک موڵکی بڵاوکەرەوەی ڕەسەنە.', contact:'بۆ داواکاری سەرچاوە یان لابردنەوە، پەیوەندی بکە.' },
+    ar: { all:'المصادر المهمة والمختارة', loading:'تحميل المصادر', note:'تُستخدم فقط المصادر الرسمية والعالمية والمالية والمحلية المهمة لـ USD/IQD والعملات والمعادن والمؤشرات والحروب. المحتوى يعود إلى ناشريه الأصليين.', contact:'لطلب إضافة مصدر أو إزالة محتوى، تواصل معنا.' },
+    en: { all:'Important curated sources', loading:'Loading sources', note:'Only important official, global, financial, and local sources are used for USD/IQD, currencies, metals, indices, and wars. Content belongs to its original publishers.', contact:'For source or removal requests, contact us.' }
   }[lang];
   useEffect(() => {
     let alive = true;
-    fetch('/api/sources').then(response => response.ok ? response.json() : Promise.reject()).then(data => { if (alive && Array.isArray(data.sources)) setSources(data.sources.filter(Boolean)); }).catch(() => { if (alive) setSources([]); });
+    fetch('/api/sources?v=focused-markets-v1').then(response => response.ok ? response.json() : Promise.reject()).then(data => { if (alive && Array.isArray(data.sources)) setSources(data.sources.filter(Boolean)); }).catch(() => { if (alive) setSources([]); });
     return () => { alive = false; };
   }, []);
   return <aside className={`sources-corner ${open ? 'is-open' : ''}`}>
@@ -399,6 +464,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260716-redesign', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260716-focused-markets', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }

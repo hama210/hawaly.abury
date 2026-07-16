@@ -1,40 +1,82 @@
 const rules = [
-  { asset: 'USD', words: ['fed','federal reserve','dollar','rate','interest','fomc','treasury','us economy','cpi','nfp'] },
-  { asset: 'Gold', words: ['gold','xau','inflation','safe haven','fed','rates','war','risk'] },
-  { asset: 'Oil', words: ['oil','brent','wti','opec','energy','crude','iraq oil','eia','iran','hormuz','blockade','shipping'] },
-  { asset: 'EUR/USD', words: ['ecb','euro','europe','eurozone','eurusd'] },
-  { asset: 'GBP/USD', words: ['boe','pound','uk','britain','gbp'] },
-  { asset: 'BTC', words: ['bitcoin','btc','crypto','etf','coinbase','binance'] },
-  { asset: 'IQD', words: ['iraq','iqd','central bank of iraq','cbi','dinar','usd/iqd','budget','baghdad','kurdistan'] },
-  { asset: 'Stocks', words: ['stocks','nasdaq','s&p','dow','shares','earnings','tesla','nvidia','apple','microsoft'] }
+  { asset:'USD/IQD', words:['iraq','iqd','central bank of iraq','cbi','dinar','usd/iqd','budget','baghdad','kurdistan','oil revenue'] },
+  { asset:'EUR/USD', words:['eur/usd','ecb','euro','europe','eurozone','european central bank'] },
+  { asset:'GBP/USD', words:['gbp/usd','boe','sterling','pound','bank of england','uk economy','british economy'] },
+  { asset:'XAU/USD', words:['gold','xau','bullion','safe haven'] },
+  { asset:'XAG/USD', words:['silver','xag','precious metals'] },
+  { asset:'DOW JONES', words:['dow','dow jones','djia','industrial average','wall street'] },
+  { asset:'NASDAQ', words:['nasdaq','technology stocks','tech stocks','wall street'] }
 ];
 
 const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','strike','strikes','blockade','strait of hormuz','sanction','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq'];
 const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory'];
 const bearishWords = ['war','attack','strike','strikes','blockade','falls','drops','weak','slump','sanction','recession','inflation rises','risk off','cuts outlook'];
-const bullishWords = ['rises','gains','strong','growth','beats','risk on','eases','recovery','surges'];
+const bullishWords = ['rises','gains','strong','growth','beats','risk on','eases','recovery','surges','ceasefire','truce'];
+const warTerms = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|invasion|ceasefire|truce|blockade|military|sanction|sanctions|houthi|nato|centcom|irgc)\b|strait of hormuz|red sea/i;
+
+function marketEffects(text, sentiment, iraqImpact){
+  const effects = [];
+  const add = (asset, direction, reason) => {
+    if(!effects.some(effect => effect.asset === asset)) effects.push({ asset, direction, reason });
+  };
+  const relief = /ceasefire|truce|peace deal|de-escalation|deescalation/i.test(text);
+  const conflict = warTerms.test(text);
+  const regional = /iraq|iran|middle east|gulf|hormuz|red sea|houthi|israel|gaza|lebanon|syria/i.test(text);
+  const hawkish = /rate hike|higher for longer|hawkish|hot inflation|inflation rises|strong jobs|strong payroll/i.test(text);
+  const dovish = /rate cut|dovish|cooling inflation|inflation falls|weak jobs|weak payroll|economic slowdown/i.test(text);
+  const positive = /rises|gains|strong|beats|surges|record high|optimism|rally/i.test(text);
+  const negative = /falls|drops|weak|slump|selloff|recession|cuts outlook|warning/i.test(text);
+
+  if(conflict){
+    add('XAU/USD', relief ? 'down' : 'up', relief ? 'deescalation' : 'safeHaven');
+    add('XAG/USD', relief ? 'down' : 'up', relief ? 'deescalation' : 'safeHaven');
+    add('NASDAQ', relief ? 'up' : 'down', relief ? 'deescalation' : 'riskOff');
+    add('DOW JONES', relief ? 'up' : 'down', relief ? 'deescalation' : 'riskOff');
+    if(regional || iraqImpact) add('USD/IQD', relief ? 'down' : 'up', relief ? 'deescalation' : 'regionalRisk');
+  }
+  if(hawkish || dovish){
+    const dollarUp = hawkish && !dovish;
+    add('EUR/USD', dollarUp ? 'down' : 'up', 'usRates');
+    add('GBP/USD', dollarUp ? 'down' : 'up', 'usRates');
+    add('XAU/USD', dollarUp ? 'down' : 'up', 'usRates');
+    add('XAG/USD', dollarUp ? 'down' : 'up', 'usRates');
+    add('NASDAQ', dollarUp ? 'down' : 'up', 'usRates');
+  }
+  if(/eur\/usd|euro|ecb|eurozone|european central bank/i.test(text)) add('EUR/USD', positive ? 'up' : negative ? 'down' : 'watch', 'euroPolicy');
+  if(/gbp\/usd|sterling|pound|bank of england|\bboe\b|uk economy|british economy/i.test(text)) add('GBP/USD', positive ? 'up' : negative ? 'down' : 'watch', 'ukPolicy');
+  if(/gold|xau|bullion/i.test(text)) add('XAU/USD', positive ? 'up' : negative ? 'down' : 'watch', 'preciousMetals');
+  if(/silver|xag|precious metals/i.test(text)) add('XAG/USD', positive ? 'up' : negative ? 'down' : 'watch', 'preciousMetals');
+  if(/nasdaq|technology stocks|tech stocks/i.test(text)) add('NASDAQ', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'indexNews');
+  if(/dow|dow jones|djia|industrial average/i.test(text)) add('DOW JONES', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'indexNews');
+  if(iraqImpact) add('USD/IQD', positive ? 'down' : negative ? 'up' : 'watch', 'iraqPolicy');
+  if(!effects.length){
+    add('NASDAQ', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'marketNews');
+    add('DOW JONES', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'marketNews');
+  }
+  return effects.slice(0, 6);
+}
 
 export function analyzeArticle(item) {
-  const text = `${item.title || ''} ${item.summary || ''} ${item.source || ''} ${item.category || ''}`.toLowerCase();
-  const assets = rules.filter(r => r.words.some(w => text.includes(w))).map(r => r.asset);
-  const impact = highWords.some(w => text.includes(w)) ? 'high' : mediumWords.some(w => text.includes(w)) ? 'medium' : 'low';
-  const sentiment = bearishWords.some(w => text.includes(w)) ? 'bearish' : bullishWords.some(w => text.includes(w)) ? 'bullish' : 'neutral';
-  const iraqImpact = ['iraq','baghdad','kurdistan','cbi','dinar','iqd','oil exports','ministry of oil','rudaw','shafaq'].some(w => text.includes(w));
+  const text = `${item.title || ''} ${item.summary || ''} ${item.content || ''} ${item.source || ''} ${item.category || ''}`.toLowerCase();
+  const impact = highWords.some(word => text.includes(word)) ? 'high' : mediumWords.some(word => text.includes(word)) ? 'medium' : 'low';
+  const sentiment = bearishWords.some(word => text.includes(word)) ? 'bearish' : bullishWords.some(word => text.includes(word)) ? 'bullish' : 'neutral';
+  const iraqImpact = ['iraq','baghdad','kurdistan','cbi','dinar','iqd','oil exports','ministry of oil','rudaw','shafaq'].some(word => text.includes(word));
+  const effects = marketEffects(text, sentiment, iraqImpact);
+  const assets = [...new Set([...rules.filter(rule => rule.words.some(word => text.includes(word))).map(rule => rule.asset), ...effects.map(effect => effect.asset)])];
   const why = getWhy(impact, assets, iraqImpact);
-  return { impact, sentiment, assets: assets.length ? [...new Set(assets)] : ['Markets'], iraqImpact, why };
+  return { impact, sentiment, assets: assets.length ? assets : ['NASDAQ', 'DOW JONES'], effects, iraqImpact, why };
 }
 
 function getWhy(impact, assets, iraq) {
-  if (iraq) return 'This story may affect Iraq through oil revenue, banking policy, USD/IQD expectations, government spending, or regional risk.';
-  if (impact === 'high') return 'This is a market-moving story because it can shift expectations around rates, inflation, oil, currencies, or geopolitical risk.';
-  if (assets.includes('Gold')) return 'Gold can react when investors reassess inflation, interest rates, or safe-haven demand.';
-  if (assets.includes('Oil')) return 'Oil-sensitive news can affect inflation, energy companies, and economies that depend on crude exports.';
-  return 'This story adds context to current market sentiment and may matter if similar headlines continue.';
+  if (iraq) return 'This story may affect the local USD/IQD market through dollar demand, banking policy, public finance, oil revenue, or regional risk.';
+  if (impact === 'high') return 'This can change risk appetite, interest-rate expectations, currency demand, precious metals, and US equity indices.';
+  if (assets.includes('XAU/USD') || assets.includes('XAG/USD')) return 'Gold and silver can react to the dollar, interest rates, inflation expectations, and safe-haven demand.';
+  return 'This story adds focused context for USD/IQD, EUR/USD, GBP/USD, precious metals, Dow Jones, or Nasdaq.';
 }
 
 export function localizeSummary(item, lang) {
   const title = item.title || 'Market news update';
-  if (lang === 'ku') return `پوختە: ئەم هەواڵە پەیوەندی بە بازاڕ و ئابوورییەوە هەیە. سەرچاوە: ${item.source || 'سەرچاوە'}.`;
-  if (lang === 'ar') return `ملخص: هذا الخبر مرتبط بالأسواق والاقتصاد وقد يؤثر على توقعات المستثمرين. المصدر: ${item.source || 'مصدر'}.`;
+  if (lang === 'ku') return `پوختە: ئەم هەواڵە کاریگەرییەکانی لەسەر دراو، کانزا و بازاڕی پشکەکان چاودێری دەکات. سەرچاوە: ${item.source || 'سەرچاوە'}.`;
+  if (lang === 'ar') return `ملخص: يتابع هذا الخبر تأثيره في العملات والمعادن ومؤشرات الأسهم. المصدر: ${item.source || 'مصدر'}.`;
   return item.summary || `Summary: ${title}`;
 }

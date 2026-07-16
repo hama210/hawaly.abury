@@ -6,11 +6,13 @@ export async function fetchMarkets() {
     return data.items || [];
   } catch (error) {
     return [
+      { symbol: 'USD/IQD', name: 'Iraq local market · 100 USD', price: null, changePct: null, status: 'watch', dataStatus: 'unavailable', source: 'Unavailable', marketKind: 'local', quoteAmount: 100 },
       { symbol: 'XAU/USD', name: 'Gold', price: null, changePct: null, status: 'watch', dataStatus: 'unavailable', source: 'Unavailable' },
-      { symbol: 'WTI', name: 'Oil', price: null, changePct: null, status: 'watch', dataStatus: 'unavailable', source: 'Unavailable' },
-      { symbol: 'BTC/USD', name: 'Bitcoin', price: null, changePct: null, status: 'watch', dataStatus: 'unavailable', source: 'Unavailable' },
+      { symbol: 'XAG/USD', name: 'Silver', price: null, changePct: null, status: 'watch', dataStatus: 'unavailable', source: 'Unavailable' },
       { symbol: 'EUR/USD', name: 'Euro Dollar', price: null, changePct: null, status: 'watch', dataStatus: 'unavailable', source: 'Unavailable' },
-      { symbol: 'USD/IQD', name: 'Iraq local market · 100 USD', price: null, changePct: null, status: 'watch', dataStatus: 'unavailable', source: 'Unavailable', marketKind: 'local', quoteAmount: 100 }
+      { symbol: 'GBP/USD', name: 'Pound Dollar', price: null, changePct: null, status: 'watch', dataStatus: 'unavailable', source: 'Unavailable' },
+      { symbol: 'DOW JONES', name: 'Dow Jones', price: null, changePct: null, status: 'watch', dataStatus: 'unavailable', source: 'Unavailable' },
+      { symbol: 'NASDAQ', name: 'Nasdaq', price: null, changePct: null, status: 'watch', dataStatus: 'unavailable', source: 'Unavailable' }
     ];
   }
 }

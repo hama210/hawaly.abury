@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { onRequest } from '../functions/api/news.js'
+import { FEEDS, onRequest } from '../functions/api/news.js'
 import { MemoryCache, replaceGlobal, requestContext, silenceWarnings } from './helpers.js'
 
 function rssItem(title, description, publishedAt){
@@ -46,6 +46,8 @@ test('news keeps recent Iraq stories, removes stale and unrelated feed results, 
     assert.equal(firstResponse.status, 200)
     assert.equal(firstResponse.headers.get('x-news-cache'), 'MISS')
     assert.deepEqual(payload.items.map(item => item.title), ['Iraq central bank updates dinar policy'])
+    assert.equal(payload.items[0].content, 'Iraq banking and budget reforms continue.')
+    assert.ok(payload.items[0].intelligence.effects.some(effect => effect.asset === 'USD/IQD'))
     assert.equal(payload.feedStats.succeeded, 1)
     assert.equal(payload.feedStats.failed, 5)
 
@@ -59,4 +61,17 @@ test('news keeps recent Iraq stories, removes stale and unrelated feed results, 
     restoreWarn()
     restoreCaches()
   }
+})
+
+test('news sources are curated around the focused markets and wars', () => {
+  const names = FEEDS.map(feed => feed.source)
+  assert.ok(FEEDS.length < 45)
+  assert.ok(names.includes('Reuters Forex'))
+  assert.ok(names.includes('Reuters Metals'))
+  assert.ok(names.includes('Reuters US Indices'))
+  assert.ok(names.includes('Shafaq Economy'))
+  assert.ok(names.includes('Reuters Global Conflict'))
+  assert.ok(!names.includes('Yahoo Finance'))
+  assert.ok(!names.includes('CoinDesk'))
+  assert.ok(!names.includes('Guardian World'))
 })

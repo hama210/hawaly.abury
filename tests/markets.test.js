@@ -38,7 +38,7 @@ test('markets use verified quotes, then mark last-known-good values stale when s
     assert.equal(usdLive.source, 'Shafaq News local market')
     assert.ok(firstPayload.items.every(item => item.dataStatus === 'live'))
 
-    cache.deleteWhere('markets-fresh-v2')
+    cache.deleteWhere('markets-fresh-v3')
     sourcesAreLive = false
     const second = requestContext('https://example.com/api/markets')
     const secondResponse = await onRequest(second.context)
