@@ -13,8 +13,6 @@ export const FEEDS = [
   ['Federal Reserve','markets',googleNewsFeed('site:federalreserve.gov (rates OR monetary policy OR FOMC) when:30d'),'official'],
   ['European Central Bank','forex',googleNewsFeed('site:ecb.europa.eu (rates OR monetary policy OR euro) when:30d'),'official'],
   ['Bank of England','forex',googleNewsFeed('site:bankofengland.co.uk (rates OR monetary policy OR sterling) when:30d'),'official'],
-  ['Gold and Silver','metals',googleNewsFeed('(gold OR silver OR XAU OR XAG) (Fed OR inflation OR dollar OR war) markets when:3d'),'specialist'],
-  ['Global Conflict','geopolitics',googleNewsFeed('(war OR conflict OR missile OR ceasefire OR invasion) (markets OR economy OR oil OR sanctions) when:3d'),'curated'],
   ['Reuters Global Conflict','geopolitics',googleNewsFeed('site:reuters.com (war OR strikes OR missile OR ceasefire OR sanctions) when:7d'),'major'],
   ['AP Global Conflict','geopolitics',googleNewsFeed('site:apnews.com (war OR strikes OR missile OR ceasefire OR sanctions) when:7d'),'major'],
   ['BBC War','geopolitics',googleNewsFeed('site:bbc.com/news (war OR strikes OR missile OR ceasefire) when:7d'),'major'],
@@ -46,7 +44,7 @@ const FAST_FEED_SOURCES = [
   'Reuters Forex',
   'Iran-US War Live',
   'Iraq Latest',
-  'Gold and Silver',
+  'Reuters Metals',
   'Shafaq Economy'
 ];
 const FAST_FEED_TIMEOUT_MS = 3200;
@@ -57,8 +55,6 @@ const MAX_FEED_BYTES = 384 * 1024;
 const NEWS_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const NEWS_MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 const IRAQ_TERMS = /\b(iraq|iraqi|baghdad|kurdistan|erbil|sulaimani|sulaymaniyah|duhok|dohuk|basra|mosul|dinar|iqd|cbi|somo|rafidain|rasheed|krg)\b|central bank of iraq|iraq business/i;
-const SPECIALIZED_IRAQ_FEEDS = new Set(['Iraq Business News']);
-
 const fallbackImages = {
   iraq: 'https://images.unsplash.com/photo-1569163139599-0f4517e36f51?auto=format&fit=crop&w=1200&q=80',
   metals: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=1200&q=80',
@@ -81,6 +77,7 @@ const assetRules = [
 ];
 const WAR_TERMS = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|invasion|ceasefire|truce|blockade|military|sanction|sanctions|houthi|nato|centcom|irgc)\b|strait of hormuz|red sea/i;
 const FOCUS_MARKET_TERMS = /\b(iqd|dinar|cbi|iraq|baghdad|kurdistan|euro|ecb|sterling|pound|boe|gold|silver|xau|xag|bullion|nasdaq|dow|djia|stocks|equities|inflation|cpi|nfp|fomc|fed|rates|dollar|forex|tariff|recession|gdp|opec)\b|eur\/usd|gbp\/usd|usd\/iqd|interest rate|central bank|wall street|oil revenue|federal reserve|bank of england|european central bank/i;
+const TRUSTED_PUBLISHERS = /\b(reuters|associated press|ap news|bbc|al jazeera|bloomberg|cnbc|financial times|wall street journal|washington post|new york times|guardian|dw|france 24|cnn|nbc news|cbs news|abc news|npr|pbs|euronews|the national|shafaq|rudaw|kurdistan24|iraqi news agency|ina|iraq business news)\b/i;
 
 const decode = (str='') => str.replace(/<!\[CDATA\[(.*?)\]\]>/gs,'$1').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'').trim();
 const extractTag = (xml, tag) => decode(xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1] || '');
@@ -111,9 +108,12 @@ function marketEffects(text, sentiment, iraqImpact){
   const regional = /iraq|iran|middle east|gulf|hormuz|red sea|houthi|israel|gaza|lebanon|syria/i.test(text);
   const hawkish = /rate hike|higher for longer|hawkish|hot inflation|inflation rises|strong jobs|strong payroll/i.test(text);
   const dovish = /rate cut|dovish|cooling inflation|inflation falls|weak jobs|weak payroll|economic slowdown/i.test(text);
-  const positive = /rises|gains|strong|beats|surges|record high|optimism|rally/i.test(text);
-  const negative = /falls|drops|weak|slump|selloff|recession|cuts outlook|warning/i.test(text);
+  const positive = /rises?|gains?|strong|beats|surges?|record high|optimism|rally|climbs?|advances?|higher/i.test(text);
+  const negative = /falls?|drops?|weak|slump|selloff|recession|cuts outlook|warning|loss|losses|lower|declines?|eases?|slides?/i.test(text);
+  const localDollarUp = /(?:dollar|usd)[^.!?]{0,70}(?:rises?|gains?|higher|climbs?|surges?|edges? up)|(?:rises?|gains?|climbs?|surges?|edges? up)[^.!?]{0,70}(?:dollar|usd)/i.test(text);
+  const localDollarDown = /(?:dollar|usd)[^.!?]{0,70}(?:falls?|drops?|lower|declines?|eases?|slides?|edges? lower)|(?:falls?|drops?|declines?|eases?|slides?|edges? lower)[^.!?]{0,70}(?:dollar|usd)/i.test(text);
 
+  if(iraqImpact && (localDollarUp || localDollarDown)) add('USD/IQD', localDollarUp ? 'up' : 'down', 'iraqPolicy');
   if(conflict){
     add('XAU/USD', relief ? 'down' : 'up', relief ? 'deescalation' : 'safeHaven');
     add('XAG/USD', relief ? 'down' : 'up', relief ? 'deescalation' : 'safeHaven');
@@ -135,7 +135,7 @@ function marketEffects(text, sentiment, iraqImpact){
   if(/silver|xag|precious metals/i.test(text)) add('XAG/USD', positive ? 'up' : negative ? 'down' : 'watch', 'preciousMetals');
   if(/nasdaq|technology stocks|tech stocks/i.test(text)) add('NASDAQ', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'indexNews');
   if(/dow|dow jones|djia|industrial average/i.test(text)) add('DOW JONES', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'indexNews');
-  if(iraqImpact) add('USD/IQD', positive ? 'down' : negative ? 'up' : 'watch', 'iraqPolicy');
+  if(iraqImpact) add('USD/IQD', localDollarUp ? 'up' : localDollarDown ? 'down' : positive ? 'down' : negative ? 'up' : 'watch', 'iraqPolicy');
   if(!effects.length){
     add('NASDAQ', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'marketNews');
     add('DOW JONES', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'marketNews');
@@ -161,10 +161,8 @@ function isFreshNewsItem(item, now = Date.now()){
 
 function isRelevantToFeed(item, feed){
   const text = `${item.title} ${item.summary}`;
-  if(feed.category === 'iraq'){
-    if(SPECIALIZED_IRAQ_FEEDS.has(feed.source) && !feed.url.includes('news.google.com')) return isIraqEconomy(item);
-    return IRAQ_TERMS.test(text) && FOCUS_MARKET_TERMS.test(text);
-  }
+  if(feed.tier === 'curated' && feed.url.includes('news.google.com') && !TRUSTED_PUBLISHERS.test(item.source)) return false;
+  if(feed.category === 'iraq') return isIraqEconomy(item);
   if(feed.category === 'geopolitics') return WAR_TERMS.test(text);
   return FOCUS_MARKET_TERMS.test(text);
 }
@@ -269,7 +267,7 @@ function fallback(){
   const base = [
     ['Iraq latest economy, dinar, banking and oil updates','Iraq Latest','iraq','https://news.google.com/search?q=Iraq%20economy%20dinar%20oil%20banking'],
     ['Federal Reserve and inflation expectations move the dollar, metals and US indices','Reuters Markets','markets','https://www.reuters.com/markets/'],
-    ['War, sanctions and conflict headlines drive global risk sentiment','Global Conflict','geopolitics','https://news.google.com/search?q=war%20sanctions%20conflict%20markets'],
+    ['War, sanctions and conflict headlines drive global risk sentiment','Reuters Global Conflict','geopolitics','https://www.reuters.com/world/'],
     ['Middle East and Red Sea risks pressure currencies, metals and US indices','Middle East Conflict','geopolitics','https://news.google.com/search?q=Middle%20East%20war%20Red%20Sea%20markets'],
     ['Iran-US war, strikes and Strait of Hormuz updates','Iran-US War Live','geopolitics','https://news.google.com/search?q=Iran%20US%20war%20strikes%20Strait%20of%20Hormuz'],
     ['EUR/USD and GBP/USD traders monitor central-bank policy','Reuters Forex','forex','https://www.reuters.com/markets/currencies/'],
@@ -286,7 +284,7 @@ function fallback(){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'focused-markets-v1');
+  cacheUrl.searchParams.set('version', 'focused-markets-v2');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));

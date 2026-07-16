@@ -10,8 +10,8 @@ const rules = [
 
 const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','strike','strikes','blockade','strait of hormuz','sanction','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq'];
 const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory'];
-const bearishWords = ['war','attack','strike','strikes','blockade','falls','drops','weak','slump','sanction','recession','inflation rises','risk off','cuts outlook'];
-const bullishWords = ['rises','gains','strong','growth','beats','risk on','eases','recovery','surges','ceasefire','truce'];
+const bearishWords = ['war','attack','strike','strikes','blockade','falls','drops','declines','losses','lower','slides','weak','slump','sanction','recession','inflation rises','risk off','cuts outlook'];
+const bullishWords = ['rises','gains','strong','growth','beats','risk on','recovery','surges','ceasefire','truce'];
 const warTerms = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|invasion|ceasefire|truce|blockade|military|sanction|sanctions|houthi|nato|centcom|irgc)\b|strait of hormuz|red sea/i;
 
 function marketEffects(text, sentiment, iraqImpact){
@@ -24,9 +24,12 @@ function marketEffects(text, sentiment, iraqImpact){
   const regional = /iraq|iran|middle east|gulf|hormuz|red sea|houthi|israel|gaza|lebanon|syria/i.test(text);
   const hawkish = /rate hike|higher for longer|hawkish|hot inflation|inflation rises|strong jobs|strong payroll/i.test(text);
   const dovish = /rate cut|dovish|cooling inflation|inflation falls|weak jobs|weak payroll|economic slowdown/i.test(text);
-  const positive = /rises|gains|strong|beats|surges|record high|optimism|rally/i.test(text);
-  const negative = /falls|drops|weak|slump|selloff|recession|cuts outlook|warning/i.test(text);
+  const positive = /rises?|gains?|strong|beats|surges?|record high|optimism|rally|climbs?|advances?|higher/i.test(text);
+  const negative = /falls?|drops?|weak|slump|selloff|recession|cuts outlook|warning|loss|losses|lower|declines?|eases?|slides?/i.test(text);
+  const localDollarUp = /(?:dollar|usd)[^.!?]{0,70}(?:rises?|gains?|higher|climbs?|surges?|edges? up)|(?:rises?|gains?|climbs?|surges?|edges? up)[^.!?]{0,70}(?:dollar|usd)/i.test(text);
+  const localDollarDown = /(?:dollar|usd)[^.!?]{0,70}(?:falls?|drops?|lower|declines?|eases?|slides?|edges? lower)|(?:falls?|drops?|declines?|eases?|slides?|edges? lower)[^.!?]{0,70}(?:dollar|usd)/i.test(text);
 
+  if(iraqImpact && (localDollarUp || localDollarDown)) add('USD/IQD', localDollarUp ? 'up' : 'down', 'iraqPolicy');
   if(conflict){
     add('XAU/USD', relief ? 'down' : 'up', relief ? 'deescalation' : 'safeHaven');
     add('XAG/USD', relief ? 'down' : 'up', relief ? 'deescalation' : 'safeHaven');
@@ -48,7 +51,7 @@ function marketEffects(text, sentiment, iraqImpact){
   if(/silver|xag|precious metals/i.test(text)) add('XAG/USD', positive ? 'up' : negative ? 'down' : 'watch', 'preciousMetals');
   if(/nasdaq|technology stocks|tech stocks/i.test(text)) add('NASDAQ', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'indexNews');
   if(/dow|dow jones|djia|industrial average/i.test(text)) add('DOW JONES', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'indexNews');
-  if(iraqImpact) add('USD/IQD', positive ? 'down' : negative ? 'up' : 'watch', 'iraqPolicy');
+  if(iraqImpact) add('USD/IQD', localDollarUp ? 'up' : localDollarDown ? 'down' : positive ? 'down' : negative ? 'up' : 'watch', 'iraqPolicy');
   if(!effects.length){
     add('NASDAQ', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'marketNews');
     add('DOW JONES', sentiment === 'bullish' ? 'up' : sentiment === 'bearish' ? 'down' : 'watch', 'marketNews');

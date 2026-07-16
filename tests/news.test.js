@@ -25,7 +25,7 @@ test('news keeps recent Iraq stories, removes stale and unrelated feed results, 
   const fresh = new Date().toUTCString()
   const old = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toUTCString()
   const xml = `<rss><channel>
-    ${rssItem('Iraq central bank updates dinar policy - Test Source', 'Iraq banking and budget reforms continue.', fresh)}
+    ${rssItem('Dollar rises in Baghdad as Iraq central bank updates dinar policy - Reuters', 'Iraq banking and budget reforms continue.', fresh)}
     ${rssItem('Old Iraq oil report - Test Source', 'Iraq oil exports.', old)}
     ${rssItem('Libya oil exports rise - MEES', 'Libya production and shipping update.', fresh)}
   </channel></rss>`
@@ -45,9 +45,9 @@ test('news keeps recent Iraq stories, removes stale and unrelated feed results, 
     await first.settle()
     assert.equal(firstResponse.status, 200)
     assert.equal(firstResponse.headers.get('x-news-cache'), 'MISS')
-    assert.deepEqual(payload.items.map(item => item.title), ['Iraq central bank updates dinar policy'])
+    assert.deepEqual(payload.items.map(item => item.title), ['Dollar rises in Baghdad as Iraq central bank updates dinar policy'])
     assert.equal(payload.items[0].content, 'Iraq banking and budget reforms continue.')
-    assert.ok(payload.items[0].intelligence.effects.some(effect => effect.asset === 'USD/IQD'))
+    assert.ok(payload.items[0].intelligence.effects.some(effect => effect.asset === 'USD/IQD' && effect.direction === 'up'))
     assert.equal(payload.feedStats.succeeded, 1)
     assert.equal(payload.feedStats.failed, 5)
 
@@ -71,6 +71,8 @@ test('news sources are curated around the focused markets and wars', () => {
   assert.ok(names.includes('Reuters US Indices'))
   assert.ok(names.includes('Shafaq Economy'))
   assert.ok(names.includes('Reuters Global Conflict'))
+  assert.ok(!names.includes('Gold and Silver'))
+  assert.ok(!names.includes('Global Conflict'))
   assert.ok(!names.includes('Yahoo Finance'))
   assert.ok(!names.includes('CoinDesk'))
   assert.ok(!names.includes('Guardian World'))
