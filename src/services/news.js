@@ -36,9 +36,10 @@ const fallback = fallbackSeeds.map(([title, source, category, link, kind], index
   publishedAt: new Date(Date.now() - index * 900000).toISOString()
 }));
 
-const NEWS_CACHE_KEY = 'hawali-aburi-news-v3-trusted';
+const NEWS_CACHE_KEY = 'hawali-aburi-news-v4-strong-sources';
 const NEWS_CACHE_MAX_AGE = 30 * 60 * 1000;
 const NEWS_LIMIT = 120;
+const TIER_WEIGHT = { official:36, major:32, local:28, specialist:22, curated:17 };
 
 function withIntelligence(items, prefix = 'news') {
   return items.map((item, index) => ({
@@ -60,8 +61,21 @@ function mergeUnique(primary = [], backup = []) {
   return output;
 }
 
-function newestFirst(items = []) {
-  return [...items].sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+function strengthScore(item) {
+  if (Number.isFinite(Number(item.strengthScore))) return Number(item.strengthScore);
+  const ageHours = Math.max(0, (Date.now() - new Date(item.publishedAt || 0).getTime()) / 3600000);
+  const recency = Math.max(0, 40 - ageHours * 1.5);
+  const impact = item.intelligence?.impact === 'high' ? 20 : item.intelligence?.impact === 'medium' ? 9 : 0;
+  const effects = Math.min(15, new Set((item.intelligence?.effects || []).map(effect => effect.asset)).size * 3);
+  const complete = String(item.content || item.summary || '').length >= 240 ? 4 : 0;
+  const localFocus = item.intelligence?.iraqImpact ? 5 : 0;
+  return Math.max(0, Math.round((TIER_WEIGHT[item.sourceTier] || 14) + recency + impact + effects + complete + localFocus));
+}
+
+function rankedFirst(items = []) {
+  return [...items]
+    .map(item => ({ ...item, strengthScore: strengthScore(item) }))
+    .sort((a, b) => b.strengthScore - a.strengthScore || new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
 }
 
 function readCachedNews() {
@@ -83,7 +97,7 @@ function saveCachedNews(items) {
 }
 
 function prepareNews(primary = [], backup = []) {
-  const liveItems = newestFirst(mergeUnique(primary, backup)).slice(0, NEWS_LIMIT);
+  const liveItems = rankedFirst(mergeUnique(primary, backup)).slice(0, NEWS_LIMIT);
   const items = liveItems.length >= 10 ? liveItems : mergeUnique(liveItems, fallback).slice(0, NEWS_LIMIT);
   return withIntelligence(items, liveItems.length ? 'live' : 'fallback');
 }

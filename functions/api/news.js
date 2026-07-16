@@ -8,11 +8,16 @@ export const FEEDS = [
   ['BBC Business','markets','https://feeds.bbci.co.uk/news/business/rss.xml','major'],
   ['CNBC Markets','indices','https://www.cnbc.com/id/100003114/device/rss/rss.html','major'],
   ['MarketWatch','indices','https://feeds.content.dowjones.io/public/rss/mw_topstories','major'],
+  ['Financial Times Markets','indices','https://www.ft.com/markets?format=rss','major',8000],
+  ['Wall Street Journal Markets','indices','https://feeds.a.dj.com/rss/RSSMarketsMain.xml','major',7000],
   ['FXStreet','forex','https://www.fxstreet.com/rss/news','specialist'],
   ['ForexLive','forex','https://www.forexlive.com/feed/news','specialist'],
-  ['Federal Reserve','markets',googleNewsFeed('site:federalreserve.gov (rates OR monetary policy OR FOMC) when:30d'),'official'],
-  ['European Central Bank','forex',googleNewsFeed('site:ecb.europa.eu (rates OR monetary policy OR euro) when:30d'),'official'],
-  ['Bank of England','forex',googleNewsFeed('site:bankofengland.co.uk (rates OR monetary policy OR sterling) when:30d'),'official'],
+  ['Federal Reserve','markets','https://www.federalreserve.gov/feeds/press_monetary.xml','official',8000],
+  ['European Central Bank','forex','https://www.ecb.europa.eu/rss/press.html','official',8000],
+  ['Bank of England','forex','https://www.bankofengland.co.uk/rss/news','official',8000],
+  ['US Inflation (BLS)','markets','https://www.bls.gov/feed/cpi.rss','official',11000],
+  ['US Employment (BLS)','markets','https://www.bls.gov/feed/empsit.rss','official',11000],
+  ['US Economy (BEA)','markets','https://apps.bea.gov/rss/rss.xml','official',11000],
   ['Reuters Global Conflict','geopolitics',googleNewsFeed('site:reuters.com (war OR strikes OR missile OR ceasefire OR sanctions) when:7d'),'major'],
   ['AP Global Conflict','geopolitics',googleNewsFeed('site:apnews.com (war OR strikes OR missile OR ceasefire OR sanctions) when:7d'),'major'],
   ['BBC War','geopolitics',googleNewsFeed('site:bbc.com/news (war OR strikes OR missile OR ceasefire) when:7d'),'major'],
@@ -34,21 +39,21 @@ export const FEEDS = [
   ['Kurdistan24 Economy','iraq',googleNewsFeed('site:kurdistan24.net/en Iraq Kurdistan (economy OR oil OR budget OR salaries) when:30d'),'local'],
   ['Iraq Business News','iraq','https://www.iraq-businessnews.com/feed/','specialist'],
   ['Central Bank of Iraq','iraq',googleNewsFeed('site:cbi.iq (dinar OR banking OR monetary OR dollar) when:60d'),'official']
-].map(([source, category, url, tier]) => ({ source, category, url, tier }));
+].map(([source, category, url, tier, timeoutMs]) => ({ source, category, url, tier, timeoutMs }));
 
-const MAX_FEEDS_PER_REQUEST = 45;
+const MAX_FEEDS_PER_REQUEST = 20;
 const FETCH_CONCURRENCY = 6;
 const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
 const FAST_FEED_SOURCES = [
-  'Reuters Markets',
-  'Reuters Forex',
-  'Iran-US War Live',
-  'Iraq Latest',
   'Reuters Metals',
-  'Shafaq Economy'
+  'CNBC Markets',
+  'FXStreet',
+  'Shafaq Economy',
+  'Iraq Business News',
+  'Al Jazeera War'
 ];
-const FAST_FEED_TIMEOUT_MS = 3200;
-const FULL_FEED_TIMEOUT_MS = 2500;
+const FAST_FEED_TIMEOUT_MS = 4500;
+const FULL_FEED_TIMEOUT_MS = 4500;
 const FAST_CACHE_TTL = 300;
 const FULL_CACHE_TTL = 300;
 const MAX_FEED_BYTES = 384 * 1024;
@@ -78,6 +83,11 @@ const assetRules = [
 const WAR_TERMS = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|invasion|ceasefire|truce|blockade|military|sanction|sanctions|houthi|nato|centcom|irgc)\b|strait of hormuz|red sea/i;
 const FOCUS_MARKET_TERMS = /\b(iqd|dinar|cbi|iraq|baghdad|kurdistan|euro|ecb|sterling|pound|boe|gold|silver|xau|xag|bullion|nasdaq|dow|djia|stocks|equities|inflation|cpi|nfp|fomc|fed|rates|dollar|forex|tariff|recession|gdp|opec)\b|eur\/usd|gbp\/usd|usd\/iqd|interest rate|central bank|wall street|oil revenue|federal reserve|bank of england|european central bank/i;
 const TRUSTED_PUBLISHERS = /\b(reuters|associated press|ap news|bbc|al jazeera|bloomberg|cnbc|financial times|wall street journal|washington post|new york times|guardian|dw|france 24|cnn|nbc news|cbs news|abc news|npr|pbs|euronews|the national|shafaq|rudaw|kurdistan24|iraqi news agency|ina|iraq business news)\b/i;
+const FOREX_TERMS = /\b(euro|ecb|eurozone|sterling|pound|boe|britain|british|uk economy)\b|eur\/usd|gbp\/usd|european central bank|bank of england/i;
+const METAL_TERMS = /\b(gold|silver|xau|xag|bullion)\b|precious metals|safe haven/i;
+const INDEX_TERMS = /\b(nasdaq|dow|djia|stocks|equities|earnings|wall street)\b|dow jones|industrial average|technology stocks/i;
+const US_MACRO_TERMS = /\b(fed|fomc|inflation|cpi|ppi|payroll|payrolls|jobs|employment|unemployment|gdp|retail sales|treasury|tariff|recession)\b|federal reserve|interest rate|rate cut|rate hike/i;
+const TIER_WEIGHT = { official:36, major:32, local:28, specialist:22, curated:17 };
 
 const decode = (str='') => str.replace(/<!\[CDATA\[(.*?)\]\]>/gs,'$1').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'').trim();
 const extractTag = (xml, tag) => decode(xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1] || '');
@@ -164,6 +174,9 @@ function isRelevantToFeed(item, feed){
   if(feed.tier === 'curated' && feed.url.includes('news.google.com') && !TRUSTED_PUBLISHERS.test(item.source)) return false;
   if(feed.category === 'iraq') return isIraqEconomy(item);
   if(feed.category === 'geopolitics') return WAR_TERMS.test(text);
+  if(feed.category === 'forex') return FOREX_TERMS.test(text) || US_MACRO_TERMS.test(text);
+  if(feed.category === 'metals') return METAL_TERMS.test(text) || US_MACRO_TERMS.test(text) || WAR_TERMS.test(text);
+  if(feed.category === 'indices') return INDEX_TERMS.test(text) || US_MACRO_TERMS.test(text) || WAR_TERMS.test(text);
   return FOCUS_MARKET_TERMS.test(text);
 }
 
@@ -182,8 +195,20 @@ function dedupeItems(items, seen = new Set()){
   return output;
 }
 
-function newestFirst(items){
-  return [...items].sort((a,b)=>new Date(b.publishedAt)-new Date(a.publishedAt));
+function storyStrength(item, now = Date.now()){
+  const ageHours = Math.max(0, (now - Date.parse(item.publishedAt || 0)) / 3600000);
+  const recency = Math.max(0, 40 - ageHours * 1.5);
+  const impact = item.intelligence?.impact === 'high' ? 20 : item.intelligence?.impact === 'medium' ? 9 : 0;
+  const effects = Math.min(15, new Set((item.intelligence?.effects || []).map(effect => effect.asset)).size * 3);
+  const complete = String(item.content || item.summary || '').length >= 240 ? 4 : 0;
+  const localFocus = item.intelligence?.iraqImpact ? 5 : 0;
+  return Math.max(0, Math.round((TIER_WEIGHT[item.sourceTier] || 14) + recency + impact + effects + complete + localFocus));
+}
+
+function rankedFirst(items){
+  return [...items]
+    .map(item => ({ ...item, strengthScore: storyStrength(item) }))
+    .sort((a,b)=>b.strengthScore-a.strengthScore || new Date(b.publishedAt)-new Date(a.publishedAt));
 }
 
 async function readFeedBody(response, itemLimit){
@@ -214,7 +239,7 @@ async function readFeedBody(response, itemLimit){
 async function fetchFeed(feed, timeoutMs){
   const startedAt = Date.now();
   const controller = new AbortController();
-  const timeoutId = setTimeout(()=>controller.abort('feed timeout'), timeoutMs);
+  const timeoutId = setTimeout(()=>controller.abort('feed timeout'), Math.max(timeoutMs, Number(feed.timeoutMs) || 0));
   try{
     const res = await fetch(feed.url, {
       signal: controller.signal,
@@ -227,14 +252,16 @@ async function fetchFeed(feed, timeoutMs){
     const items = [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
       const entry = m[0];
       const rawTitle = extractTag(entry,'title');
-      const title = cleanGoogleTitle(rawTitle);
+      const isGoogleFeed = feed.url.includes('news.google.com');
+      const title = isGoogleFeed ? cleanGoogleTitle(rawTitle) : rawTitle;
       const link = extractTag(entry,'link') || extractTag(entry,'guid') || feed.url;
       const description = extractTag(entry,'description') || extractTag(entry,'summary');
       const content = (extractTag(entry,'content:encoded') || description).replace(/\s+/g, ' ').trim().slice(0, 1600);
       const summary = (description || content).replace(/\s+/g, ' ').trim().slice(0, 900);
       const publishedAt = extractTag(entry,'pubDate') || extractTag(entry,'published') || extractTag(entry,'updated') || extractTag(entry,'dc:date');
       const image = extractImage(entry) || fallbackImages[feed.category] || fallbackImages.markets;
-      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, source: sourceFromGoogleTitle(rawTitle, feed.source), sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image };
+      const source = isGoogleFeed ? sourceFromGoogleTitle(rawTitle, feed.source) : feed.source;
+      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image };
       const intel = analyze(base);
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
     }).filter(i=>i.title && isFreshNewsItem(i)).filter(item=>isRelevantToFeed(item, feed));
@@ -284,7 +311,7 @@ function fallback(){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'focused-markets-v2');
+  cacheUrl.searchParams.set('version', 'strong-sources-v1');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
@@ -326,16 +353,17 @@ export async function onRequest(context) {
     if(cached) return withHeader(cached, 'X-News-Cache', 'HIT');
   }
 
-  const selectedFeeds = mode === 'fast'
+  const selectedFeeds = (mode === 'fast'
     ? FAST_FEED_SOURCES.map(source => FEEDS.find(feed => feed.source === source)).filter(Boolean)
-    : FEEDS.filter((_, index) => index % BATCH_COUNT === batch);
+    : FEEDS.filter((_, index) => index % BATCH_COUNT === batch))
+    .sort((a,b)=>(Number(b.timeoutMs) || 0) - (Number(a.timeoutMs) || 0));
   const feedResults = await fetchFeeds(selectedFeeds, mode === 'fast' ? FAST_FEED_TIMEOUT_MS : FULL_FEED_TIMEOUT_MS);
   const raw = feedResults.flatMap(result => result.items);
-  const iraq = newestFirst(dedupeItems(raw.filter(isIraqEconomy)));
+  const iraq = rankedFirst(dedupeItems(raw.filter(isIraqEconomy)));
   const reserved = Math.min(iraq.length, Math.max(12, Math.ceil(limit * 0.28)));
   const seen = new Set(iraq.slice(0, reserved).map(itemKey));
-  const others = newestFirst(dedupeItems(raw.filter(item => !seen.has(itemKey(item))), seen));
-  let items = newestFirst([...iraq.slice(0, reserved), ...others.slice(0, Math.max(0, limit - reserved))]);
+  const others = rankedFirst(dedupeItems(raw.filter(item => !seen.has(itemKey(item))), seen));
+  let items = rankedFirst([...iraq.slice(0, reserved), ...others.slice(0, Math.max(0, limit - reserved))]);
 
   if(!items.length) items = fallback();
   const succeeded = feedResults.filter(result => result.ok).length;

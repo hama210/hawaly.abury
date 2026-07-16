@@ -45,6 +45,17 @@ const localRateText = {
   ar: { erbil:'أربيل', baghdad:'بغداد' },
   en: { erbil:'Erbil', baghdad:'Baghdad' }
 };
+const sourceTierCopy = {
+  ku: { official:'فەرمی', major:'جیهانی', local:'ناوخۆیی', specialist:'پسپۆڕ', curated:'هەڵبژێردراو' },
+  ar: { official:'رسمي', major:'عالمي', local:'محلي', specialist:'متخصص', curated:'مختار' },
+  en: { official:'Official', major:'Major', local:'Local', specialist:'Specialist', curated:'Curated' }
+};
+const trustBarCopy = {
+  ku: { title:'سەرچاوە باوەڕپێکراوەکان', note:'فەرمی، جیهانی و پسپۆڕ · هەواڵی گرنگ لەپێشەوە' },
+  ar: { title:'مصادر موثوقة', note:'رسمية وعالمية ومتخصصة · الأخبار الأهم أولاً' },
+  en: { title:'Trusted sources', note:'Official, major and specialist · strongest stories first' }
+};
+const trustBarSources = ['Federal Reserve', 'ECB', 'BoE', 'BLS', 'Reuters', 'FT', 'WSJ', 'CNBC', 'CBI', 'Shafaq'];
 const calendarEvents = {
   ku: [
     ['وتاری فیدراڵ ڕیزێرڤ', 'USD • XAU', 'high'],
@@ -168,6 +179,19 @@ function EffectBadge({ effect, lang, detailed = false }) {
   </span>;
 }
 
+function SourceTrustBadge({ tier = 'curated', lang }) {
+  const label = sourceTierCopy[lang]?.[tier] || sourceTierCopy.en[tier] || sourceTierCopy.en.curated;
+  return <span className={`source-trust source-trust-${tier}`}>✓ {label}</span>;
+}
+
+function TrustBar({ lang }) {
+  const copy = trustBarCopy[lang] || trustBarCopy.en;
+  return <section className="trust-bar" aria-label={copy.title}>
+    <div className="trust-copy"><strong>✓ {copy.title}</strong><small>{copy.note}</small></div>
+    <div className="trust-names">{trustBarSources.map(source => <span key={source}>{source}</span>)}</div>
+  </section>;
+}
+
 function focusedIntelligence(item) {
   const analyzed = analyzeArticle(item || {});
   const stored = item?.intelligence || {};
@@ -243,7 +267,7 @@ function Hero({ item, lang, dict, onOpen }) {
       <h1>{translatedTitle(item, lang)}</h1>
       <p>{translatedSummary(item, lang)}</p>
       <div className="hero-effects">{intel.effects?.slice(0, 4).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
-      <div className="story-meta"><span>{item.source}</span><span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
+      <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
     </div>
   </article>;
 }
@@ -275,7 +299,7 @@ function NewsCard({ item, lang, onOpen }) {
   return <article className="story-card">
     <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={translatedTitle(item, lang)}><img src={item.image} alt="" loading="lazy" onError={imageFallback} /></button>
     <div className="story-copy">
-      <div className="story-source"><span>{item.source}</span><span>{timeAgo(item.publishedAt, lang)}</span></div>
+      <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>{timeAgo(item.publishedAt, lang)}</span></div>
       <button className="story-title" type="button" onClick={() => onOpen(item)}>{translatedTitle(item, lang)}</button>
       <div className="card-effects">{intel.effects?.slice(0, 3).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
     </div>
@@ -330,7 +354,7 @@ function ArticleModal({ item, lang, dict, onClose }) {
     <div className="modal-image"><img src={item.image} alt="" onError={imageFallback} /></div>
     <div className="modal-content">
       <button className="modal-close" type="button" onClick={onClose} aria-label={uiCopy[lang]?.close}>×</button>
-      <div className="story-meta"><span>{item.source}</span><span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>
+      <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>
       <h2 id="modal-title">{translatedTitle(item, lang)}</h2>
       <h3>{copy.content}</h3><p className="article-body">{loadingBody ? copy.loadingContent : body || translatedSummary(item, lang)}</p>
       <h3>{copy.effects}</h3>
@@ -352,14 +376,18 @@ function SourcesDisclosure({ lang }) {
   }[lang];
   useEffect(() => {
     let alive = true;
-    fetch('/api/sources?v=focused-markets-v2').then(response => response.ok ? response.json() : Promise.reject()).then(data => { if (alive && Array.isArray(data.sources)) setSources(data.sources.filter(Boolean)); }).catch(() => { if (alive) setSources([]); });
+    fetch('/api/sources?v=strong-sources-v1').then(response => response.ok ? response.json() : Promise.reject()).then(data => {
+      if (!alive) return;
+      if (Array.isArray(data.details)) setSources(data.details.filter(item => item?.source));
+      else if (Array.isArray(data.sources)) setSources(data.sources.filter(Boolean).map(source => ({ source, tier:'curated' })));
+    }).catch(() => { if (alive) setSources([]); });
     return () => { alive = false; };
   }, []);
   return <aside className={`sources-corner ${open ? 'is-open' : ''}`}>
     {open && <div className="sources-panel" role="dialog" aria-label={disclosure.all}>
       <div className="sources-head"><div><strong>{disclosure.all}</strong><small>{sources.length ? `${sources.length} ${t[lang]?.sources}` : disclosure.loading}</small></div><button type="button" onClick={() => setOpen(false)} aria-label={copy.close}>×</button></div>
       <p>{disclosure.note}</p><p className="source-contact">{disclosure.contact} <a href={`tel:${developer.phone}`} dir="ltr">{developer.phone}</a></p>
-      <div className="sources-list">{sources.length ? sources.map(source => <span key={source}>{source}</span>) : <span>{disclosure.loading}...</span>}</div>
+      <div className="sources-list">{sources.length ? sources.map(source => <span key={source.source}><b>{source.source}</b><small>{sourceTierCopy[lang]?.[source.tier] || sourceTierCopy.en.curated}</small></span>) : <span>{disclosure.loading}...</span>}</div>
     </div>}
     <button className="sources-toggle" type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}><span>Sources</span><b>{sources.length || '...'}</b></button>
   </aside>;
@@ -440,6 +468,7 @@ function App() {
       <MarketStrip markets={markets} lang={lang} />
       <BreakingBar items={displayNews} lang={lang} dict={dict} />
       <CategoryTabs active={active} setActive={setActive} lang={lang} />
+      <TrustBar lang={lang} />
       {filtered.length ? <>
         <section className="main-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected} /><aside className="home-side"><LocalRatePanel markets={markets} lang={lang} /><CalendarPanel lang={lang} /></aside></section>
         <section className="latest-section" id="latest">
@@ -464,6 +493,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260716-focused-markets-v2', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260716-strong-sources-v1', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }
