@@ -1,8 +1,12 @@
-const CACHE_NAME = 'hawali-aburi-v15-reliability';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/hawali-logo-96.webp', '/hawali-logo-192.png'];
+const CACHE_NAME = 'hawali-aburi-v16-translation';
+// Never precache the HTML document. A cached index can keep pointing at an
+// old JavaScript bundle after a new Cloudflare Pages deployment.
+const APP_SHELL = ['/manifest.webmanifest', '/hawali-logo-96.webp', '/hawali-logo-192.png'];
 
 function shouldBypass(request, url) {
   return request.method !== 'GET'
+    || request.mode === 'navigate'
+    || request.destination === 'document'
     || url.pathname.startsWith('/api/')
     || url.pathname.startsWith('/src/')
     || url.pathname.startsWith('/@vite')
@@ -31,6 +35,6 @@ self.addEventListener('fetch', event => {
 
   event.waitUntil(network.then(() => undefined));
   event.respondWith(
-    caches.match(event.request).then(cached => cached || network.then(response => response || caches.match('/')))
+    caches.match(event.request).then(cached => cached || network.then(response => response || new Response('Offline', { status: 503 })))
   );
 });
