@@ -1,6 +1,6 @@
 import { analyzeArticle } from '../utils/intelligence.js';
 
-const NEWS_CACHE_KEY = 'hawali-aburi-news-v6-live-latest';
+const NEWS_CACHE_KEY = 'hawali-aburi-news-v7-middle-east';
 const NEWS_CACHE_MAX_AGE = 5 * 60 * 1000;
 const NEWS_DISPLAY_MAX_AGE = 3 * 24 * 60 * 60 * 1000;
 const NEWS_MAX_FUTURE_AGE = 10 * 60 * 1000;

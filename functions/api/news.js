@@ -329,7 +329,7 @@ async function fetchFeeds(feeds, timeoutMs){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'fresh-latest-v5-sources');
+  cacheUrl.searchParams.set('version', 'fresh-latest-v6-conflict');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
