@@ -212,5 +212,6 @@ test('Middle East conflict stories are classified without mixing in unrelated wa
   assert.equal(conflictRegionFor({ title:'US and Iran exchange missile strikes near Hormuz', summary:'CENTCOM reports military activity' }), 'usIran')
   assert.equal(conflictRegionFor({ title:'Houthi drone attack disrupts Red Sea shipping', summary:'Fighting continues near Yemen' }), 'redSea')
   assert.equal(conflictRegionFor({ title:'Ceasefire talks follow fighting in Gaza', summary:'Israel and Hamas discuss a truce' }), 'gazaIsrael')
+  assert.equal(conflictRegionFor({ title:'Treasury sanctions Iranian airline network', summary:'Officials announced new financial restrictions' }), null)
   assert.equal(conflictRegionFor({ title:'Russia launches missiles at Ukraine', summary:'The war continues in Europe' }), null)
 })

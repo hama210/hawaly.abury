@@ -90,6 +90,7 @@ const assetRules = [
   ['NASDAQ',['nasdaq','technology stocks','tech stocks','wall street']]
 ];
 const WAR_TERMS = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|weapon|weapons|arms|terrorism|terrorist|invasion|ceasefire|truce|blockade|military|sanction|sanctions|houthi|nato|centcom|irgc)\b|strait of hormuz|red sea/i;
+const CONFLICT_EVENT_TERMS = /\b(war|conflict|attack|attacks|airstrike|airstrikes|strike|strikes|missile|missiles|drone|drones|fighting|clash|clashes|invasion|ceasefire|truce|blockade|bombing|bombardment|shelling|explosion)\b|under fire|opens? fire/i;
 const MIDDLE_EAST_TERMS = /\b(iran|iranian|tehran|irgc|israel|israeli|gaza|hamas|west bank|lebanon|lebanese|hezbollah|syria|syrian|iraq|iraqi|yemen|yemeni|houthi|gulf|qatar|jordan|amman|saudi|uae|bahrain|oman)\b|middle east|strait of hormuz|red sea/i;
 const FOCUS_MARKET_TERMS = /\b(iqd|dinar|cbi|iraq|baghdad|kurdistan|euro|ecb|sterling|pound|boe|gold|silver|xau|xag|bullion|nasdaq|dow|djia|stocks|equities|inflation|cpi|nfp|fomc|fed|rates|dollar|forex|tariff|recession|gdp|opec|pce|employment|payrolls)\b|eur\/usd|gbp\/usd|usd\/iqd|interest rate|central bank|wall street|oil revenue|federal reserve|bank of england|european central bank|personal income|trade deficit|economic growth|gross domestic product/i;
 const TRUSTED_PUBLISHERS = /\b(reuters|associated press|ap news|bbc|al jazeera|bloomberg|cnbc|financial times|wall street journal|washington post|new york times|guardian|dw|france 24|cnn|nbc news|cbs news|abc news|npr|pbs|euronews|the national|u\.s\. department of the treasury|shafaq|rudaw|kurdistan24|iraqi news agency|ina|iraq business news)\b/i;
@@ -121,7 +122,7 @@ function analyze(item){
 
 export function conflictRegionFor(item){
   const text = `${item.title} ${item.summary} ${item.source} ${item.sourceGroup || ''}`.toLowerCase();
-  if(!WAR_TERMS.test(text) || !MIDDLE_EAST_TERMS.test(text)) return null;
+  if(!CONFLICT_EVENT_TERMS.test(text) || !MIDDLE_EAST_TERMS.test(text)) return null;
   const iran = /\b(iran|iranian|tehran|irgc)\b|strait of hormuz/i.test(text);
   const usa = /\b(usa|u\.s\.|united states|american|pentagon|centcom|white house)\b/i.test(text);
   if(iran && usa) return 'usIran';

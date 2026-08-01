@@ -205,8 +205,8 @@ function TrustBar({ lang }) {
 
 function clientConflictRegion(item) {
   if (item?.conflictRegion) return item.conflictRegion;
-  const text = articleText(item);
-  const war = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|fighting|clash|ceasefire|truce|blockade|military|houthi|centcom|irgc)\b|strait of hormuz|red sea/i.test(text);
+  const text = `${item?.title || ''} ${item?.titleEn || ''} ${item?.titleKu || ''} ${item?.titleAr || ''} ${item?.summary || ''} ${item?.summaryEn || ''} ${item?.summaryKu || ''} ${item?.summaryAr || ''} ${item?.source || ''} ${item?.sourceGroup || ''}`.toLowerCase();
+  const war = /\b(war|conflict|attack|attacks|airstrike|airstrikes|strike|strikes|missile|missiles|drone|drones|fighting|clash|clashes|invasion|ceasefire|truce|blockade|bombing|bombardment|shelling|explosion)\b|under fire|opens? fire/i.test(text);
   const regional = /\b(iran|iranian|tehran|irgc|israel|israeli|gaza|hamas|west bank|lebanon|hezbollah|syria|iraq|yemen|houthi|gulf|oman)\b|middle east|strait of hormuz|red sea/i.test(text);
   if (!war || !regional) return null;
   if (/\b(iran|iranian|tehran|irgc)\b|strait of hormuz/i.test(text) && /\b(usa|u\.s\.|united states|american|pentagon|centcom|white house)\b/i.test(text)) return 'usIran';
