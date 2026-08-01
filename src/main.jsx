@@ -204,7 +204,7 @@ function TrustBar({ lang }) {
 }
 
 function clientConflictRegion(item, lang) {
-  const text = `${translatedTitle(item, lang)} ${translatedSummary(item, lang)} ${item?.source || ''} ${item?.sourceGroup || ''}`.toLowerCase();
+  const text = `${translatedTitle(item, lang)} ${translatedSummary(item, lang)}`.toLowerCase();
   const war = /\b(war|conflict|attack|attacks|airstrike|airstrikes|strike|strikes|missile|missiles|drone|drones|fighting|clash|clashes|invasion|ceasefire|truce|blockade|bombing|bombardment|shelling|explosion)\b|under fire|opens? fire|هێرش|شەڕ|پێکدادان|مووشەک|فڕۆکەی بێفڕۆکەوان|ئاگربەست|êrîş|şer|mûşek|هجوم|حرب|اشتباك|صاروخ|مسيّرة|وقف إطلاق النار/i.test(text);
   const regional = /\b(iran|iranian|tehran|irgc|israel|israeli|gaza|hamas|west bank|lebanon|hezbollah|syria|iraq|yemen|houthi|gulf|oman)\b|middle east|strait of hormuz|red sea|ئێران|ئیسرائیل|غەزە|لوبنان|سوریا|عێراق|یەمەن|دەریای سوور|إيران|إسرائيل|غزة|لبنان|سوريا|العراق|اليمن|البحر الأحمر/i.test(text);
   if (!war || !regional) return null;
