@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { FEEDS, onRequest } from '../functions/api/news.js'
+import { FEEDS, conflictRegionFor, onRequest } from '../functions/api/news.js'
 import { MemoryCache, replaceGlobal, requestContext, silenceWarnings } from './helpers.js'
 
 function rssItem(title, description, publishedAt){
@@ -53,7 +53,7 @@ test('news keeps recent Iraq stories, removes stale and unrelated feed results, 
     assert.equal(payload.items[0].sourceTier, 'local')
     assert.ok(payload.items[0].strengthScore > 0)
     assert.equal(payload.feedStats.succeeded, 1)
-    assert.equal(payload.feedStats.failed, 5)
+    assert.equal(payload.feedStats.failed, 7)
 
     const callsAfterFirst = fetchCount
     const second = requestContext('https://example.com/api/news?limit=48&mode=fast')
@@ -185,6 +185,10 @@ test('news sources are curated around the focused markets and wars', () => {
   assert.ok(names.includes('US Treasury Sanctions'))
   assert.ok(names.includes('Shafaq Economy'))
   assert.ok(names.includes('Reuters Global Conflict'))
+  assert.ok(names.includes('Reuters Iran-US Conflict'))
+  assert.ok(names.includes('Reuters Middle East Conflict'))
+  assert.ok(names.includes('AP Middle East Conflict'))
+  assert.ok(names.includes('BBC Middle East Conflict'))
   assert.ok(names.includes('Financial Times Markets'))
   assert.ok(names.includes('US Inflation (BLS)'))
   assert.ok(names.includes('US Employment (BLS)'))
@@ -202,4 +206,11 @@ test('news sources are curated around the focused markets and wars', () => {
   assert.ok(!names.includes('Yahoo Finance'))
   assert.ok(!names.includes('CoinDesk'))
   assert.ok(!names.includes('Guardian World'))
+})
+
+test('Middle East conflict stories are classified without mixing in unrelated wars', () => {
+  assert.equal(conflictRegionFor({ title:'US and Iran exchange missile strikes near Hormuz', summary:'CENTCOM reports military activity' }), 'usIran')
+  assert.equal(conflictRegionFor({ title:'Houthi drone attack disrupts Red Sea shipping', summary:'Fighting continues near Yemen' }), 'redSea')
+  assert.equal(conflictRegionFor({ title:'Ceasefire talks follow fighting in Gaza', summary:'Israel and Hamas discuss a truce' }), 'gazaIsrael')
+  assert.equal(conflictRegionFor({ title:'Russia launches missiles at Ukraine', summary:'The war continues in Europe' }), null)
 })

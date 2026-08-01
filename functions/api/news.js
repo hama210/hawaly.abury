@@ -27,6 +27,10 @@ export const FEEDS = [
   ['UN Conflict Updates','geopolitics',googleNewsFeed('site:news.un.org (war OR conflict OR ceasefire OR sanctions) when:14d'),'official'],
   ['Iran-US War Live','geopolitics',googleNewsFeed('Iran (US OR "United States") (war OR strikes OR missile OR blockade OR ceasefire OR Hormuz) when:3d'),'curated'],
   ['Middle East Conflict','geopolitics',googleNewsFeed('("Middle East" OR Iran OR Israel OR Gaza OR Lebanon) (war OR strikes OR ceasefire OR sanctions) when:7d'),'curated'],
+  ['Reuters Iran-US Conflict','geopolitics',googleNewsFeed('site:reuters.com (Iran AND (US OR "United States")) (attack OR airstrike OR missile OR military OR ceasefire OR Hormuz) when:3d'),'major'],
+  ['Reuters Middle East Conflict','geopolitics',googleNewsFeed('site:reuters.com (Israel OR Gaza OR Lebanon OR Syria OR Iraq OR Houthi) (attack OR strike OR missile OR fighting OR ceasefire) when:3d'),'major'],
+  ['AP Middle East Conflict','geopolitics',googleNewsFeed('site:apnews.com (Iran OR Israel OR Gaza OR Lebanon OR Syria OR Iraq OR Houthi) (attack OR strike OR missile OR fighting OR ceasefire) when:3d'),'major'],
+  ['BBC Middle East Conflict','geopolitics',googleNewsFeed('site:bbc.com/news (Iran OR Israel OR Gaza OR Lebanon OR Syria OR Iraq OR Houthi) (attack OR strike OR missile OR fighting OR ceasefire) when:3d'),'major'],
   ['Ukraine War','geopolitics',googleNewsFeed('(Ukraine OR Russia) (war OR strikes OR sanctions OR ceasefire) when:7d'),'curated'],
   ['Red Sea and Hormuz Risk','geopolitics',googleNewsFeed('("Red Sea" OR Hormuz OR Houthi) (shipping OR blockade OR strike OR oil) when:14d'),'curated'],
   ['CENTCOM Updates','geopolitics',googleNewsFeed('site:centcom.mil (strike OR military OR missile OR Iran OR Houthi) when:14d'),'official'],
@@ -43,7 +47,7 @@ export const FEEDS = [
   ['Central Bank of Iraq','iraq',googleNewsFeed('site:cbi.iq (dinar OR banking OR monetary OR dollar) when:60d'),'official']
 ].map(([source, category, url, tier, timeoutMs, format]) => ({ source, category, url, tier, timeoutMs, format }));
 
-const MAX_FEEDS_PER_REQUEST = 20;
+const MAX_FEEDS_PER_REQUEST = 22;
 const FETCH_CONCURRENCY = 6;
 const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
 const FAST_FEED_SOURCES = [
@@ -52,7 +56,9 @@ const FAST_FEED_SOURCES = [
   'FXStreet',
   'Shafaq Economy',
   'Iraq Business News',
-  'Al Jazeera War'
+  'Al Jazeera War',
+  'Reuters Iran-US Conflict',
+  'Reuters Middle East Conflict'
 ];
 const FAST_FEED_TIMEOUT_MS = 4500;
 const FULL_FEED_TIMEOUT_MS = 4500;
@@ -84,6 +90,7 @@ const assetRules = [
   ['NASDAQ',['nasdaq','technology stocks','tech stocks','wall street']]
 ];
 const WAR_TERMS = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|weapon|weapons|arms|terrorism|terrorist|invasion|ceasefire|truce|blockade|military|sanction|sanctions|houthi|nato|centcom|irgc)\b|strait of hormuz|red sea/i;
+const MIDDLE_EAST_TERMS = /\b(iran|iranian|tehran|irgc|israel|israeli|gaza|hamas|west bank|lebanon|lebanese|hezbollah|syria|syrian|iraq|iraqi|yemen|yemeni|houthi|gulf|qatar|jordan|amman|saudi|uae|bahrain|oman)\b|middle east|strait of hormuz|red sea/i;
 const FOCUS_MARKET_TERMS = /\b(iqd|dinar|cbi|iraq|baghdad|kurdistan|euro|ecb|sterling|pound|boe|gold|silver|xau|xag|bullion|nasdaq|dow|djia|stocks|equities|inflation|cpi|nfp|fomc|fed|rates|dollar|forex|tariff|recession|gdp|opec|pce|employment|payrolls)\b|eur\/usd|gbp\/usd|usd\/iqd|interest rate|central bank|wall street|oil revenue|federal reserve|bank of england|european central bank|personal income|trade deficit|economic growth|gross domestic product/i;
 const TRUSTED_PUBLISHERS = /\b(reuters|associated press|ap news|bbc|al jazeera|bloomberg|cnbc|financial times|wall street journal|washington post|new york times|guardian|dw|france 24|cnn|nbc news|cbs news|abc news|npr|pbs|euronews|the national|u\.s\. department of the treasury|shafaq|rudaw|kurdistan24|iraqi news agency|ina|iraq business news)\b/i;
 const FOREX_TERMS = /\b(euro|ecb|eurozone|sterling|pound|boe|britain|british|uk economy)\b|eur\/usd|gbp\/usd|european central bank|bank of england/i;
@@ -110,6 +117,19 @@ function analyze(item){
     ...effects.map(effect=>effect.asset)
   ])];
   return { impact, sentiment, assets: affected.length ? affected : ['NASDAQ', 'DOW JONES'], effects, iraqImpact };
+}
+
+export function conflictRegionFor(item){
+  const text = `${item.title} ${item.summary} ${item.source} ${item.sourceGroup || ''}`.toLowerCase();
+  if(!WAR_TERMS.test(text) || !MIDDLE_EAST_TERMS.test(text)) return null;
+  const iran = /\b(iran|iranian|tehran|irgc)\b|strait of hormuz/i.test(text);
+  const usa = /\b(usa|u\.s\.|united states|american|pentagon|centcom|white house)\b/i.test(text);
+  if(iran && usa) return 'usIran';
+  if(/\b(gaza|hamas|west bank|israel|israeli)\b/i.test(text)) return 'gazaIsrael';
+  if(/\b(lebanon|lebanese|hezbollah|beirut)\b/i.test(text)) return 'lebanon';
+  if(/\b(yemen|yemeni|houthi)\b|red sea/i.test(text)) return 'redSea';
+  if(/\b(iraq|iraqi|baghdad|syria|syrian|damascus)\b/i.test(text)) return 'iraqSyria';
+  return 'middleEast';
 }
 
 function marketEffects(text, sentiment, iraqImpact){
@@ -279,7 +299,7 @@ async function fetchFeed(feed, timeoutMs){
       const source = isGoogleFeed ? sourceFromGoogleTitle(rawTitle, feed.source) : feed.source;
       const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image };
       const intel = analyze(base);
-      return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact };
+      return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact, conflictRegion: feed.category === 'geopolitics' ? conflictRegionFor(base) : null };
     }).filter(i=>i.title && isFreshNewsItem(i)).filter(item=>isRelevantToFeed(item, feed));
     if(!items.length){
       return { source: feed.source, ok: false, items: [], durationMs: Date.now() - startedAt, error: 'no usable recent items' };

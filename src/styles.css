@@ -190,6 +190,32 @@ img { display:block; }
 .empty-state { padding:30px; border:1px dashed var(--line); border-radius:18px; color:var(--muted); text-align:center; }
 .page-empty { min-height:330px; display:grid; place-items:center; }
 
+/* Middle East daily conflict brief */
+.middle-east-brief { display:grid; gap:14px; padding:20px; border:1px solid color-mix(in srgb, var(--red) 38%, var(--line)); border-radius:20px; background:linear-gradient(145deg, color-mix(in srgb, var(--red) 8%, var(--card)), var(--card) 48%); box-shadow:var(--shadow); }
+.brief-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; }
+.brief-heading h2 { margin:7px 0 4px; font-size:clamp(20px,2.4vw,29px); }
+.brief-heading p { max-width:720px; margin:0; color:var(--muted); font-size:11px; line-height:1.8; }
+.brief-live { display:inline-flex; align-items:center; gap:7px; color:var(--red); font-size:10px; font-weight:800; }
+.brief-live i { width:7px; height:7px; border-radius:50%; background:var(--red); box-shadow:0 0 0 5px color-mix(in srgb, var(--red) 16%, transparent); animation:live 1.5s infinite; }
+.brief-count { display:grid; min-width:94px; padding:10px 13px; border:1px solid color-mix(in srgb, var(--red) 30%, var(--line)); border-radius:14px; background:var(--card-strong); text-align:center; }
+.brief-count strong { color:var(--red); font-family:Inter, sans-serif; font-size:24px; }
+.brief-count span { color:var(--muted); font-size:8px; }
+.brief-filters { display:flex; gap:7px; overflow-x:auto; padding-bottom:2px; }
+.brief-filters button { flex:0 0 auto; min-height:35px; padding:0 12px; border:1px solid var(--line); border-radius:999px; background:var(--card-strong); color:var(--muted); font-size:10px; font-weight:800; }
+.brief-filters button.active { border-color:var(--red); background:color-mix(in srgb, var(--red) 17%, var(--card)); color:var(--text); }
+.brief-list { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px 18px; }
+.brief-item { display:grid; grid-template-columns:76px minmax(0,1fr); gap:10px; min-width:0; padding:11px; border:1px solid var(--line); border-radius:14px; background:color-mix(in srgb, var(--card-strong) 90%, transparent); }
+.brief-time { display:flex; align-items:flex-start; justify-content:flex-end; gap:7px; padding-top:3px; color:var(--muted); font-family:Inter, 'Noto Kufi Arabic', sans-serif; font-size:8px; direction:ltr; }
+.brief-time i { width:8px; height:8px; flex:0 0 8px; margin-top:1px; border:2px solid var(--red); border-radius:50%; background:var(--card); }
+.brief-copy { display:grid; gap:5px; min-width:0; padding:0; border:0; background:transparent; color:var(--text); text-align:start; }
+.brief-copy:hover h3 { color:var(--primary-strong); }
+.brief-region { width:max-content; padding:3px 7px; border-radius:999px; background:color-mix(in srgb, var(--red) 14%, var(--card)); color:var(--red); font-size:8px; font-weight:800; }
+.brief-copy h3 { margin:0; font-size:12px; line-height:1.65; transition:color .2s ease; }
+.brief-copy p { display:-webkit-box; overflow:hidden; margin:0; color:var(--muted); font-size:9px; line-height:1.75; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.brief-copy small { overflow:hidden; color:var(--primary-strong); font-size:7px; text-overflow:ellipsis; white-space:nowrap; }
+.brief-empty { padding:24px; border:1px dashed var(--line); border-radius:14px; color:var(--muted); text-align:center; font-size:11px; }
+.brief-note { margin:0; color:var(--muted); font-size:8px; line-height:1.7; }
+
 /* Modal */
 .modal-backdrop { position:fixed; inset:0; z-index:80; display:grid; place-items:center; padding:20px; background:rgba(1,5,10,.76); backdrop-filter:blur(8px); }
 .article-modal { width:min(900px,100%); max-height:90vh; overflow:auto; border:1px solid var(--line); border-radius:22px; background:var(--card); box-shadow:0 34px 100px rgba(0,0,0,.5); }
@@ -230,6 +256,9 @@ img { display:block; }
 .sources-list > span { display:grid; gap:2px; overflow-wrap:anywhere; padding:7px 8px; border:1px solid var(--line); border-radius:9px; background:var(--card-strong); color:var(--text); font-size:9px; }
 .sources-list b { font-weight:700; }
 .sources-list small { color:var(--primary-strong); font-size:7px; text-transform:uppercase; }
+.sources-list .source-active { border-color:color-mix(in srgb, var(--green) 38%, var(--line)); }
+.sources-list .source-active small { color:var(--green); }
+.sources-list .source-quiet { opacity:.72; }
 .site-footer { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-top:20px; padding:18px 20px; border-top:1px solid var(--line); color:var(--muted); }
 .site-footer > div { display:grid; gap:3px; }
 .site-footer span { font-size:9px; }
@@ -276,6 +305,11 @@ img { display:block; }
   .lead-copy p { font-size:11px; }
   .home-side { grid-template-columns:1fr; }
   .news-grid { grid-template-columns:1fr; }
+  .middle-east-brief { padding:14px; }
+  .brief-heading { align-items:flex-start; }
+  .brief-count { min-width:76px; }
+  .brief-list { grid-template-columns:1fr; }
+  .brief-item { grid-template-columns:66px minmax(0,1fr); }
   .story-card { grid-template-columns:124px minmax(0,1fr); grid-template-rows:1fr; min-height:142px; }
   .story-image { height:100%; min-height:142px; }
   .story-copy { padding:12px; }

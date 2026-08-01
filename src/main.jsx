@@ -55,6 +55,11 @@ const trustBarCopy = {
   ar: { title:'مصادر موثوقة', note:'رسمية وعالمية ومتخصصة · الأحدث أولاً' },
   en: { title:'Trusted sources', note:'Official, major and specialist · newest first' }
 };
+const conflictBriefCopy = {
+  ku: { title:'پوختەی ڕۆژانەی ڕۆژهەڵاتی ناوەڕاست', description:'تەنها گرنگترین پێشهاتەکانی جەنگ، هێرش و پێکدادان؛ بە کورتی و لە سەرچاوەی دیاریکراو.', live:'چاودێری زیندوو', today:'نوێکاری ئەمڕۆ', all:'هەموو', usIran:'ئەمریکا–ئێران', gazaIsrael:'غەزە–ئیسرائیل', lebanon:'لوبنان', redSea:'دەریای سوور', iraqSyria:'عێراق–سوریا', middleEast:'ڕۆژهەڵاتی ناوەڕاست', source:'سەرچاوەی دیاریکراو', empty:'هیچ نوێکارییەکی تازە لەم بەشەدا نییە.', note:'پێشهاتەکانی جەنگ خێرا دەگۆڕێن؛ کاتی بڵاوکردنەوە و سەرچاوەی ڕەسەنی هەر هەواڵێک بپشکنە.' },
+  ar: { title:'الموجز اليومي للشرق الأوسط', description:'أهم تطورات الحروب والضربات والاشتباكات فقط، باختصار ومن مصادر محددة.', live:'مراقبة مباشرة', today:'تحديثات اليوم', all:'الكل', usIran:'أمريكا–إيران', gazaIsrael:'غزة–إسرائيل', lebanon:'لبنان', redSea:'البحر الأحمر', iraqSyria:'العراق–سوريا', middleEast:'الشرق الأوسط', source:'مصدر محدد', empty:'لا توجد تحديثات جديدة في هذا القسم.', note:'تتغير تطورات الحرب بسرعة؛ تحقق من وقت النشر والمصدر الأصلي لكل خبر.' },
+  en: { title:'Middle East Daily Brief', description:'Only the most important war, strike and fighting developments—short and source-attributed.', live:'Live conflict watch', today:'updates today', all:'All', usIran:'USA–Iran', gazaIsrael:'Gaza–Israel', lebanon:'Lebanon', redSea:'Red Sea', iraqSyria:'Iraq–Syria', middleEast:'Middle East', source:'identified source', empty:'No fresh updates in this section.', note:'Conflict developments change quickly. Check each story’s publication time and original source.' }
+};
 const trustBarSources = ['Federal Reserve', 'ECB', 'BoE', 'BLS', 'BEA', 'Reuters', 'FT', 'CNBC', 'CBI', 'Shafaq'];
 const calendarEvents = {
   ku: [
@@ -195,6 +200,43 @@ function TrustBar({ lang }) {
   return <section className="trust-bar" aria-label={copy.title}>
     <div className="trust-copy"><strong>✓ {copy.title}</strong><small>{copy.note}</small></div>
     <div className="trust-names">{trustBarSources.map(source => <span key={source}>{source}</span>)}</div>
+  </section>;
+}
+
+function clientConflictRegion(item) {
+  if (item?.conflictRegion) return item.conflictRegion;
+  const text = articleText(item);
+  const war = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|fighting|clash|ceasefire|truce|blockade|military|houthi|centcom|irgc)\b|strait of hormuz|red sea/i.test(text);
+  const regional = /\b(iran|iranian|tehran|irgc|israel|israeli|gaza|hamas|west bank|lebanon|hezbollah|syria|iraq|yemen|houthi|gulf|oman)\b|middle east|strait of hormuz|red sea/i.test(text);
+  if (!war || !regional) return null;
+  if (/\b(iran|iranian|tehran|irgc)\b|strait of hormuz/i.test(text) && /\b(usa|u\.s\.|united states|american|pentagon|centcom|white house)\b/i.test(text)) return 'usIran';
+  if (/\b(gaza|hamas|west bank|israel|israeli)\b/i.test(text)) return 'gazaIsrael';
+  if (/\b(lebanon|lebanese|hezbollah|beirut)\b/i.test(text)) return 'lebanon';
+  if (/\b(yemen|yemeni|houthi)\b|red sea/i.test(text)) return 'redSea';
+  if (/\b(iraq|iraqi|baghdad|syria|syrian|damascus)\b/i.test(text)) return 'iraqSyria';
+  return 'middleEast';
+}
+
+function MiddleEastBrief({ items, lang, onOpen }) {
+  const [filter, setFilter] = useState('all');
+  const copy = conflictBriefCopy[lang] || conflictBriefCopy.en;
+  const filters = ['all', 'usIran', 'gazaIsrael', 'lebanon', 'redSea', 'iraqSyria'];
+  const allConflict = useMemo(() => items.map(item => ({ item, region:clientConflictRegion(item) })).filter(entry => entry.region), [items]);
+  const shown = allConflict.filter(entry => filter === 'all' || entry.region === filter).slice(0, 8);
+  const todayCount = allConflict.filter(({ item }) => {
+    const published = Date.parse(item.publishedAt || 0);
+    return Number.isFinite(published) && Date.now() - published <= 86400000;
+  }).length;
+  if (!allConflict.length) return null;
+  const shorten = value => {
+    const clean = String(value || '').replace(/\s+/g, ' ').trim();
+    return clean.length > 190 ? `${clean.slice(0, 190).replace(/\s+\S*$/, '')}…` : clean;
+  };
+  return <section className="middle-east-brief" aria-labelledby="middle-east-title">
+    <div className="brief-heading"><div><span className="brief-live"><i />{copy.live}</span><h2 id="middle-east-title">{copy.title}</h2><p>{copy.description}</p></div><div className="brief-count"><strong>{todayCount}</strong><span>{copy.today}</span></div></div>
+    <div className="brief-filters" role="tablist" aria-label={copy.title}>{filters.map(key => <button key={key} type="button" className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{copy[key]}</button>)}</div>
+    {shown.length ? <div className="brief-list">{shown.map(({ item, region }) => <article className="brief-item" key={item.id}><div className="brief-time"><span>{timeAgo(item.publishedAt, lang)}</span><i /></div><button type="button" className="brief-copy" onClick={() => onOpen(item)}><span className="brief-region">{copy[region]}</span><h3>{translatedTitle(item, lang)}</h3><p>{shorten(translatedSummary(item, lang))}</p><small>{item.source} · {copy.source}</small></button></article>)}</div> : <div className="brief-empty">{copy.empty}</div>}
+    <p className="brief-note">{copy.note}</p>
   </section>;
 }
 
@@ -371,7 +413,7 @@ function ArticleModal({ item, lang, dict, onClose }) {
   </article></div>;
 }
 
-function SourcesDisclosure({ lang }) {
+function SourcesDisclosure({ lang, news }) {
   const [open, setOpen] = useState(false);
   const [sources, setSources] = useState([]);
   const copy = uiCopy[lang] || uiCopy.ku;
@@ -380,6 +422,8 @@ function SourcesDisclosure({ lang }) {
     ar: { all:'المصادر المهمة والمختارة', loading:'تحميل المصادر', note:'تُستخدم فقط المصادر الرسمية والعالمية والمالية والمحلية المهمة لـ USD/IQD والعملات والمعادن والمؤشرات والحروب. المحتوى يعود إلى ناشريه الأصليين.', contact:'لطلب إضافة مصدر أو إزالة محتوى، تواصل معنا.' },
     en: { all:'Important curated sources', loading:'Loading sources', note:'Only important official, global, financial, and local sources are used for USD/IQD, currencies, metals, indices, and wars. Content belongs to its original publishers.', contact:'For source or removal requests, contact us.' }
   }[lang];
+  const statusCopy = { ku:{ active:'هەواڵی تازە', quiet:'هەواڵی تازە نییە' }, ar:{ active:'أخبار حديثة', quiet:'لا أخبار حديثة' }, en:{ active:'Recent news', quiet:'No recent news' } }[lang];
+  const activeSources = useMemo(() => new Set(news.flatMap(item => [item.sourceGroup, item.source]).filter(Boolean)), [news]);
   useEffect(() => {
     let alive = true;
     fetch('/api/sources?v=fresh-latest-v3', { cache:'no-store' }).then(response => response.ok ? response.json() : Promise.reject()).then(data => {
@@ -393,7 +437,7 @@ function SourcesDisclosure({ lang }) {
     {open && <div className="sources-panel" role="dialog" aria-label={disclosure.all}>
       <div className="sources-head"><div><strong>{disclosure.all}</strong><small>{sources.length ? `${sources.length} ${t[lang]?.sources}` : disclosure.loading}</small></div><button type="button" onClick={() => setOpen(false)} aria-label={copy.close}>×</button></div>
       <p>{disclosure.note}</p><p className="source-contact">{disclosure.contact} <a href={`tel:${developer.phone}`} dir="ltr">{developer.phone}</a></p>
-      <div className="sources-list">{sources.length ? sources.map(source => <span key={source.source}><b>{source.source}</b><small>{sourceTierCopy[lang]?.[source.tier] || sourceTierCopy.en.curated}</small></span>) : <span>{disclosure.loading}...</span>}</div>
+      <div className="sources-list">{sources.length ? sources.map(source => { const active = activeSources.has(source.source); return <span className={active ? 'source-active' : 'source-quiet'} key={source.source}><b>{source.source}</b><small>{sourceTierCopy[lang]?.[source.tier] || sourceTierCopy.en.curated} · {active ? statusCopy.active : statusCopy.quiet}</small></span>; }) : <span>{disclosure.loading}...</span>}</div>
     </div>}
     <button className="sources-toggle" type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}><span>Sources</span><b>{sources.length || '...'}</b></button>
   </aside>;
@@ -477,6 +521,7 @@ function App() {
       <TrustBar lang={lang} />
       {filtered.length ? <>
         <section className="main-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected} /><aside className="home-side"><LocalRatePanel markets={markets} lang={lang} /><CalendarPanel lang={lang} /></aside></section>
+        {(active === 'all' || active === 'geopolitics') && <MiddleEastBrief items={displayNews} lang={lang} onOpen={setSelected} />}
         <section className="latest-section" id="latest">
           <div className="section-heading"><h2>{copy.latest}</h2><span>{translating ? copy.translating : active === 'all' ? copy.allSections : categoryMap[lang]?.[active]}</span></div>
           {rest.length ? <div className="news-grid" aria-live="polite">{rest.map(item => <NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected} />)}</div> : <div className="empty-state">{dict.noResults}</div>}
@@ -485,7 +530,7 @@ function App() {
       <SiteFooter lang={lang} />
     </div>
     <MobileNav lang={lang} />
-    <SourcesDisclosure lang={lang} />
+    <SourcesDisclosure lang={lang} news={displayNews} />
     <ArticleModal item={selected} lang={lang} dict={dict} onClose={() => setSelected(null)} />
   </div>;
 }
