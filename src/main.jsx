@@ -203,10 +203,10 @@ function TrustBar({ lang }) {
   </section>;
 }
 
-function clientConflictRegion(item) {
-  const text = `${item?.title || ''} ${item?.titleEn || ''} ${item?.titleKu || ''} ${item?.titleAr || ''} ${item?.summary || ''} ${item?.summaryEn || ''} ${item?.summaryKu || ''} ${item?.summaryAr || ''} ${item?.source || ''} ${item?.sourceGroup || ''}`.toLowerCase();
-  const war = /\b(war|conflict|attack|attacks|airstrike|airstrikes|strike|strikes|missile|missiles|drone|drones|fighting|clash|clashes|invasion|ceasefire|truce|blockade|bombing|bombardment|shelling|explosion)\b|under fire|opens? fire/i.test(text);
-  const regional = /\b(iran|iranian|tehran|irgc|israel|israeli|gaza|hamas|west bank|lebanon|hezbollah|syria|iraq|yemen|houthi|gulf|oman)\b|middle east|strait of hormuz|red sea/i.test(text);
+function clientConflictRegion(item, lang) {
+  const text = `${translatedTitle(item, lang)} ${translatedSummary(item, lang)} ${item?.source || ''} ${item?.sourceGroup || ''}`.toLowerCase();
+  const war = /\b(war|conflict|attack|attacks|airstrike|airstrikes|strike|strikes|missile|missiles|drone|drones|fighting|clash|clashes|invasion|ceasefire|truce|blockade|bombing|bombardment|shelling|explosion)\b|under fire|opens? fire|هێرش|شەڕ|پێکدادان|مووشەک|فڕۆکەی بێفڕۆکەوان|ئاگربەست|êrîş|şer|mûşek|هجوم|حرب|اشتباك|صاروخ|مسيّرة|وقف إطلاق النار/i.test(text);
+  const regional = /\b(iran|iranian|tehran|irgc|israel|israeli|gaza|hamas|west bank|lebanon|hezbollah|syria|iraq|yemen|houthi|gulf|oman)\b|middle east|strait of hormuz|red sea|ئێران|ئیسرائیل|غەزە|لوبنان|سوریا|عێراق|یەمەن|دەریای سوور|إيران|إسرائيل|غزة|لبنان|سوريا|العراق|اليمن|البحر الأحمر/i.test(text);
   if (!war || !regional) return null;
   if (item?.conflictRegion) return item.conflictRegion;
   if (/\b(iran|iranian|tehran|irgc)\b|strait of hormuz/i.test(text) && /\b(usa|u\.s\.|united states|american|pentagon|centcom|white house)\b/i.test(text)) return 'usIran';
@@ -221,7 +221,7 @@ function MiddleEastBrief({ items, lang, onOpen }) {
   const [filter, setFilter] = useState('all');
   const copy = conflictBriefCopy[lang] || conflictBriefCopy.en;
   const filters = ['all', 'usIran', 'gazaIsrael', 'lebanon', 'redSea', 'iraqSyria'];
-  const allConflict = useMemo(() => items.map(item => ({ item, region:clientConflictRegion(item) })).filter(entry => entry.region), [items]);
+  const allConflict = useMemo(() => items.map(item => ({ item, region:clientConflictRegion(item, lang) })).filter(entry => entry.region), [items, lang]);
   const shown = allConflict.filter(entry => filter === 'all' || entry.region === filter).slice(0, 8);
   const todayCount = allConflict.filter(({ item }) => {
     const published = Date.parse(item.publishedAt || 0);
