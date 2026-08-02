@@ -175,13 +175,16 @@ test('news parses current Treasury press releases from the official HTML listing
   }
 })
 
-test('news parses the official CENTCOM press-release listing without Google News', async () => {
+test('news parses the official CENTCOM DVIDS feed without Google News or media-only entries', async () => {
   const restoreCaches = replaceGlobal('caches', { default: new MemoryCache() })
   const restoreWarn = silenceWarnings()
-  const published = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric', timeZone:'UTC' })
-  const centcom = `<div class="item"><div class="info"><div class="info-bar"><span class="date">${published}</span></div><div class="title"><a href='/MEDIA/PUBLIC-RELEASES/Article/1234/test/'>CENTCOM reports missile strike near Iran</a></div></div></div>`
-  const restoreFetch = replaceGlobal('fetch', async url => String(url).includes('centcom.mil/MEDIA/PUBLIC-RELEASES')
-    ? new Response(centcom, { status: 200, headers: { 'content-type':'text/html' } })
+  const published = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toUTCString()
+  const centcom = `<rss><channel>
+    <item><title>CENTCOM missile training image</title><link>https://www.dvidshub.net/image/1234/test</link><description>Military training image.</description><pubDate>${published}</pubDate></item>
+    <item><title>CENTCOM reports missile strike near Iran</title><link>https://www.dvidshub.net/news/5678/test</link><description>Official U.S. Central Command public release.</description><pubDate>${published}</pubDate></item>
+  </channel></rss>`
+  const restoreFetch = replaceGlobal('fetch', async url => String(url) === 'https://www.dvidshub.net/rss/unit/72'
+    ? new Response(centcom, { status: 200, headers: { 'content-type':'application/rss+xml' } })
     : new Response('unavailable', { status: 503 }))
 
   try {
@@ -193,7 +196,8 @@ test('news parses the official CENTCOM press-release listing without Google News
     assert.ok(item)
     assert.equal(item.sourceTier, 'official')
     assert.equal(item.displayMaxAgeDays, 14)
-    assert.equal(item.link, 'https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/Article/1234/test/')
+    assert.equal(item.link, 'https://www.dvidshub.net/news/5678/test')
+    assert.equal(payload.items.some(entry => entry.link.includes('/image/')), false)
   } finally {
     restoreFetch()
     restoreWarn()
@@ -237,8 +241,8 @@ test('news sources are curated around the focused markets and wars', () => {
   assert.equal(FEEDS.find(feed => feed.source === 'US Treasury Sanctions')?.format, 'treasury-html')
   assert.equal(FEEDS.find(feed => feed.source === 'BBC War')?.url, 'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml')
   assert.equal(FEEDS.find(feed => feed.source === 'Al Jazeera War')?.url, 'https://www.aljazeera.com/xml/rss/all.xml')
-  assert.equal(FEEDS.find(feed => feed.source === 'CENTCOM Updates')?.format, 'centcom-html')
-  assert.equal(FEEDS.find(feed => feed.source === 'CENTCOM Updates')?.url, 'https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/')
+  assert.equal(FEEDS.find(feed => feed.source === 'CENTCOM Updates')?.format, 'centcom-dvids')
+  assert.equal(FEEDS.find(feed => feed.source === 'CENTCOM Updates')?.url, 'https://www.dvidshub.net/rss/unit/72')
   assert.equal(FEEDS.find(feed => feed.source === 'CENTCOM Updates')?.maxAgeDays, 14)
   assert.equal(FEEDS.find(feed => feed.source === 'DW Business')?.url, 'https://rss.dw.com/rdf/rss-en-bus')
   assert.equal(FEEDS.find(feed => feed.source === 'Euronews Business')?.url, 'https://www.euronews.com/rss?level=theme&name=business')

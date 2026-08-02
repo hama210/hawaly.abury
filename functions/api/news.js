@@ -33,7 +33,7 @@ export const FEEDS = [
   ['BBC Middle East Conflict','geopolitics',googleNewsFeed('site:bbc.com/news (Iran OR Israel OR Gaza OR Lebanon OR Syria OR Iraq OR Houthi) (attack OR strike OR missile OR fighting OR ceasefire) when:3d'),'major'],
   ['Ukraine War','geopolitics',googleNewsFeed('(Ukraine OR Russia) (war OR strikes OR sanctions OR ceasefire) when:7d'),'curated'],
   ['Red Sea and Hormuz Risk','geopolitics',googleNewsFeed('("Red Sea" OR Hormuz OR Houthi) (shipping OR blockade OR strike OR oil) when:14d'),'curated'],
-  ['CENTCOM Updates','geopolitics','https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/','official',8000,'centcom-html',14],
+  ['CENTCOM Updates','geopolitics','https://www.dvidshub.net/rss/unit/72','official',8000,'centcom-dvids',14],
   ['Iraq Latest','iraq','https://news.google.com/rss/search?q=Iraq%20OR%20Baghdad%20OR%20Kurdistan%20when%3A7d&hl=en-US&gl=US&ceid=US:en','curated'],
   ['Iraq Economy','iraq',googleNewsFeed('Iraq (economy OR budget OR oil OR dinar OR banking OR salaries) when:14d'),'curated'],
   ['Iraq Dinar and CBI','iraq',googleNewsFeed('Iraq (dinar OR CBI OR "central bank" OR dollar market OR banking) when:14d'),'curated'],
@@ -272,27 +272,6 @@ function treasuryHtmlToFeedXml(html, feedUrl){
   return `<rss><channel>${items.join('')}</channel></rss>`;
 }
 
-function centcomHtmlToFeedXml(html, feedUrl){
-  const current = [...html.matchAll(/<span\s+class=['"]date['"]>\s*([^<]+?)\s*<\/span>[\s\S]{0,800}?<div\s+class=['"]title['"]>\s*<a\s+href=['"]([^'"]+)['"][^>]*>\s*([\s\S]*?)<\/a>/gi)]
-    .map(([, publishedAt, path, rawTitle]) => ({ path, rawTitle, publishedAt }));
-  const legacy = [...html.matchAll(/<b>\s*<a\s+href=['"]([^'"]+)['"][^>]*>([\s\S]*?)<\/a>\s*<\/b>\s*([A-Z][a-z]+\s+\d{1,2},\s+\d{4})\s*<br\s*\/?>/gi)]
-    .map(([, path, rawTitle, publishedAt]) => ({ path, rawTitle, publishedAt }));
-  const seen = new Set();
-  const items = [...current, ...legacy]
-    .filter(({ path }) => {
-      if(!path || seen.has(path)) return false;
-      seen.add(path);
-      return true;
-    })
-    .slice(0, 16)
-    .map(({ path, rawTitle, publishedAt }) => {
-      const title = decode(rawTitle).replaceAll(']]>', '] ]>');
-      const link = new URL(path, feedUrl).toString().replaceAll('&', '&amp;');
-      return `<item><title><![CDATA[${title}]]></title><link>${link}</link><description><![CDATA[Official CENTCOM update: ${title}]]></description><pubDate>${decode(publishedAt)}</pubDate></item>`;
-    });
-  return `<rss><channel>${items.join('')}</channel></rss>`;
-}
-
 async function fetchFeed(feed, timeoutMs){
   const startedAt = Date.now();
   const controller = new AbortController();
@@ -304,10 +283,9 @@ async function fetchFeed(feed, timeoutMs){
       headers: { 'user-agent': 'HawaliAburiBot/1.7' }
     });
     if(!res.ok) throw new Error(String(res.status));
-    const perFeedLimit = feed.category === 'iraq' ? 12 : 8;
+    const perFeedLimit = feed.format === 'centcom-dvids' ? 32 : feed.category === 'iraq' ? 12 : 8;
     let xml = await readFeedBody(res, perFeedLimit);
     if(feed.format === 'treasury-html') xml = treasuryHtmlToFeedXml(xml, feed.url);
-    if(feed.format === 'centcom-html') xml = centcomHtmlToFeedXml(xml, feed.url);
     const items = [...xml.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
       const entry = m[0];
       const rawTitle = extractTag(entry,'title');
@@ -323,7 +301,9 @@ async function fetchFeed(feed, timeoutMs){
       const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image, displayMaxAgeDays: Number(feed.maxAgeDays) || 3 };
       const intel = analyze(base);
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact, conflictRegion: feed.category === 'geopolitics' ? conflictRegionFor(base) : null };
-    }).filter(i=>i.title && isFreshNewsItem(i, Date.now(), (Number(feed.maxAgeDays) || 3) * 24 * 60 * 60 * 1000)).filter(item=>isRelevantToFeed(item, feed));
+    }).filter(i=>i.title && (feed.format !== 'centcom-dvids' || i.link.includes('dvidshub.net/news/')))
+      .filter(i=>isFreshNewsItem(i, Date.now(), (Number(feed.maxAgeDays) || 3) * 24 * 60 * 60 * 1000))
+      .filter(item=>isRelevantToFeed(item, feed));
     if(!items.length){
       return { source: feed.source, ok: false, items: [], durationMs: Date.now() - startedAt, error: 'no usable recent items' };
     }
@@ -351,7 +331,7 @@ async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'fresh-latest-v8-centcom-public');
+  cacheUrl.searchParams.set('version', 'fresh-latest-v9-centcom-dvids');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
