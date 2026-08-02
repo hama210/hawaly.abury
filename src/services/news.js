@@ -1,7 +1,9 @@
 import { analyzeArticle } from '../utils/intelligence.js';
 
-const NEWS_CACHE_KEY = 'hawali-aburi-news-v7-middle-east';
-const NEWS_CACHE_MAX_AGE = 5 * 60 * 1000;
+const NEWS_CACHE_KEY = 'hawali-aburi-news-v9-centcom-public';
+// Keep the last verified live response visible while a fresh background request
+// is running. Individual stories are still removed after NEWS_DISPLAY_MAX_AGE.
+const NEWS_CACHE_MAX_AGE = 12 * 60 * 60 * 1000;
 const NEWS_DISPLAY_MAX_AGE = 3 * 24 * 60 * 60 * 1000;
 const NEWS_MAX_FUTURE_AGE = 10 * 60 * 1000;
 const NEWS_LIMIT = 120;
@@ -40,9 +42,10 @@ function strengthScore(item) {
 
 function isFreshLiveItem(item, now = Date.now()) {
   const publishedAt = Date.parse(item?.publishedAt);
+  const sourceWindowMs = Math.min(30, Math.max(3, Number(item?.displayMaxAgeDays) || 3)) * 24 * 60 * 60 * 1000;
   return !item?.isFallback
     && Number.isFinite(publishedAt)
-    && publishedAt >= now - NEWS_DISPLAY_MAX_AGE
+    && publishedAt >= now - Math.max(NEWS_DISPLAY_MAX_AGE, sourceWindowMs)
     && publishedAt <= now + NEWS_MAX_FUTURE_AGE;
 }
 
@@ -83,20 +86,24 @@ export function getInitialNews() {
   return prepareNews(cached);
 }
 
-async function fetchPayload(path, force = false) {
+async function fetchPayload(path, force = false, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort('news request timeout'), timeoutMs);
   try {
     const separator = path.includes('?') ? '&' : '?';
     const requestUrl = `${path}${separator}client_ts=${Date.now()}${force ? '&refresh=1' : ''}`;
-    const res = await fetch(requestUrl, { cache:'no-store', headers:{ 'Cache-Control':'no-cache' } });
+    const res = await fetch(requestUrl, { cache:'no-store', headers:{ 'Cache-Control':'no-cache' }, signal:controller.signal });
     if (!res.ok) return null;
     return await res.json();
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
 async function fetchBatch(batch, force) {
-  return fetchPayload(`/api/news?mode=full&limit=${NEWS_LIMIT}&batch=${batch}`, force);
+  return fetchPayload(`/api/news?mode=full&limit=${NEWS_LIMIT}&batch=${batch}`, force, 24000);
 }
 
 export async function fetchNews(onUpdate, { force = false } = {}) {
@@ -112,7 +119,7 @@ export async function fetchNews(onUpdate, { force = false } = {}) {
   };
 
   try {
-    const fast = await fetchPayload('/api/news?mode=fast&limit=48', force);
+    const fast = await fetchPayload('/api/news?mode=fast&limit=48', force, 11000);
     fastItems = Array.isArray(fast?.items) ? fast.items : [];
     if (fastItems.length) publish();
 

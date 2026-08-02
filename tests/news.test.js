@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { FEEDS, conflictRegionFor, onRequest } from '../functions/api/news.js'
+import { matchesCategory } from '../src/utils/categories.js'
 import { MemoryCache, replaceGlobal, requestContext, silenceWarnings } from './helpers.js'
 
 function rssItem(title, description, publishedAt){
@@ -53,7 +54,7 @@ test('news keeps recent Iraq stories, removes stale and unrelated feed results, 
     assert.equal(payload.items[0].sourceTier, 'local')
     assert.ok(payload.items[0].strengthScore > 0)
     assert.equal(payload.feedStats.succeeded, 1)
-    assert.equal(payload.feedStats.failed, 7)
+    assert.equal(payload.feedStats.failed, payload.feedStats.requested - 1)
 
     const callsAfterFirst = fetchCount
     const second = requestContext('https://example.com/api/news?limit=48&mode=fast')
@@ -95,7 +96,7 @@ test('news is ordered by publication time even when an older story has a stronge
     assert.equal(response.headers.get('x-news-order'), 'latest-first')
     assert.deepEqual(payload.items.map(item => item.title), [
       'EUR/USD holds steady in quiet trading',
-      'Iran war attack raises global market risk'
+      'Iran war attack raises global market risk - Al Jazeera'
     ])
     assert.ok(payload.items[0].strengthScore < payload.items[1].strengthScore)
   } finally {
@@ -174,6 +175,41 @@ test('news parses current Treasury press releases from the official HTML listing
   }
 })
 
+test('news parses the official CENTCOM press-release listing without Google News', async () => {
+  const restoreCaches = replaceGlobal('caches', { default: new MemoryCache() })
+  const restoreWarn = silenceWarnings()
+  const published = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric', timeZone:'UTC' })
+  const centcom = `<div class="item"><div class="info"><div class="info-bar"><span class="date">${published}</span></div><div class="title"><a href='/MEDIA/PUBLIC-RELEASES/Article/1234/test/'>CENTCOM reports missile strike near Iran</a></div></div></div>`
+  const restoreFetch = replaceGlobal('fetch', async url => String(url).includes('centcom.mil/MEDIA/PUBLIC-RELEASES')
+    ? new Response(centcom, { status: 200, headers: { 'content-type':'text/html' } })
+    : new Response('unavailable', { status: 503 }))
+
+  try {
+    const request = requestContext('https://example.com/api/news?mode=full&batch=0&limit=40')
+    const response = await onRequest(request.context)
+    const payload = await response.json()
+    await request.settle()
+    const item = payload.items.find(entry => entry.source === 'CENTCOM Updates')
+    assert.ok(item)
+    assert.equal(item.sourceTier, 'official')
+    assert.equal(item.displayMaxAgeDays, 14)
+    assert.equal(item.link, 'https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/Article/1234/test/')
+  } finally {
+    restoreFetch()
+    restoreWarn()
+    restoreCaches()
+  }
+})
+
+test('news category filters use explicit categories and affected assets', () => {
+  assert.equal(matchesCategory({ category:'iraq', intelligence:{ assets:['USD/IQD'] } }, 'iraq'), true)
+  assert.equal(matchesCategory({ category:'forex', intelligence:{ assets:['EUR/USD'] } }, 'forex'), true)
+  assert.equal(matchesCategory({ category:'metals', intelligence:{ assets:['XAU/USD'] } }, 'metals'), true)
+  assert.equal(matchesCategory({ category:'indices', intelligence:{ assets:['NASDAQ'] } }, 'indices'), true)
+  assert.equal(matchesCategory({ category:'geopolitics', title:'CENTCOM reports a missile strike' }, 'geopolitics'), true)
+  assert.equal(matchesCategory({ category:'iraq', title:'Dollar rises in Baghdad' }, 'forex'), false)
+})
+
 test('news sources are curated around the focused markets and wars', () => {
   const names = FEEDS.map(feed => feed.source)
   assert.ok(FEEDS.length < 45)
@@ -189,6 +225,7 @@ test('news sources are curated around the focused markets and wars', () => {
   assert.ok(names.includes('Reuters Middle East Conflict'))
   assert.ok(names.includes('AP Middle East Conflict'))
   assert.ok(names.includes('BBC Middle East Conflict'))
+  assert.ok(names.includes('FXStreet Metals'))
   assert.ok(names.includes('Financial Times Markets'))
   assert.ok(names.includes('US Inflation (BLS)'))
   assert.ok(names.includes('US Employment (BLS)'))
@@ -198,6 +235,11 @@ test('news sources are curated around the focused markets and wars', () => {
   assert.equal(FEEDS.find(feed => feed.source === 'Bank of England')?.url, 'https://www.bankofengland.co.uk/rss/news')
   assert.equal(FEEDS.find(feed => feed.source === 'US Treasury Sanctions')?.tier, 'official')
   assert.equal(FEEDS.find(feed => feed.source === 'US Treasury Sanctions')?.format, 'treasury-html')
+  assert.equal(FEEDS.find(feed => feed.source === 'BBC War')?.url, 'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml')
+  assert.equal(FEEDS.find(feed => feed.source === 'Al Jazeera War')?.url, 'https://www.aljazeera.com/xml/rss/all.xml')
+  assert.equal(FEEDS.find(feed => feed.source === 'CENTCOM Updates')?.format, 'centcom-html')
+  assert.equal(FEEDS.find(feed => feed.source === 'CENTCOM Updates')?.url, 'https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/')
+  assert.equal(FEEDS.find(feed => feed.source === 'CENTCOM Updates')?.maxAgeDays, 14)
   assert.equal(FEEDS.find(feed => feed.source === 'DW Business')?.url, 'https://rss.dw.com/rdf/rss-en-bus')
   assert.equal(FEEDS.find(feed => feed.source === 'Euronews Business')?.url, 'https://www.euronews.com/rss?level=theme&name=business')
   assert.ok(!names.includes('Wall Street Journal Markets'))

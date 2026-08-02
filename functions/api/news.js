@@ -22,18 +22,18 @@ export const FEEDS = [
   ['Reuters Global Conflict','geopolitics',googleNewsFeed('site:reuters.com (war OR strikes OR missile OR ceasefire OR sanctions) when:7d'),'major'],
   ['US Treasury Sanctions','geopolitics','https://home.treasury.gov/news/press-releases','official',12000,'treasury-html'],
   ['AP Global Conflict','geopolitics',googleNewsFeed('site:apnews.com (war OR strikes OR missile OR ceasefire OR sanctions) when:7d'),'major'],
-  ['BBC War','geopolitics',googleNewsFeed('site:bbc.com/news (war OR strikes OR missile OR ceasefire) when:7d'),'major'],
-  ['Al Jazeera War','geopolitics',googleNewsFeed('site:aljazeera.com (war OR strikes OR missile OR ceasefire) when:7d'),'major'],
+  ['BBC War','geopolitics','https://feeds.bbci.co.uk/news/world/middle_east/rss.xml','major',7000],
+  ['Al Jazeera War','geopolitics','https://www.aljazeera.com/xml/rss/all.xml','major',7000],
   ['UN Conflict Updates','geopolitics',googleNewsFeed('site:news.un.org (war OR conflict OR ceasefire OR sanctions) when:14d'),'official'],
   ['Iran-US War Live','geopolitics',googleNewsFeed('Iran (US OR "United States") (war OR strikes OR missile OR blockade OR ceasefire OR Hormuz) when:3d'),'curated'],
-  ['Middle East Conflict','geopolitics',googleNewsFeed('("Middle East" OR Iran OR Israel OR Gaza OR Lebanon) (war OR strikes OR ceasefire OR sanctions) when:7d'),'curated'],
+  ['FXStreet Metals','metals','https://www.fxstreet.com/rss/news','specialist'],
   ['Reuters Iran-US Conflict','geopolitics',googleNewsFeed('site:reuters.com (Iran AND (US OR "United States")) (attack OR airstrike OR missile OR military OR ceasefire OR Hormuz) when:3d'),'major'],
   ['Reuters Middle East Conflict','geopolitics',googleNewsFeed('site:reuters.com (Israel OR Gaza OR Lebanon OR Syria OR Iraq OR Houthi) (attack OR strike OR missile OR fighting OR ceasefire) when:3d'),'major'],
   ['AP Middle East Conflict','geopolitics',googleNewsFeed('site:apnews.com (Iran OR Israel OR Gaza OR Lebanon OR Syria OR Iraq OR Houthi) (attack OR strike OR missile OR fighting OR ceasefire) when:3d'),'major'],
   ['BBC Middle East Conflict','geopolitics',googleNewsFeed('site:bbc.com/news (Iran OR Israel OR Gaza OR Lebanon OR Syria OR Iraq OR Houthi) (attack OR strike OR missile OR fighting OR ceasefire) when:3d'),'major'],
   ['Ukraine War','geopolitics',googleNewsFeed('(Ukraine OR Russia) (war OR strikes OR sanctions OR ceasefire) when:7d'),'curated'],
   ['Red Sea and Hormuz Risk','geopolitics',googleNewsFeed('("Red Sea" OR Hormuz OR Houthi) (shipping OR blockade OR strike OR oil) when:14d'),'curated'],
-  ['CENTCOM Updates','geopolitics',googleNewsFeed('site:centcom.mil (strike OR military OR missile OR Iran OR Houthi) when:14d'),'official'],
+  ['CENTCOM Updates','geopolitics','https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/','official',8000,'centcom-html',14],
   ['Iraq Latest','iraq','https://news.google.com/rss/search?q=Iraq%20OR%20Baghdad%20OR%20Kurdistan%20when%3A7d&hl=en-US&gl=US&ceid=US:en','curated'],
   ['Iraq Economy','iraq',googleNewsFeed('Iraq (economy OR budget OR oil OR dinar OR banking OR salaries) when:14d'),'curated'],
   ['Iraq Dinar and CBI','iraq',googleNewsFeed('Iraq (dinar OR CBI OR "central bank" OR dollar market OR banking) when:14d'),'curated'],
@@ -45,22 +45,22 @@ export const FEEDS = [
   ['Kurdistan24 Economy','iraq',googleNewsFeed('site:kurdistan24.net/en Iraq Kurdistan (economy OR oil OR budget OR salaries) when:30d'),'local'],
   ['Iraq Business News','iraq','https://www.iraq-businessnews.com/feed/','specialist'],
   ['Central Bank of Iraq','iraq',googleNewsFeed('site:cbi.iq (dinar OR banking OR monetary OR dollar) when:60d'),'official']
-].map(([source, category, url, tier, timeoutMs, format]) => ({ source, category, url, tier, timeoutMs, format }));
+].map(([source, category, url, tier, timeoutMs, format, maxAgeDays]) => ({ source, category, url, tier, timeoutMs, format, maxAgeDays }));
 
 const MAX_FEEDS_PER_REQUEST = 22;
 const FETCH_CONCURRENCY = 6;
 const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
 const FAST_FEED_SOURCES = [
-  'Reuters Metals',
   'CNBC Markets',
+  'MarketWatch',
   'FXStreet',
   'Shafaq Economy',
   'Iraq Business News',
+  'BBC War',
   'Al Jazeera War',
-  'Reuters Iran-US Conflict',
-  'Reuters Middle East Conflict'
+  'CENTCOM Updates',
 ];
-const FAST_FEED_TIMEOUT_MS = 4500;
+const FAST_FEED_TIMEOUT_MS = 5000;
 const FULL_FEED_TIMEOUT_MS = 4500;
 const FAST_CACHE_TTL = 60;
 const FULL_CACHE_TTL = 120;
@@ -187,10 +187,10 @@ function isIraqEconomy(item){
   return iraqRelated && economyRelated;
 }
 
-function isFreshNewsItem(item, now = Date.now()){
+function isFreshNewsItem(item, now = Date.now(), maxAgeMs = NEWS_MAX_AGE_MS){
   const publishedTime = Date.parse(item.publishedAt);
   return Number.isFinite(publishedTime)
-    && publishedTime >= now - NEWS_MAX_AGE_MS
+    && publishedTime >= now - maxAgeMs
     && publishedTime <= now + NEWS_MAX_FUTURE_MS;
 }
 
@@ -272,6 +272,27 @@ function treasuryHtmlToFeedXml(html, feedUrl){
   return `<rss><channel>${items.join('')}</channel></rss>`;
 }
 
+function centcomHtmlToFeedXml(html, feedUrl){
+  const current = [...html.matchAll(/<span\s+class=['"]date['"]>\s*([^<]+?)\s*<\/span>[\s\S]{0,800}?<div\s+class=['"]title['"]>\s*<a\s+href=['"]([^'"]+)['"][^>]*>\s*([\s\S]*?)<\/a>/gi)]
+    .map(([, publishedAt, path, rawTitle]) => ({ path, rawTitle, publishedAt }));
+  const legacy = [...html.matchAll(/<b>\s*<a\s+href=['"]([^'"]+)['"][^>]*>([\s\S]*?)<\/a>\s*<\/b>\s*([A-Z][a-z]+\s+\d{1,2},\s+\d{4})\s*<br\s*\/?>/gi)]
+    .map(([, path, rawTitle, publishedAt]) => ({ path, rawTitle, publishedAt }));
+  const seen = new Set();
+  const items = [...current, ...legacy]
+    .filter(({ path }) => {
+      if(!path || seen.has(path)) return false;
+      seen.add(path);
+      return true;
+    })
+    .slice(0, 16)
+    .map(({ path, rawTitle, publishedAt }) => {
+      const title = decode(rawTitle).replaceAll(']]>', '] ]>');
+      const link = new URL(path, feedUrl).toString().replaceAll('&', '&amp;');
+      return `<item><title><![CDATA[${title}]]></title><link>${link}</link><description><![CDATA[Official CENTCOM update: ${title}]]></description><pubDate>${decode(publishedAt)}</pubDate></item>`;
+    });
+  return `<rss><channel>${items.join('')}</channel></rss>`;
+}
+
 async function fetchFeed(feed, timeoutMs){
   const startedAt = Date.now();
   const controller = new AbortController();
@@ -286,6 +307,7 @@ async function fetchFeed(feed, timeoutMs){
     const perFeedLimit = feed.category === 'iraq' ? 12 : 8;
     let xml = await readFeedBody(res, perFeedLimit);
     if(feed.format === 'treasury-html') xml = treasuryHtmlToFeedXml(xml, feed.url);
+    if(feed.format === 'centcom-html') xml = centcomHtmlToFeedXml(xml, feed.url);
     const items = [...xml.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
       const entry = m[0];
       const rawTitle = extractTag(entry,'title');
@@ -298,10 +320,10 @@ async function fetchFeed(feed, timeoutMs){
       const publishedAt = extractTag(entry,'pubDate') || extractTag(entry,'published') || extractTag(entry,'updated') || extractTag(entry,'dc:date');
       const image = extractImage(entry) || fallbackImages[feed.category] || fallbackImages.markets;
       const source = isGoogleFeed ? sourceFromGoogleTitle(rawTitle, feed.source) : feed.source;
-      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image };
+      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image, displayMaxAgeDays: Number(feed.maxAgeDays) || 3 };
       const intel = analyze(base);
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact, conflictRegion: feed.category === 'geopolitics' ? conflictRegionFor(base) : null };
-    }).filter(i=>i.title && isFreshNewsItem(i)).filter(item=>isRelevantToFeed(item, feed));
+    }).filter(i=>i.title && isFreshNewsItem(i, Date.now(), (Number(feed.maxAgeDays) || 3) * 24 * 60 * 60 * 1000)).filter(item=>isRelevantToFeed(item, feed));
     if(!items.length){
       return { source: feed.source, ok: false, items: [], durationMs: Date.now() - startedAt, error: 'no usable recent items' };
     }
@@ -314,7 +336,7 @@ async function fetchFeed(feed, timeoutMs){
   }
 }
 
-async function fetchFeeds(feeds, timeoutMs){
+async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
   const results = new Array(feeds.length);
   let cursor = 0;
   async function run(){
@@ -323,13 +345,13 @@ async function fetchFeeds(feeds, timeoutMs){
       results[index] = await fetchFeed(feeds[index], timeoutMs);
     }
   }
-  await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, feeds.length) }, run));
+  await Promise.all(Array.from({ length: Math.min(concurrency, feeds.length) }, run));
   return results;
 }
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'fresh-latest-v6-conflict');
+  cacheUrl.searchParams.set('version', 'fresh-latest-v8-centcom-public');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
@@ -376,7 +398,11 @@ export async function onRequest(context) {
     ? FAST_FEED_SOURCES.map(source => FEEDS.find(feed => feed.source === source)).filter(Boolean)
     : FEEDS.filter((_, index) => index % BATCH_COUNT === batch))
     .sort((a,b)=>(Number(b.timeoutMs) || 0) - (Number(a.timeoutMs) || 0));
-  const feedResults = await fetchFeeds(selectedFeeds, mode === 'fast' ? FAST_FEED_TIMEOUT_MS : FULL_FEED_TIMEOUT_MS);
+  const feedResults = await fetchFeeds(
+    selectedFeeds,
+    mode === 'fast' ? FAST_FEED_TIMEOUT_MS : FULL_FEED_TIMEOUT_MS,
+    mode === 'fast' ? selectedFeeds.length : FETCH_CONCURRENCY
+  );
   const raw = feedResults.flatMap(result => result.items);
   const iraq = latestFirst(dedupeItems(raw.filter(isIraqEconomy)));
   const reserved = Math.min(iraq.length, Math.max(12, Math.ceil(limit * 0.28)));

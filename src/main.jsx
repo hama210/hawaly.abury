@@ -7,6 +7,7 @@ import { useClientTranslator } from './hooks/useClientTranslator.js';
 import { LANGS, t } from './utils/i18n.js';
 import { analyzeArticle, localizeSummary } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
+import { articleText, matchesCategory } from './utils/categories.js';
 
 const categories = ['all', 'iraq', 'forex', 'metals', 'indices', 'geopolitics'];
 const categoryMap = {
@@ -20,7 +21,7 @@ const uiCopy = {
     sell100:'فرۆشتن / $100', calendar:'ڕۆژژمێری ئابووری', latest:'دوایین هەواڵەکان', allSections:'هەموو بەشەکان',
     refresh:'نوێکردنەوە', theme:'گۆڕینی ڕەنگ', language:'زمان', search:'گەڕان', menu:'بەشەکانی هەواڵ',
     home:'سەرەکی', markets:'بازاڕ', news:'هەواڵ', high:'گرنگ', medium:'مامناوەند', live:'زیندوو', fresh:'نوێ',
-    noMarket:'نرخی ناوخۆ بەردەست نییە', translating:'وەرگێڕانی هەواڵەکان...', close:'داخستن',
+    noMarket:'نرخی ناوخۆ بەردەست نییە', translating:'وەرگێڕانی هەواڵەکان...', loadingNews:'هەواڵە نوێیەکان بار دەکرێن...', close:'داخستن',
     effects:'کاریگەری لەسەر بازاڕ', content:'ناوەڕۆکی هەواڵ', loadingContent:'وەرگێڕانی ناوەڕۆک...', up:'فشاری بەرەو سەرەو', down:'فشاری بەرەو خوارەوە', watch:'چاودێری', effectNotice:'ئەمە هەڵسەنگاندنی ئاڕاستەی بازاڕە، نەک سیگناڵی مامەڵەکردن.'
   },
   ar: {
@@ -28,7 +29,7 @@ const uiCopy = {
     sell100:'بيع / 100$', calendar:'التقويم الاقتصادي', latest:'أحدث الأخبار', allSections:'كل الأقسام',
     refresh:'تحديث', theme:'تغيير المظهر', language:'اللغة', search:'بحث', menu:'أقسام الأخبار',
     home:'الرئيسية', markets:'الأسواق', news:'الأخبار', high:'مهم', medium:'متوسط', live:'مباشر', fresh:'جديد',
-    noMarket:'السعر المحلي غير متاح', translating:'جاري ترجمة الأخبار...', close:'إغلاق',
+    noMarket:'السعر المحلي غير متاح', translating:'جاري ترجمة الأخبار...', loadingNews:'جاري تحميل أحدث الأخبار...', close:'إغلاق',
     effects:'التأثير في الأسواق', content:'محتوى الخبر', loadingContent:'جاري ترجمة المحتوى...', up:'ضغط صعودي', down:'ضغط هبوطي', watch:'مراقبة', effectNotice:'هذا تقدير لاتجاه ضغط السوق وليس إشارة تداول.'
   },
   en: {
@@ -36,7 +37,7 @@ const uiCopy = {
     sell100:'Sell / $100', calendar:'Economic Calendar', latest:'Latest News', allSections:'All sections',
     refresh:'Refresh', theme:'Change theme', language:'Language', search:'Search', menu:'News sections',
     home:'Home', markets:'Markets', news:'News', high:'High', medium:'Medium', live:'Live', fresh:'New',
-    noMarket:'Local rate unavailable', translating:'Translating news...', close:'Close',
+    noMarket:'Local rate unavailable', translating:'Translating news...', loadingNews:'Loading the latest news...', close:'Close',
     effects:'Market Effects', content:'News Content', loadingContent:'Translating content...', up:'Upward pressure', down:'Downward pressure', watch:'Watch', effectNotice:'This is directional market context, not a trading signal.'
   }
 };
@@ -154,23 +155,6 @@ function imageFallback(event) {
   event.currentTarget.src = '/hawali-logo-512.png';
 }
 
-function articleText(item) {
-  return `${item.title || ''} ${item.titleEn || ''} ${item.titleKu || ''} ${item.titleAr || ''} ${item.summary || ''} ${item.summaryEn || ''} ${item.summaryKu || ''} ${item.summaryAr || ''} ${item.content || ''} ${item.source || ''} ${item.sourceGroup || ''} ${item.category || ''} ${(item.intelligence?.assets || []).join(' ')}`.toLowerCase();
-}
-
-function matchesCategory(item, category) {
-  if (category === 'all') return true;
-  const text = articleText(item);
-  const aliases = {
-    iraq:['iraq', 'iqd', 'cbi', 'baghdad', 'kurdistan', 'kurdish'],
-    forex:['forex', 'currency', 'dollar', 'usd', 'eur', 'gbp', 'euro', 'sterling', 'ecb', 'boe'],
-    metals:['metals', 'gold', 'silver', 'xau', 'xag', 'bullion'],
-    indices:['indices', 'index', 'nasdaq', 'dow', 'djia', 'wall street'],
-    geopolitics:['geopolit', 'war', 'conflict', 'iran', 'strike', 'military', 'shipping', 'red sea'],
-  };
-  return aliases[category]?.some(term => text.includes(term)) || false;
-}
-
 function selectMarketItems(markets) {
   const targets = ['USD/IQD', 'EUR/USD', 'GBP/USD', 'XAU/USD', 'XAG/USD', 'DOW JONES', 'NASDAQ'];
   const selected = targets.map(symbol => markets.find(item => item.symbol === symbol)).filter(Boolean);
@@ -204,11 +188,11 @@ function TrustBar({ lang }) {
 }
 
 function clientConflictRegion(item, lang) {
-  const text = `${translatedTitle(item, lang)} ${translatedSummary(item, lang)}`.toLowerCase();
+  if (item?.conflictRegion) return item.conflictRegion;
+  const text = `${item?.titleEn || item?.title || ''} ${item?.summaryEn || item?.summary || ''} ${translatedTitle(item, lang)} ${translatedSummary(item, lang)}`.toLowerCase();
   const war = /\b(war|conflict|attack|attacks|airstrike|airstrikes|strike|strikes|missile|missiles|drone|drones|fighting|clash|clashes|invasion|ceasefire|truce|blockade|bombing|bombardment|shelling|explosion)\b|under fire|opens? fire|هێرش|شەڕ|پێکدادان|مووشەک|فڕۆکەی بێفڕۆکەوان|ئاگربەست|êrîş|şer|mûşek|هجوم|حرب|اشتباك|صاروخ|مسيّرة|وقف إطلاق النار/i.test(text);
   const regional = /\b(iran|iranian|tehran|irgc|israel|israeli|gaza|hamas|west bank|lebanon|hezbollah|syria|iraq|yemen|houthi|gulf|oman)\b|middle east|strait of hormuz|red sea|ئێران|ئیسرائیل|غەزە|لوبنان|سوریا|عێراق|یەمەن|دەریای سوور|إيران|إسرائيل|غزة|لبنان|سوريا|العراق|اليمن|البحر الأحمر/i.test(text);
   if (!war || !regional) return null;
-  if (item?.conflictRegion) return item.conflictRegion;
   if (/\b(iran|iranian|tehran|irgc)\b|strait of hormuz/i.test(text) && /\b(usa|u\.s\.|united states|american|pentagon|centcom|white house)\b/i.test(text)) return 'usIran';
   if (/\b(gaza|hamas|west bank|israel|israeli)\b/i.test(text)) return 'gazaIsrael';
   if (/\b(lebanon|lebanese|hezbollah|beirut)\b/i.test(text)) return 'lebanon';
@@ -222,6 +206,9 @@ function MiddleEastBrief({ items, lang, onOpen }) {
   const copy = conflictBriefCopy[lang] || conflictBriefCopy.en;
   const filters = ['all', 'usIran', 'gazaIsrael', 'lebanon', 'redSea', 'iraqSyria'];
   const allConflict = useMemo(() => items.map(item => ({ item, region:clientConflictRegion(item, lang) })).filter(entry => entry.region), [items, lang]);
+  useEffect(() => {
+    if (filter !== 'all' && !allConflict.some(entry => entry.region === filter)) setFilter('all');
+  }, [allConflict, filter]);
   const shown = allConflict.filter(entry => filter === 'all' || entry.region === filter).slice(0, 8);
   const todayCount = allConflict.filter(({ item }) => {
     const published = Date.parse(item.publishedAt || 0);
@@ -460,6 +447,7 @@ function App() {
   const [active, setActive] = useState('all');
   const [query, setQuery] = useState('');
   const [news, setNews] = useState(getInitialNews);
+  const [loadingNews, setLoadingNews] = useState(true);
   const [markets, setMarkets] = useState([]);
   const [selected, setSelected] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -479,9 +467,9 @@ function App() {
   useEffect(() => {
     let alive = true;
     const update = items => { if (alive && items?.length) setNews(items); };
-    const load = () => fetchNews(update).then(update);
-    load();
-    const interval = setInterval(load, 120000);
+    const load = (initial = false) => fetchNews(update).then(update).finally(() => { if (alive && initial) setLoadingNews(false); });
+    load(true);
+    const interval = setInterval(() => load(false), 120000);
     return () => { alive = false; clearInterval(interval); };
   }, []);
 
@@ -526,7 +514,7 @@ function App() {
           <div className="section-heading"><h2>{copy.latest}</h2><span>{translating ? copy.translating : active === 'all' ? copy.allSections : categoryMap[lang]?.[active]}</span></div>
           {rest.length ? <div className="news-grid" aria-live="polite">{rest.map(item => <NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected} />)}</div> : <div className="empty-state">{dict.noResults}</div>}
         </section>
-      </> : <div className="empty-state page-empty">{dict.noResults}</div>}
+      </> : <div className="empty-state page-empty">{loadingNews ? copy.loadingNews : dict.noResults}</div>}
       <SiteFooter lang={lang} />
     </div>
     <MobileNav lang={lang} />
@@ -544,6 +532,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260801-middle-east-v2', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260802-centcom-public-v1', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }
