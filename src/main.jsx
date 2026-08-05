@@ -188,8 +188,13 @@ function TrustBar({ lang }) {
 }
 
 function clientConflictRegion(item, lang) {
+  const rawText = `${item?.titleEn || item?.title || ''} ${item?.summaryEn || item?.summary || ''} ${translatedTitle(item, lang)} ${translatedSummary(item, lang)}`;
+  const text = rawText.toLowerCase();
+  const iran = /\b(iran|iranian|tehran|irgc)\b|strait of hormuz|\bhormuz\b/i.test(rawText);
+  const usa = /(?:^|[^A-Za-z])(?:US|USA|U\.S\.?)(?=[^A-Za-z]|$)/.test(rawText) || /\b(united states|american|pentagon|centcom|white house|trump|rubio)\b/i.test(rawText);
+  const development = /\b(war|conflict|hostilities|attack|attacks|airstrike|airstrikes|strike|strikes|missile|missiles|drone|drones|ceasefire|truce|blockade|sanction|sanctions|escalation|de-escalation|deescalation|peace|deal|agreement|talk|talks|negotiation|negotiations|standoff|stand-off|crisis|threat|ultimatum)\b|strait of hormuz|\bhormuz\b/i.test(rawText);
+  if (iran && usa && development) return 'usIran';
   if (item?.conflictRegion) return item.conflictRegion;
-  const text = `${item?.titleEn || item?.title || ''} ${item?.summaryEn || item?.summary || ''} ${translatedTitle(item, lang)} ${translatedSummary(item, lang)}`.toLowerCase();
   const war = /\b(war|conflict|attack|attacks|airstrike|airstrikes|strike|strikes|missile|missiles|drone|drones|fighting|clash|clashes|invasion|ceasefire|truce|blockade|bombing|bombardment|shelling|explosion)\b|under fire|opens? fire|هێرش|شەڕ|پێکدادان|مووشەک|فڕۆکەی بێفڕۆکەوان|ئاگربەست|êrîş|şer|mûşek|هجوم|حرب|اشتباك|صاروخ|مسيّرة|وقف إطلاق النار/i.test(text);
   const regional = /\b(iran|iranian|tehran|irgc|israel|israeli|gaza|hamas|west bank|lebanon|hezbollah|syria|iraq|yemen|houthi|gulf|oman)\b|middle east|strait of hormuz|red sea|ئێران|ئیسرائیل|غەزە|لوبنان|سوریا|عێراق|یەمەن|دەریای سوور|إيران|إسرائيل|غزة|لبنان|سوريا|العراق|اليمن|البحر الأحمر/i.test(text);
   if (!war || !regional) return null;
@@ -532,6 +537,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260802-centcom-dvids-v1', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20260805-direct-iran-us-v1', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }
