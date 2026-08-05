@@ -21,17 +21,17 @@ export const FEEDS = [
   ['US Economy (BEA)','markets','https://apps.bea.gov/rss/rss.xml','official',11000],
   ['Reuters Global Conflict','geopolitics',googleNewsFeed('site:reuters.com (war OR strikes OR missile OR ceasefire OR sanctions) when:7d'),'major'],
   ['US Treasury Sanctions','geopolitics','https://home.treasury.gov/news/press-releases','official',12000,'treasury-html'],
-  ['AP Global Conflict','geopolitics',googleNewsFeed('site:apnews.com (war OR strikes OR missile OR ceasefire OR sanctions) when:7d'),'major'],
+  ['NBC News World','geopolitics','https://feeds.nbcnews.com/nbcnews/public/world','major',10000,'iran-us-direct'],
   ['BBC War','geopolitics','https://feeds.bbci.co.uk/news/world/middle_east/rss.xml','major',7000],
   ['Al Jazeera War','geopolitics','https://www.aljazeera.com/xml/rss/all.xml','major',7000],
-  ['UN Conflict Updates','geopolitics',googleNewsFeed('site:news.un.org (war OR conflict OR ceasefire OR sanctions) when:14d'),'official'],
-  ['Iran-US War Live','geopolitics',googleNewsFeed('Iran (US OR "United States") (war OR strikes OR missile OR blockade OR ceasefire OR Hormuz) when:3d'),'curated'],
+  ['Guardian Iran','geopolitics','https://www.theguardian.com/world/iran/rss','major',9000,'iran-us-direct'],
+  ['France 24 Middle East','geopolitics','https://www.france24.com/en/middle-east/rss','major',10000,'iran-us-direct'],
   ['FXStreet Metals','metals','https://www.fxstreet.com/rss/news','specialist'],
   ['Reuters Iran-US Conflict','geopolitics',googleNewsFeed('site:reuters.com (Iran AND (US OR "United States")) (attack OR airstrike OR missile OR military OR ceasefire OR Hormuz) when:3d'),'major'],
   ['Reuters Middle East Conflict','geopolitics',googleNewsFeed('site:reuters.com (Israel OR Gaza OR Lebanon OR Syria OR Iraq OR Houthi) (attack OR strike OR missile OR fighting OR ceasefire) when:3d'),'major'],
   ['AP Middle East Conflict','geopolitics',googleNewsFeed('site:apnews.com (Iran OR Israel OR Gaza OR Lebanon OR Syria OR Iraq OR Houthi) (attack OR strike OR missile OR fighting OR ceasefire) when:3d'),'major'],
-  ['BBC Middle East Conflict','geopolitics',googleNewsFeed('site:bbc.com/news (Iran OR Israel OR Gaza OR Lebanon OR Syria OR Iraq OR Houthi) (attack OR strike OR missile OR fighting OR ceasefire) when:3d'),'major'],
-  ['Ukraine War','geopolitics',googleNewsFeed('(Ukraine OR Russia) (war OR strikes OR sanctions OR ceasefire) when:7d'),'curated'],
+  ['CBS News World','geopolitics','https://www.cbsnews.com/latest/rss/world','major',11000,'iran-us-direct'],
+  ['Iran International','geopolitics','https://www.iranintl.com/en/feed','specialist',10000,'iran-us-direct'],
   ['Red Sea and Hormuz Risk','geopolitics',googleNewsFeed('("Red Sea" OR Hormuz OR Houthi) (shipping OR blockade OR strike OR oil) when:14d'),'curated'],
   ['CENTCOM Updates','geopolitics','https://www.dvidshub.net/rss/unit/72','official',8000,'centcom-dvids',14],
   ['Iraq Latest','iraq','https://news.google.com/rss/search?q=Iraq%20OR%20Baghdad%20OR%20Kurdistan%20when%3A7d&hl=en-US&gl=US&ceid=US:en','curated'],
@@ -48,7 +48,7 @@ export const FEEDS = [
 ].map(([source, category, url, tier, timeoutMs, format, maxAgeDays]) => ({ source, category, url, tier, timeoutMs, format, maxAgeDays }));
 
 const MAX_FEEDS_PER_REQUEST = 22;
-const FETCH_CONCURRENCY = 6;
+const FETCH_CONCURRENCY = 11;
 const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
 const FAST_FEED_SOURCES = [
   'CNBC Markets',
@@ -58,10 +58,13 @@ const FAST_FEED_SOURCES = [
   'Iraq Business News',
   'BBC War',
   'Al Jazeera War',
+  'Guardian Iran',
+  'France 24 Middle East',
+  'Iran International',
   'CENTCOM Updates',
 ];
-const FAST_FEED_TIMEOUT_MS = 5000;
-const FULL_FEED_TIMEOUT_MS = 4500;
+const FAST_FEED_TIMEOUT_MS = 9000;
+const FULL_FEED_TIMEOUT_MS = 8000;
 const FAST_CACHE_TTL = 60;
 const FULL_CACHE_TTL = 120;
 const SOURCE_CACHE_TTL = 60;
@@ -91,6 +94,8 @@ const assetRules = [
 ];
 const WAR_TERMS = /\b(war|conflict|attack|airstrike|strike|strikes|missile|drone|weapon|weapons|arms|terrorism|terrorist|invasion|ceasefire|truce|blockade|military|sanction|sanctions|houthi|nato|centcom|irgc)\b|strait of hormuz|red sea/i;
 const CONFLICT_EVENT_TERMS = /\b(war|conflict|attack|attacks|airstrike|airstrikes|strike|strikes|missile|missiles|drone|drones|fighting|clash|clashes|invasion|ceasefire|truce|blockade|bombing|bombardment|shelling|explosion)\b|under fire|opens? fire/i;
+const CONFLICT_DEVELOPMENT_TERMS = /\b(war|conflict|hostilities|attack|attacks|airstrike|airstrikes|strike|strikes|missile|missiles|drone|drones|ceasefire|truce|blockade|sanction|sanctions|escalation|de-escalation|deescalation|peace|deal|agreement|talk|talks|negotiation|negotiations|standoff|stand-off|crisis|threat|ultimatum)\b|strait of hormuz|\bhormuz\b/i;
+const IRAN_TERMS = /\b(iran|iranian|tehran|irgc)\b|strait of hormuz|\bhormuz\b/i;
 const MIDDLE_EAST_TERMS = /\b(iran|iranian|tehran|irgc|israel|israeli|gaza|hamas|west bank|lebanon|lebanese|hezbollah|syria|syrian|iraq|iraqi|yemen|yemeni|houthi|gulf|qatar|jordan|amman|saudi|uae|bahrain|oman)\b|middle east|strait of hormuz|red sea/i;
 const FOCUS_MARKET_TERMS = /\b(iqd|dinar|cbi|iraq|baghdad|kurdistan|euro|ecb|sterling|pound|boe|gold|silver|xau|xag|bullion|nasdaq|dow|djia|stocks|equities|inflation|cpi|nfp|fomc|fed|rates|dollar|forex|tariff|recession|gdp|opec|pce|employment|payrolls)\b|eur\/usd|gbp\/usd|usd\/iqd|interest rate|central bank|wall street|oil revenue|federal reserve|bank of england|european central bank|personal income|trade deficit|economic growth|gross domestic product/i;
 const TRUSTED_PUBLISHERS = /\b(reuters|associated press|ap news|bbc|al jazeera|bloomberg|cnbc|financial times|wall street journal|washington post|new york times|guardian|dw|france 24|cnn|nbc news|cbs news|abc news|npr|pbs|euronews|the national|u\.s\. department of the treasury|shafaq|rudaw|kurdistan24|iraqi news agency|ina|iraq business news)\b/i;
@@ -122,15 +127,23 @@ function analyze(item){
 
 export function conflictRegionFor(item){
   const text = `${item.title} ${item.summary} ${item.source} ${item.sourceGroup || ''}`.toLowerCase();
+  if(isIranUsDevelopment(item)) return 'usIran';
   if(!CONFLICT_EVENT_TERMS.test(text) || !MIDDLE_EAST_TERMS.test(text)) return null;
-  const iran = /\b(iran|iranian|tehran|irgc)\b|strait of hormuz/i.test(text);
-  const usa = /\b(usa|u\.s\.|united states|american|pentagon|centcom|white house)\b/i.test(text);
-  if(iran && usa) return 'usIran';
   if(/\b(gaza|hamas|west bank|israel|israeli)\b/i.test(text)) return 'gazaIsrael';
   if(/\b(lebanon|lebanese|hezbollah|beirut)\b/i.test(text)) return 'lebanon';
   if(/\b(yemen|yemeni|houthi)\b|red sea/i.test(text)) return 'redSea';
   if(/\b(iraq|iraqi|baghdad|syria|syrian|damascus)\b/i.test(text)) return 'iraqSyria';
   return 'middleEast';
+}
+
+function mentionsUnitedStates(value=''){
+  return /(?:^|[^A-Za-z])(?:US|USA|U\.S\.?)(?=[^A-Za-z]|$)/.test(value)
+    || /\b(united states|american|pentagon|centcom|white house|trump|rubio)\b/i.test(value);
+}
+
+function isIranUsDevelopment(item){
+  const text = `${item.title || ''} ${item.summary || ''} ${item.content || ''}`;
+  return IRAN_TERMS.test(text) && mentionsUnitedStates(text) && CONFLICT_DEVELOPMENT_TERMS.test(text);
 }
 
 function marketEffects(text, sentiment, iraqImpact){
@@ -198,7 +211,13 @@ function isRelevantToFeed(item, feed){
   const text = `${item.title} ${item.summary}`;
   if(feed.tier === 'curated' && feed.url.includes('news.google.com') && !TRUSTED_PUBLISHERS.test(item.source)) return false;
   if(feed.category === 'iraq') return isIraqEconomy(item);
-  if(feed.category === 'geopolitics') return WAR_TERMS.test(text);
+  if(feed.category === 'geopolitics'){
+    if(feed.format === 'iran-us-direct'){
+      if(feed.source === 'Guardian Iran' && item.link.includes('/commentisfree/')) return false;
+      return isIranUsDevelopment(item);
+    }
+    return WAR_TERMS.test(text) || (/Iran-US/i.test(feed.source) && isIranUsDevelopment(item));
+  }
   if(feed.category === 'forex') return FOREX_TERMS.test(text) || US_MACRO_TERMS.test(text);
   if(feed.category === 'metals') return METAL_TERMS.test(text) || US_MACRO_TERMS.test(text) || WAR_TERMS.test(text);
   if(feed.category === 'indices') return INDEX_TERMS.test(text) || US_MACRO_TERMS.test(text) || WAR_TERMS.test(text);
@@ -283,7 +302,7 @@ async function fetchFeed(feed, timeoutMs){
       headers: { 'user-agent': 'HawaliAburiBot/1.7' }
     });
     if(!res.ok) throw new Error(String(res.status));
-    const perFeedLimit = feed.format === 'centcom-dvids' ? 32 : feed.category === 'iraq' ? 12 : 8;
+    const perFeedLimit = feed.format === 'centcom-dvids' ? 32 : feed.format === 'iran-us-direct' ? 20 : feed.category === 'iraq' ? 12 : 8;
     let xml = await readFeedBody(res, perFeedLimit);
     if(feed.format === 'treasury-html') xml = treasuryHtmlToFeedXml(xml, feed.url);
     const items = [...xml.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
@@ -331,7 +350,7 @@ async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'fresh-latest-v9-centcom-dvids');
+  cacheUrl.searchParams.set('version', 'fresh-latest-v10-direct-iran-us');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));

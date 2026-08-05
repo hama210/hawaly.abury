@@ -1,6 +1,6 @@
 import { analyzeArticle } from '../utils/intelligence.js';
 
-const NEWS_CACHE_KEY = 'hawali-aburi-news-v10-centcom-dvids';
+const NEWS_CACHE_KEY = 'hawali-aburi-news-v11-direct-iran-us';
 // Keep the last verified live response visible while a fresh background request
 // is running. Individual stories are still removed after NEWS_DISPLAY_MAX_AGE.
 const NEWS_CACHE_MAX_AGE = 12 * 60 * 60 * 1000;
@@ -103,7 +103,7 @@ async function fetchPayload(path, force = false, timeoutMs = 20000) {
 }
 
 async function fetchBatch(batch, force) {
-  return fetchPayload(`/api/news?mode=full&limit=${NEWS_LIMIT}&batch=${batch}`, force, 24000);
+  return fetchPayload(`/api/news?mode=full&limit=${NEWS_LIMIT}&batch=${batch}`, force, 32000);
 }
 
 export async function fetchNews(onUpdate, { force = false } = {}) {
@@ -119,7 +119,7 @@ export async function fetchNews(onUpdate, { force = false } = {}) {
   };
 
   try {
-    const fast = await fetchPayload('/api/news?mode=fast&limit=48', force, 11000);
+    const fast = await fetchPayload('/api/news?mode=fast&limit=48', force, 15000);
     fastItems = Array.isArray(fast?.items) ? fast.items : [];
     if (fastItems.length) publish();
 

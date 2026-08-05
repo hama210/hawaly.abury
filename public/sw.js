@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hawali-aburi-v21-centcom-dvids';
+const CACHE_NAME = 'hawali-aburi-v22-direct-iran-us';
 // Never precache the HTML document. A cached index can keep pointing at an
 // old JavaScript bundle after a new Cloudflare Pages deployment.
 const APP_SHELL = ['/manifest.webmanifest', '/hawali-logo-96.webp', '/hawali-logo-192.png'];

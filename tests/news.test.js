@@ -205,6 +205,35 @@ test('news parses the official CENTCOM DVIDS feed without Google News or media-o
   }
 })
 
+test('news keeps direct Iran-US diplomacy updates and classifies them in the USA-Iran brief', async () => {
+  const restoreCaches = replaceGlobal('caches', { default: new MemoryCache() })
+  const restoreWarn = silenceWarnings()
+  const published = new Date().toUTCString()
+  const guardian = `<rss><channel>
+    ${rssItem('Rubio says US-Iran Hormuz deal could come soon', 'The United States and Iran continue ceasefire negotiations over the Strait of Hormuz.', published)}
+    ${rssItem('Iran announces new school calendar', 'Domestic education officials published the dates.', published)}
+    ${rssItem('Russia launches new missile attacks in Ukraine', 'The war in Europe continues.', published)}
+  </channel></rss>`
+  const restoreFetch = replaceGlobal('fetch', async url => String(url) === 'https://www.theguardian.com/world/iran/rss'
+    ? new Response(guardian, { status: 200, headers: { 'content-type':'application/rss+xml' } })
+    : new Response('unavailable', { status: 503 }))
+
+  try {
+    const request = requestContext('https://example.com/api/news?mode=fast&limit=48')
+    const response = await onRequest(request.context)
+    const payload = await response.json()
+    await request.settle()
+    assert.equal(response.status, 200)
+    assert.equal(payload.items.length, 1)
+    assert.equal(payload.items[0].source, 'Guardian Iran')
+    assert.equal(payload.items[0].conflictRegion, 'usIran')
+  } finally {
+    restoreFetch()
+    restoreWarn()
+    restoreCaches()
+  }
+})
+
 test('news category filters use explicit categories and affected assets', () => {
   assert.equal(matchesCategory({ category:'iraq', intelligence:{ assets:['USD/IQD'] } }, 'iraq'), true)
   assert.equal(matchesCategory({ category:'forex', intelligence:{ assets:['EUR/USD'] } }, 'forex'), true)
@@ -228,7 +257,11 @@ test('news sources are curated around the focused markets and wars', () => {
   assert.ok(names.includes('Reuters Iran-US Conflict'))
   assert.ok(names.includes('Reuters Middle East Conflict'))
   assert.ok(names.includes('AP Middle East Conflict'))
-  assert.ok(names.includes('BBC Middle East Conflict'))
+  assert.ok(names.includes('Guardian Iran'))
+  assert.ok(names.includes('France 24 Middle East'))
+  assert.ok(names.includes('NBC News World'))
+  assert.ok(names.includes('CBS News World'))
+  assert.ok(names.includes('Iran International'))
   assert.ok(names.includes('FXStreet Metals'))
   assert.ok(names.includes('Financial Times Markets'))
   assert.ok(names.includes('US Inflation (BLS)'))
@@ -244,11 +277,20 @@ test('news sources are curated around the focused markets and wars', () => {
   assert.equal(FEEDS.find(feed => feed.source === 'CENTCOM Updates')?.format, 'centcom-dvids')
   assert.equal(FEEDS.find(feed => feed.source === 'CENTCOM Updates')?.url, 'https://www.dvidshub.net/rss/unit/72')
   assert.equal(FEEDS.find(feed => feed.source === 'CENTCOM Updates')?.maxAgeDays, 14)
+  assert.equal(FEEDS.find(feed => feed.source === 'Guardian Iran')?.url, 'https://www.theguardian.com/world/iran/rss')
+  assert.equal(FEEDS.find(feed => feed.source === 'France 24 Middle East')?.url, 'https://www.france24.com/en/middle-east/rss')
+  assert.equal(FEEDS.find(feed => feed.source === 'NBC News World')?.format, 'iran-us-direct')
+  assert.equal(FEEDS.find(feed => feed.source === 'CBS News World')?.format, 'iran-us-direct')
+  assert.equal(FEEDS.find(feed => feed.source === 'Iran International')?.format, 'iran-us-direct')
   assert.equal(FEEDS.find(feed => feed.source === 'DW Business')?.url, 'https://rss.dw.com/rdf/rss-en-bus')
   assert.equal(FEEDS.find(feed => feed.source === 'Euronews Business')?.url, 'https://www.euronews.com/rss?level=theme&name=business')
   assert.ok(!names.includes('Wall Street Journal Markets'))
   assert.ok(!names.includes('Gold and Silver'))
   assert.ok(!names.includes('Global Conflict'))
+  assert.ok(!names.includes('Iran-US War Live'))
+  assert.ok(!names.includes('BBC Middle East Conflict'))
+  assert.ok(!names.includes('UN Conflict Updates'))
+  assert.ok(!names.includes('Ukraine War'))
   assert.ok(!names.includes('Yahoo Finance'))
   assert.ok(!names.includes('CoinDesk'))
   assert.ok(!names.includes('Guardian World'))
@@ -256,6 +298,7 @@ test('news sources are curated around the focused markets and wars', () => {
 
 test('Middle East conflict stories are classified without mixing in unrelated wars', () => {
   assert.equal(conflictRegionFor({ title:'US and Iran exchange missile strikes near Hormuz', summary:'CENTCOM reports military activity' }), 'usIran')
+  assert.equal(conflictRegionFor({ title:'War on Iran: US-Iran deal edges closer', summary:'Talks cover a ceasefire and the Strait of Hormuz' }), 'usIran')
   assert.equal(conflictRegionFor({ title:'Houthi drone attack disrupts Red Sea shipping', summary:'Fighting continues near Yemen' }), 'redSea')
   assert.equal(conflictRegionFor({ title:'Ceasefire talks follow fighting in Gaza', summary:'Israel and Hamas discuss a truce' }), 'gazaIsrael')
   assert.equal(conflictRegionFor({ title:'Treasury sanctions Iranian airline network', summary:'Officials announced new financial restrictions' }), null)
