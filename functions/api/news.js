@@ -25,7 +25,7 @@ export const FEEDS = [
   ['BBC War','geopolitics','https://feeds.bbci.co.uk/news/world/middle_east/rss.xml','major',7000],
   ['Al Jazeera War','geopolitics','https://www.aljazeera.com/xml/rss/all.xml','major',7000],
   ['Guardian Iran','geopolitics','https://www.theguardian.com/world/iran/rss','major',9000,'iran-us-direct'],
-  ['France 24 Middle East','geopolitics','https://www.france24.com/en/middle-east/rss','major',10000,'iran-us-direct'],
+  ['NPR World','geopolitics','https://feeds.npr.org/1004/rss.xml','major',9000,'iran-us-direct'],
   ['FXStreet Metals','metals','https://www.fxstreet.com/rss/news','specialist'],
   ['Reuters Iran-US Conflict','geopolitics',googleNewsFeed('site:reuters.com (Iran AND (US OR "United States")) (attack OR airstrike OR missile OR military OR ceasefire OR Hormuz) when:3d'),'major'],
   ['Reuters Middle East Conflict','geopolitics',googleNewsFeed('site:reuters.com (Israel OR Gaza OR Lebanon OR Syria OR Iraq OR Houthi) (attack OR strike OR missile OR fighting OR ceasefire) when:3d'),'major'],
@@ -59,7 +59,7 @@ const FAST_FEED_SOURCES = [
   'BBC War',
   'Al Jazeera War',
   'Guardian Iran',
-  'France 24 Middle East',
+  'NPR World',
   'Iran International',
   'CENTCOM Updates',
 ];
@@ -350,7 +350,7 @@ async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'fresh-latest-v10-direct-iran-us');
+  cacheUrl.searchParams.set('version', 'fresh-latest-v11-direct-iran-us');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
