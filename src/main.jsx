@@ -86,11 +86,11 @@ const effectReasonCopy = {
   en: { safeHaven:'War risk can lift safe-haven demand', riskOff:'War risk can weaken risk appetite', regionalRisk:'Regional risk can increase dollar demand', deescalation:'Lower tension can improve risk appetite', usRates:'Changing US interest-rate expectations', euroPolicy:'ECB policy and euro-area data', ukPolicy:'BoE policy and UK data', iraqPolicy:'CBI policy, budget and Iraqi oil revenue', preciousMetals:'Dollar, rates and safe-haven demand', indexNews:'Rates, earnings and Wall Street sentiment', marketNews:'Broad market sentiment' }
 };
 const developerCopy = {
-  ku: { developedBy:'گەشەپێدراوە لەلایەن', contact:'پەیوەندی', whatsapp:'واتساپ' },
-  ar: { developedBy:'تطوير', contact:'اتصال', whatsapp:'واتساب' },
-  en: { developedBy:'Developed by', contact:'Contact', whatsapp:'WhatsApp' }
+  ku: { developedBy:'گەشەپێدراوە لەلایەن' },
+  ar: { developedBy:'تطوير' },
+  en: { developedBy:'Developed by' }
 };
-const developer = { name:'Muhammad Muhsin', phone:'+9647763326510', whatsapp:'https://wa.me/9647763326510' };
+const developer = { name:'Muhammad Muhsin' };
 
 function timeAgo(value, lang) {
   const ts = Date.parse(value);
@@ -410,9 +410,9 @@ function SourcesDisclosure({ lang, news }) {
   const [sources, setSources] = useState([]);
   const copy = uiCopy[lang] || uiCopy.ku;
   const disclosure = {
-    ku: { all:'سەرچاوە گرنگ و هەڵبژێردراوەکان', loading:'بارکردنی سەرچاوەکان', note:'تەنها سەرچاوە گرنگە فەرمی، جیهانی، دارایی و ناوخۆییەکان بۆ USD/IQD، دراو، کانزا، پێوەرەکان و جەنگ هەڵبژێردراون. ناوەڕۆک موڵکی بڵاوکەرەوەی ڕەسەنە.', contact:'بۆ داواکاری سەرچاوە یان لابردنەوە، پەیوەندی بکە.' },
-    ar: { all:'المصادر المهمة والمختارة', loading:'تحميل المصادر', note:'تُستخدم فقط المصادر الرسمية والعالمية والمالية والمحلية المهمة لـ USD/IQD والعملات والمعادن والمؤشرات والحروب. المحتوى يعود إلى ناشريه الأصليين.', contact:'لطلب إضافة مصدر أو إزالة محتوى، تواصل معنا.' },
-    en: { all:'Important curated sources', loading:'Loading sources', note:'Only important official, global, financial, and local sources are used for USD/IQD, currencies, metals, indices, and wars. Content belongs to its original publishers.', contact:'For source or removal requests, contact us.' }
+    ku: { all:'سەرچاوە گرنگ و هەڵبژێردراوەکان', loading:'بارکردنی سەرچاوەکان', note:'تەنها سەرچاوە گرنگە فەرمی، جیهانی، دارایی و ناوخۆییەکان بۆ USD/IQD، دراو، کانزا، پێوەرەکان و جەنگ هەڵبژێردراون. ناوەڕۆک موڵکی بڵاوکەرەوەی ڕەسەنە.' },
+    ar: { all:'المصادر المهمة والمختارة', loading:'تحميل المصادر', note:'تُستخدم فقط المصادر الرسمية والعالمية والمالية والمحلية المهمة لـ USD/IQD والعملات والمعادن والمؤشرات والحروب. المحتوى يعود إلى ناشريه الأصليين.' },
+    en: { all:'Important curated sources', loading:'Loading sources', note:'Only important official, global, financial, and local sources are used for USD/IQD, currencies, metals, indices, and wars. Content belongs to its original publishers.' }
   }[lang];
   const statusCopy = { ku:{ active:'هەواڵی تازە', quiet:'هەواڵی تازە نییە' }, ar:{ active:'أخبار حديثة', quiet:'لا أخبار حديثة' }, en:{ active:'Recent news', quiet:'No recent news' } }[lang];
   const activeSources = useMemo(() => new Set(news.flatMap(item => [item.sourceGroup, item.source]).filter(Boolean)), [news]);
@@ -428,7 +428,7 @@ function SourcesDisclosure({ lang, news }) {
   return <aside className={`sources-corner ${open ? 'is-open' : ''}`}>
     {open && <div className="sources-panel" role="dialog" aria-label={disclosure.all}>
       <div className="sources-head"><div><strong>{disclosure.all}</strong><small>{sources.length ? `${sources.length} ${t[lang]?.sources}` : disclosure.loading}</small></div><button type="button" onClick={() => setOpen(false)} aria-label={copy.close}>×</button></div>
-      <p>{disclosure.note}</p><p className="source-contact">{disclosure.contact} <a href={`tel:${developer.phone}`} dir="ltr">{developer.phone}</a></p>
+      <p>{disclosure.note}</p>
       <div className="sources-list">{sources.length ? sources.map(source => { const active = activeSources.has(source.source); return <span className={active ? 'source-active' : 'source-quiet'} key={source.source}><b>{source.source}</b><small>{sourceTierCopy[lang]?.[source.tier] || sourceTierCopy.en.curated} · {active ? statusCopy.active : statusCopy.quiet}</small></span>; }) : <span>{disclosure.loading}...</span>}</div>
     </div>}
     <button className="sources-toggle" type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}><span>Sources</span><b>{sources.length || '...'}</b></button>
@@ -437,7 +437,7 @@ function SourcesDisclosure({ lang, news }) {
 
 function SiteFooter({ lang }) {
   const copy = developerCopy[lang] || developerCopy.en;
-  return <footer className="site-footer"><div><span>{copy.developedBy}</span><strong>{developer.name}</strong></div><nav><a href={`tel:${developer.phone}`} dir="ltr">☎ {developer.phone}</a><a href={developer.whatsapp} target="_blank" rel="noreferrer">{copy.whatsapp} ↗</a></nav></footer>;
+  return <footer className="site-footer"><div><span>{copy.developedBy}</span><strong>{developer.name}</strong></div></footer>;
 }
 
 function MobileNav({ lang }) {
