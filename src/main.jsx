@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import './hawal-features.css';
+import './redesign.css';
 import { DollarRates, MarketDesk, DailyBrief, CalendarLinks, AboutPage, InstallPanel } from './components/MarketDesk.jsx';
 import { MarketIntelligence, VerificationDesk, DollarHistory, MarketAlerts } from './components/HawalFeatures.jsx';
+import { Navigation, NavIcon, HomeMarkets, FeatureShortcuts, ScreenIntro, navigationCopy } from './components/HawalDashboard.jsx';
 import { dashboardCopy } from './lib/dashboard-copy.js';
 import { pageRoute, pagePath, timestamp, quoteState, safeUrl } from './lib/market-tools.js';
 const route = pageRoute(location.pathname);
@@ -228,29 +230,33 @@ function focusedIntelligence(item) {
   return { ...analyzed, ...stored, effects: stored.effects?.length ? stored.effects : analyzed.effects, assets: stored.assets?.length ? stored.assets : analyzed.assets };
 }
 
-function Header({ lang, setLang, theme, setTheme, query, setQuery, dict, refreshing, onRefresh }) {
+function Header({ lang, setLang, theme, setTheme, query, setQuery, dict, refreshing, onRefresh, onSearch }) {
   const copy = uiCopy[lang] || uiCopy.ku;
+  const [searchOpen,setSearchOpen] = useState(false);
   return <header className="site-header">
     <a className="brand" href={pagePath(lang)} aria-label={dict.site}>
-      <span className="brand-mark"><img src="/hawali-logo-96.webp" alt="" /></span>
-      <span className="brand-copy"><strong>{dict.site}</strong><small>{copy.brandTagline}</small></span>
+      <span className="brand-copy"><strong className="hawal-wordmark" dir="ltr">H<span className="brand-accent">Λ</span>WAL</strong><small>{copy.brandTagline}</small></span>
     </a>
-    <label className="search-wrap">
-      <span aria-hidden="true">⌕</span>
+    <label className={'search-wrap '+(searchOpen || query ? 'is-open' : '')}>
+      <NavIcon name="search" size={17}/>
       <span className="sr-only">{copy.search}</span>
-      <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={dict.search} />
+      <input type="search" value={query} onChange={event => {setQuery(event.target.value);if(event.target.value)onSearch();}} placeholder={dict.search} />
     </label>
     <div className="header-tools">
-      <label className="language-control">
-        <span className="sr-only">{copy.language}</span>
-        <select value={lang} onChange={event => setLang(event.target.value)} aria-label={copy.language}>
-          {Object.entries(LANGS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
-        </select>
-      </label>
-      <button className="icon-button" type="button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={copy.theme}>{theme === 'dark' ? '☀' : '☾'}</button>
-      <button className={`icon-button refresh-button ${refreshing ? 'is-loading' : ''}`} type="button" onClick={onRefresh} disabled={refreshing} aria-label={copy.refresh}>↻</button>
+      <button className="icon-button header-search-toggle" type="button" aria-label={copy.search} aria-expanded={searchOpen || Boolean(query)} onClick={()=>{setSearchOpen(open=>!open);onSearch();}}><NavIcon name="search" size={19}/></button>
+      <button className="icon-button" type="button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={copy.theme}><NavIcon name={theme === 'dark' ? 'sun':'moon'} size={20}/></button>
+      <button className={'icon-button refresh-button '+(refreshing ? 'is-loading' : '')} type="button" onClick={onRefresh} disabled={refreshing} aria-label={copy.refresh}><NavIcon name="refresh" size={19}/></button>
     </div>
   </header>;
+}
+function LanguagePills({lang,onLanguage}){
+ const langs=[['ku','کوردی','☀'],['ar','العربية',''],['en','English','']];
+ const flag={ku:'☀',ar:'🇮🇶',en:'🇬🇧'};
+ return <nav className="language-pills" aria-label={uiCopy[lang]?.language || 'Language'}>
+   {langs.map(([value,label])=><button type="button" key={value} className={lang===value?'active':''} aria-current={lang===value?'true':undefined} onClick={()=>value!==lang&&onLanguage(value)}>
+     <span>{label}</span><span aria-hidden="true">{flag[value]}</span>
+   </button>)}
+ </nav>;
 }
 
 function MarketStrip({ markets, lang }) {
@@ -416,11 +422,6 @@ function SiteFooter({ lang }) {
   return <footer className="site-footer"><nav>{['home','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{dashboardCopy[lang][page]}</a>)}</nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong></div></footer>;
 }
 
-function MobileNav({ lang }) {
-  const copy = uiCopy[lang] || uiCopy.ku;
-  const go = id => document.getElementById(id)?.scrollIntoView({ behavior:'smooth', block:'start' });
-  return <nav className="mobile-nav" aria-label="Mobile navigation"><button type="button" onClick={() => go('top')}><span>⌂</span>{copy.home}</button><button type="button" onClick={() => go('markets')}><span>⌁</span>{copy.markets}</button><button type="button" onClick={() => go('latest')}><span>▤</span>{copy.news}</button></nav>;
-}
 
 function App() {
   const [lang, setLang] = useState(route.lang);
@@ -432,10 +433,24 @@ function App() {
   const [markets, setMarkets] = useState(bootstrap.markets || []);
   const [selected, setSelected] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeView, setActiveView] = useState('home');
+  const [featureTarget, setFeatureTarget] = useState(null);
   const dict = t[lang] || t.ku;
   const copy = uiCopy[lang] || uiCopy.ku;
   const { translatedNews, translating } = useClientTranslator(news, lang);
   const displayNews = translatedNews.length ? translatedNews : news;
+  const designCopy = navigationCopy[lang] || navigationCopy.ku;
+  const navigate = view => {
+    setActiveView(view);
+    setFeatureTarget(null);
+    if (view === 'home') { setActive('all'); setQuery(''); }
+    window.scrollTo({ top:0, behavior:'smooth' });
+  };
+  useEffect(() => {
+    if (!featureTarget) return;
+    const id = featureTarget === 'history' ? 'dollar-history' : featureTarget === 'alerts' ? 'market-alerts' : featureTarget === 'verify' ? 'verify' : 'intelligence';
+    document.getElementById(id)?.scrollIntoView({ behavior:'smooth', block:'start' });
+  }, [activeView,featureTarget]);
 
   useEffect(() => {
     document.documentElement.lang = lang === 'ku' ? 'ckb' : lang;
@@ -478,38 +493,75 @@ function App() {
     const search = query.trim().toLowerCase();
     return (!search || articleText(item).includes(search)) && matchesCategory(item, active);
   }), [displayNews, query, active]);
-  const hero = filtered[0];
-  const rest = filtered.slice(1);
+  const hero = displayNews[0];
+  const rest = displayNews.slice(1);
 
   return <div className="page" id="top">
     <div className="shell">
-      <Header lang={lang} setLang={next => { location.href = pagePath(next, route.page); }} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} />
+      <Header lang={lang} setLang={next=>{location.href=pagePath(next,route.page);}} theme={theme} setTheme={setTheme}
+        query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} onSearch={()=>navigate('news')}/>
+      <LanguagePills lang={lang} onLanguage={next=>{location.href=pagePath(next,route.page);}}/>
       {route.page !== 'home' ? <AboutPage lang={lang} page={route.page}/> : <>
-      <section className="desk-intro"><p>{dashboardCopy[lang].subtitle}</p><h1>{dashboardCopy[lang].title}</h1></section>
-      <DollarRates markets={markets} lang={lang}/>
-      <MarketStrip markets={markets} lang={lang} />
-      <section className="hawal-feature-grid" aria-label="Hawal market intelligence and verification"><MarketIntelligence markets={markets} news={displayNews} lang={lang}/><VerificationDesk news={displayNews} lang={lang}/></section>
-      <MarketDesk markets={markets} lang={lang}/>
-      <section className="hawal-feature-grid" aria-label="Hawal dollar history and market alerts"><DollarHistory markets={markets} lang={lang}/><MarketAlerts markets={markets} news={displayNews} lang={lang}/></section>
-      <DailyBrief items={displayNews} lang={lang}/>
-      <BreakingBar items={displayNews} lang={lang} dict={dict} />
-      <CategoryTabs active={active} setActive={setActive} lang={lang} />
-      <TrustBar lang={lang} />
-      {filtered.length ? <>
-        <section className="main-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected} /><aside className="home-side"><CalendarLinks lang={lang} /><InstallPanel lang={lang}/></aside></section>
-        {(active === 'all' || active === 'geopolitics') && <MiddleEastBrief items={displayNews} lang={lang} onOpen={setSelected} />}
-        <section className="latest-section" id="latest">
-          <div className="section-heading"><h2>{copy.latest}</h2><span>{translating ? copy.translating : active === 'all' ? copy.allSections : categoryMap[lang]?.[active]}</span></div>
-          {rest.length ? <div className="news-grid" aria-live="polite">{rest.map(item => <NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected} />)}</div> : <div className="empty-state">{dict.noResults}</div>}
+      <Navigation active={activeView} onNavigate={navigate} lang={lang}/>
+      <section className={'hawal-screen home-screen '+(activeView==='home'?'':'is-hidden-view')} aria-label={designCopy.home}>
+        <div className="home-stage">
+          <div className="home-feature-main">
+            {hero ? <Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/> :
+              <div className="screen-intro"><p>HAWAL · NEWS</p><h1>{copy.loadingNews}</h1><span>{dashboardCopy[lang].subtitle}</span></div>}
+            <aside className="home-market-aside">
+              <HomeMarkets markets={markets} lang={lang} onNavigate={navigate}/>
+              <FeatureShortcuts lang={lang} onNavigate={navigate} onMoreTarget={setFeatureTarget}/>
+            </aside>
+          </div>
+        </div>
+        {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
+        <section className="latest-section home-news" id="latest-home">
+          <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
+          {rest.length ? <div className="news-grid">{rest.slice(0,4).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div> :
+            <div className="empty-state">{loadingNews?copy.loadingNews:dict.noResults}</div>}
         </section>
-      </> : <div className="empty-state page-empty">{loadingNews ? copy.loadingNews : dict.noResults}</div>}
-      <div className="lower-tools">{!filtered.length && <><CalendarLinks lang={lang}/><InstallPanel lang={lang}/></>}</div>
+        {(active==='all'||active==='geopolitics') && <MiddleEastBrief items={displayNews} lang={lang} onOpen={setSelected}/>}
+        <TrustBar lang={lang}/>
+      </section>
+
+      <section className={'hawal-screen markets-screen '+(activeView==='markets'?'':'is-hidden-view')} aria-label={designCopy.markets}>
+        <ScreenIntro page="markets" lang={lang}/>
+        {activeView==='markets' && <MarketIntelligence markets={markets} news={displayNews} lang={lang}/>}
+        <DollarRates markets={markets} lang={lang}/>
+        <div className="section-heading"><h2>{designCopy.latestRates}</h2><span>{dashboardCopy[lang].disclaimer}</span></div>
+        <MarketStrip markets={markets} lang={lang}/>
+        <DailyBrief items={displayNews} lang={lang}/>
+      </section>
+
+      <section className={'hawal-screen news-screen '+(activeView==='news'?'':'is-hidden-view')} aria-label={designCopy.news}>
+        <ScreenIntro page="news" lang={lang}/>
+        {activeView==='news' && <VerificationDesk news={displayNews} lang={lang}/>}
+        {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
+        <CategoryTabs active={active} setActive={setActive} lang={lang}/>
+        <section className="latest-section" id="latest">
+          <div className="section-heading"><h2>{copy.latest}</h2><span>{translating?copy.translating:active==='all'?copy.allSections:categoryMap[lang]?.[active]}</span></div>
+          {filtered.length ? <div className="news-grid" aria-live="polite">{filtered.map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div> :
+            <div className="empty-state">{loadingNews?copy.loadingNews:dict.noResults}</div>}
+        </section>
+        {(active==='all'||active==='geopolitics') && <MiddleEastBrief items={displayNews} lang={lang} onOpen={setSelected}/>}
+      </section>
+
+      <section className={'hawal-screen more-screen '+(activeView==='more'?'':'is-hidden-view')} aria-label={designCopy.more}>
+        <ScreenIntro page="more" lang={lang}/>
+        <div className="hawal-feature-grid">
+          <DollarHistory markets={markets} lang={lang}/>
+          <MarketAlerts markets={markets} news={displayNews} lang={lang}/>
+        </div>
+        <MarketDesk markets={markets} lang={lang}/>
+        <CalendarLinks lang={lang}/>
+        <InstallPanel lang={lang}/>
+      </section>
       </>}
-      <SiteFooter lang={lang} />
+      <SiteFooter lang={lang}/>
     </div>
-    <MobileNav lang={lang} />
-    <SourcesDisclosure lang={lang} news={displayNews} />
-    <ArticleModal item={selected} lang={lang} dict={dict} onClose={() => setSelected(null)} />
+    {route.page==='home' && <Navigation mobile active={activeView} onNavigate={navigate} lang={lang}/>}
+    <SourcesDisclosure lang={lang} news={displayNews}/>
+    <ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/>
   </div>;
 }
 
@@ -522,6 +574,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20261008-hawal-four-features', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20261008-hawal-premium-mobile-ui', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }
