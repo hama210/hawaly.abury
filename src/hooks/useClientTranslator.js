@@ -72,7 +72,7 @@ async function translateList(items, lang, update, signal){
     const key = itemKey(item, lang)
     const saved = readSaved(key)
     if(saved) output[index] = { ...item, ...saved }
-    else if(item.titleEn || item.summaryEn) pending.push({ index, item, key })
+    else if ((lang === 'ku' ? (!item.titleKu || !item.summaryKu) : (!item.titleAr || !item.summaryAr)) && (item.titleEn || item.summaryEn)) pending.push({ index, item, key })
   })
   update([...output])
 
