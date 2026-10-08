@@ -19,6 +19,7 @@ import { analyzeArticle, localizeSummary } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
 import { articleText, matchesCategory } from './utils/categories.js';
 import { articleSelection, storyExcerpt, readerCopy } from './lib/article-content.js';
+import { imageForNews, coverForCategory } from './lib/news-images.js';
 
 const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
 const categoryMap = {
@@ -143,9 +144,18 @@ function copyLink(url) {
 }
 
 function imageFallback(event) {
-  if (event.currentTarget.dataset.fallback) return;
-  event.currentTarget.dataset.fallback = 'true';
-  event.currentTarget.src = '/hawali-logo-512.png';
+  const element=event.currentTarget;
+  if(element.dataset.fallback==='logo') {
+    element.style.visibility='hidden';
+    return;
+  }
+  if(element.dataset.fallback==='category') {
+    element.dataset.fallback='logo';
+    element.src='/hawali-logo-512.png';
+    return;
+  }
+  element.dataset.fallback='category';
+  element.src=coverForCategory(element.dataset.newsCategory);
 }
 
 function selectMarketItems(markets) {
@@ -305,7 +315,7 @@ function Hero({ item, lang, dict, onOpen }) {
   if (!item) return null;
   const intel = focusedIntelligence(item);
   return <article className="lead-story" role="button" tabIndex="0" onClick={() => onOpen(item)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') onOpen(item); }}>
-    <img src={item.image} alt="" onError={imageFallback} />
+    <img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" decoding="async" fetchPriority="high" referrerPolicy="no-referrer" onError={imageFallback} />
     <div className="lead-overlay" />
     <div className="lead-copy">
       <span className="lead-label">{uiCopy[lang]?.lead || uiCopy.ku.lead}</span>
@@ -320,7 +330,7 @@ function Hero({ item, lang, dict, onOpen }) {
 function NewsCard({ item, lang, onOpen }) {
   const intel = focusedIntelligence(item);
   return <article className="story-card">
-    <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={translatedTitle(item, lang)}><img src={item.image} alt="" loading="lazy" onError={imageFallback} /></button>
+    <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={translatedTitle(item, lang)}><img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={imageFallback} /></button>
     <div className="story-copy">
       <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}<time dateTime={item.publishedAt}>{timestamp(item.publishedAt,lang)}</time></span></div>
       <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noreferrer">{dashboardCopy[lang].original} ↗</a><button className="story-title" type="button" onClick={() => onOpen(item)}>{translatedTitle(item, lang)}</button>
@@ -398,7 +408,7 @@ function ArticleModal({ item, lang, dict, onClose }) {
   const intel = focusedIntelligence(item);
   const copy = uiCopy[lang] || uiCopy.ku;
   return <div className="modal-backdrop" onClick={onClose} role="presentation"><article className="article-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={event => event.stopPropagation()}>
-    <div className="modal-image"><img src={item.image} alt="" onError={imageFallback} /></div>
+    <div className="modal-image"><img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" decoding="async" fetchPriority="high" referrerPolicy="no-referrer" onError={imageFallback} /></div>
     <div className="modal-content">
       <button className="modal-close" type="button" onClick={onClose} aria-label={uiCopy[lang]?.close}>×</button>
       <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>
@@ -604,6 +614,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20261008-hawal-news-reader-v1', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20261008-hawal-news-images-v1', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }

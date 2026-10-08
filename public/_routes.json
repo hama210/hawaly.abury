@@ -3,6 +3,7 @@
   "include": ["/*"],
   "exclude": [
     "/assets/*",
+    "/news-covers/*",
     "/hawali-logo-96.webp",
     "/hawali-logo-192.png",
     "/hawali-logo-512.png",

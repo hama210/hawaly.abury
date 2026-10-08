@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" role="img" aria-label="GOLD & SILVER illustration">
+ <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#51401f"/><stop offset="1" stop-color="#141b2c"/></linearGradient><radialGradient id="glow"><stop stop-color="#efc25a" stop-opacity=".24"/><stop offset="1" stop-color="#efc25a" stop-opacity="0"/></radialGradient></defs>
+ <rect width="800" height="450" fill="url(#bg)"/><circle cx="590" cy="170" r="240" fill="url(#glow)"/>
+ <g opacity=".18" stroke="#efc25a" stroke-width="2"><path d="M0 88h800M0 172h800M0 256h800M0 340h800M90 0v450M230 0v450M370 0v450M510 0v450M650 0v450"/></g>
+ <g opacity=".92" transform="translate(0 -30)"><path d="m158 320 60-116h145l59 116z" fill="#d6a53f" stroke="#ffdf86" stroke-width="13"/><path d="m351 320 60-116h145l59 116z" fill="#ebce86" stroke="#fff1bf" stroke-width="13"/><path d="m257 204 60-97h145l60 97z" fill="#e4b951" stroke="#ffdc83" stroke-width="10"/></g>
+ <rect x="0" y="367" width="800" height="83" fill="#03101e" fill-opacity=".76"/>
+ <rect x="25" y="385" width="6" height="42" rx="3" fill="#efc25a"/>
+ <text x="48" y="402" fill="#fff" font-family="Arial, sans-serif" font-size="24" font-weight="800" letter-spacing="1.7">GOLD & SILVER</text>
+ <text x="48" y="427" fill="#c5d5e9" font-family="Arial, sans-serif" font-size="15">Precious metals and inflation</text>
+ <text x="765" y="421" fill="#e5f1fd" text-anchor="end" font-family="Arial, sans-serif" font-weight="900" font-size="20">HAWAL</text>
+ <title>GOLD & SILVER — illustrative category cover, not an event photograph</title>
+ </svg>

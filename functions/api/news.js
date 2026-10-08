@@ -1,4 +1,5 @@
 import { meaningfulArticleText } from '../../src/lib/article-content.js';
+import { extractNewsImage, coverForCategory } from '../../src/lib/news-images.js';
 
 const googleNewsFeed = query => `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
 
@@ -76,14 +77,7 @@ const MAX_FEED_BYTES = 384 * 1024;
 const NEWS_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 const NEWS_MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 const IRAQ_TERMS = /\b(iraq|iraqi|baghdad|kurdistan|erbil|sulaimani|sulaymaniyah|duhok|dohuk|basra|mosul|dinar|iqd|cbi|somo|rafidain|rasheed|krg)\b|central bank of iraq|iraq business/i;
-const fallbackImages = {
-  iraq: 'https://images.unsplash.com/photo-1569163139599-0f4517e36f51?auto=format&fit=crop&w=1200&q=80',
-  metals: 'https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=1200&q=80',
-  indices: 'https://images.unsplash.com/photo-1642790551116-18e150f248e0?auto=format&fit=crop&w=1200&q=80',
-  forex: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=80',
-  markets: 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80',
-  geopolitics: 'https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1200&q=80'
-};
+// Category cover images are served from Hawal itself so they're available without external CDNs.
 
 const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','airstrike','strike','strikes','sanction','sanctions','missile','drone','weapon','weapons','terrorism','terrorist','ceasefire','invasion','conflict','blockade','strait of hormuz','centcom','irgc','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi','somo','budget','salary','salaries','oil revenue','basra','ceyhan','rafidain','rasheed','ukraine','russia','israel','iran','tehran','gaza','lebanon','red sea','houthi','nato'];
 const mediumWords = ['pmi','retail sales','speech','claims','forecast','budget','trade','earnings','inventory','election','lawsuit','pipeline','exports','banking','investment','customs','taxes','ports','development road','private sector','electricity','gas imports','defense','military','shipping','supply chain','security','diplomacy'];
@@ -112,7 +106,7 @@ const TIER_WEIGHT = { official:36, major:32, local:28, specialist:22, curated:17
 const decode = (str='') => str.replace(/<!\[CDATA\[(.*?)\]\]>/gs,'$1').replace(/&#x([0-9a-f]+);/gi,(_,value)=>String.fromCodePoint(Number.parseInt(value,16))).replace(/&#(\d+);/g,(_,value)=>String.fromCodePoint(Number(value))).replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'').trim();
 const extractTag = (xml, tag) => decode(xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1] || '');
 const extractLink = xml => extractTag(xml,'link') || decode(xml.match(/<link[^>]+href=["']([^"']+)/i)?.[1] || '');
-const extractImage = xml => xml.match(/<media:content[^>]+url=["']([^"']+)/i)?.[1] || xml.match(/<enclosure[^>]+url=["']([^"']+)/i)?.[1] || xml.match(/<img[^>]+src=["']([^"']+)/i)?.[1] || '';
+// RSS image extraction lives in news-images.js and understands thumbnails, enclosures and HTML images.
 const cleanGoogleTitle = title => title.replace(/\s+-\s+[^-]{2,80}$/,'').trim();
 const sourceFromGoogleTitle = (title, fallback) => title.split(' - ').length > 1 ? title.split(' - ').at(-1).trim() : fallback;
 
@@ -323,9 +317,10 @@ async function fetchFeed(feed, timeoutMs){
       const summary=(meaningfulArticleText(description,title) || content).slice(0,1000);
       const contentStatus=content.length > summary.length+65 ? 'rss-text' : summary ? 'excerpt' : 'headline-only';
       const publishedAt = extractTag(entry,'pubDate') || extractTag(entry,'published') || extractTag(entry,'updated') || extractTag(entry,'dc:date');
-      const image = extractImage(entry) || fallbackImages[feed.category] || fallbackImages.markets;
+      const publisherImage=extractNewsImage(entry,feed.url);
+      const image=publisherImage || coverForCategory(feed.category);
       const source = isGoogleFeed ? sourceFromGoogleTitle(rawTitle, feed.source) : feed.source;
-      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, contentStatus, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image, displayMaxAgeDays: Number(feed.maxAgeDays) || 3 };
+      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, contentStatus, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image, imageSource:publisherImage ? 'publisher' : 'illustration', displayMaxAgeDays: Number(feed.maxAgeDays) || 3 };
       const intel = analyze(base);
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact, conflictRegion: feed.category === 'geopolitics' ? conflictRegionFor(base) : null };
     }).filter(i=>i.title && (feed.format !== 'centcom-dvids' || i.link.includes('dvidshub.net/news/')))
@@ -358,7 +353,7 @@ async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'fresh-latest-v12-article-reader');
+  cacheUrl.searchParams.set('version', 'fresh-latest-v13-news-images');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));

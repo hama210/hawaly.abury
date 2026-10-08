@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" role="img" aria-label="OIL & ENERGY illustration">
+ <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#253c4e"/><stop offset="1" stop-color="#07131d"/></linearGradient><radialGradient id="glow"><stop stop-color="#edaf5c" stop-opacity=".24"/><stop offset="1" stop-color="#edaf5c" stop-opacity="0"/></radialGradient></defs>
+ <rect width="800" height="450" fill="url(#bg)"/><circle cx="590" cy="170" r="240" fill="url(#glow)"/>
+ <g opacity=".18" stroke="#edaf5c" stroke-width="2"><path d="M0 88h800M0 172h800M0 256h800M0 340h800M90 0v450M230 0v450M370 0v450M510 0v450M650 0v450"/></g>
+ <g opacity=".92" transform="translate(0 -30)"><path d="M285 347V147m230 200V147M230 147h340m-268-65h196m-210 69 210-69m-210 0 210 69M250 347h300M340 347l60-80 58 80" fill="none" stroke="#f5c078" stroke-width="16" stroke-linecap="round"/></g>
+ <rect x="0" y="367" width="800" height="83" fill="#03101e" fill-opacity=".76"/>
+ <rect x="25" y="385" width="6" height="42" rx="3" fill="#edaf5c"/>
+ <text x="48" y="402" fill="#fff" font-family="Arial, sans-serif" font-size="24" font-weight="800" letter-spacing="1.7">OIL & ENERGY</text>
+ <text x="48" y="427" fill="#c5d5e9" font-family="Arial, sans-serif" font-size="15">Energy supply, crude and global prices</text>
+ <text x="765" y="421" fill="#e5f1fd" text-anchor="end" font-family="Arial, sans-serif" font-weight="900" font-size="20">HAWAL</text>
+ <title>OIL & ENERGY — illustrative category cover, not an event photograph</title>
+ </svg>

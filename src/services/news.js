@@ -1,6 +1,6 @@
 import { analyzeArticle } from '../utils/intelligence.js';
 
-const NEWS_CACHE_KEY = 'hawali-aburi-news-v12-article-reader';
+const NEWS_CACHE_KEY = 'hawali-aburi-news-v13-news-images';
 // Keep the last verified live response visible while a fresh background request
 // is running. Individual stories are still removed after NEWS_DISPLAY_MAX_AGE.
 const NEWS_CACHE_MAX_AGE = 12 * 60 * 60 * 1000;
