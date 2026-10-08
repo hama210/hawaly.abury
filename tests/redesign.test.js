@@ -51,5 +51,5 @@ test('mobile design matches navy-blue screenshot while supporting narrow and RTL
   assert.match(css,/@media\(max-width:370px\)/);
   assert.match(css,/\.pulse-card strong\{[^}]*overflow:hidden/);
   assert.match(css,/\[data-theme="light"\]/);
-  assert.match(sw,/v26-premium-dashboard/);
+  assert.match(sw,/v27-news-reader/);
 });
