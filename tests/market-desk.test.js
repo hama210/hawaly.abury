@@ -64,7 +64,7 @@ test('middleware preserves JSON/assets and renders correct language HTML at the 
  const base={env:{},waitUntil(){},next:async()=>new Response(fs.readFileSync('index.html','utf8'),{headers:{'Content-Type':'text/html'}})};
  const response=await onRequest({...base,request:new Request('https://example.com/en/about')});
  assert.equal(response.status,200);
- assert.equal(response.headers.get('X-Hawall-Version'),'2026-10-market-desk');
+ assert.equal(response.headers.get('X-Hawall-Version'),'2026-10-ssr-routes-v2');
  assert.match(await response.text(),/lang="en" dir="ltr"/);
  const redirect=await onRequest({...base,request:new Request('https://example.com/ar')});
  assert.equal(redirect.status,308);

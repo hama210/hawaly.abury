@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/assets/*",
+    "/hawali-logo-96.webp",
+    "/hawali-logo-192.png",
+    "/hawali-logo-512.png",
+    "/icon.svg",
+    "/icon-192.svg",
+    "/icon-512.svg",
+    "/og-image.png",
+    "/og-image.svg",
+    "/sw.js",
+    "/manifest.webmanifest",
+    "/offline.html",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/browserconfig.xml"
+  ]
+}
