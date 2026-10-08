@@ -254,17 +254,25 @@ function Header({ lang, setLang, theme, setTheme, query, setQuery, dict, refresh
 function MarketStrip({ markets, lang }) {
   const copy = uiCopy[lang] || uiCopy.ku;
   const localCopy = localRateText[lang] || localRateText.en;
+  const selected = selectMarketItems(markets);
   return <section className="market-strip" id="markets" aria-label={copy.markets}>
-    {selectMarketItems(markets).map(market => <div className="market-item" key={market.symbol}>
-      <span className="market-symbol" title={market.name}>{market.symbol.replace('/USD', '')}{market.quoteType === 'futures' ? ' · Futures' : ''}</span>
-      <span className="market-value">
-        <strong>{formatPrice(market.price)}</strong><small>{dashboardCopy[lang][quoteState(market)]}</small>
-        {market.marketKind === 'local'
-          ? <small>{localCopy.erbil}</small>
-          : <small className={changeClass(market.changePct)}>{formatChange(market.changePct)}</small>}<small title={timestamp(market.updatedAt,lang)}>{market.updatedAt ? timestamp(market.updatedAt,lang) : dashboardCopy[lang].undated}</small>{safeUrl(market.sourceUrl) && <a href={safeUrl(market.sourceUrl)} target="_blank" rel="noreferrer">{market.source} ↗</a>}
-      </span>
-    </div>)}
-    {!markets.length && Array.from({ length:7 }, (_, index) => <div className="market-item market-skeleton" key={index}><span>—</span><strong>—</strong></div>)}
+    {selected.map(market => {
+      const state = quoteState(market);
+      const sourceUrl = safeUrl(market.sourceUrl);
+      const reportedAt = market.updatedAt ? timestamp(market.updatedAt, lang) : dashboardCopy[lang].undated;
+      return <article className="market-item" key={market.symbol}>
+        <div className="market-item-heading">
+          <span className="market-symbol" title={market.name || market.symbol} dir="ltr">{market.symbol.replace('/USD', '')}{market.quoteType === 'futures' ? ' · Futures' : ''}</span>
+          {market.marketKind !== 'local' && <span className={`market-change ${changeClass(market.changePct)}`} dir="ltr">{formatChange(market.changePct)}</span>}
+        </div>
+        <strong className="market-price" dir="ltr">{formatPrice(market.price)}</strong>
+        <small className={`market-state ${state}`}>{dashboardCopy[lang][state] || state}</small>
+        {market.marketKind === 'local' && <small className="market-city">{localCopy.erbil}</small>}
+        <time className="market-updated" dateTime={market.updatedAt || undefined} title={reportedAt}>{reportedAt}</time>
+        {sourceUrl && <a className="market-source" href={sourceUrl} target="_blank" rel="noopener noreferrer" title={market.source || ''}><span dir="auto">{market.source || 'Source'}</span><span aria-hidden="true">↗</span></a>}
+      </article>;
+    })}
+    {!selected.length && Array.from({ length:6 }, (_, index) => <div className="market-item market-skeleton" key={index}><span>—</span><strong>—</strong></div>)}
   </section>;
 }
 
@@ -510,6 +518,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20261008-market-desk', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20261008-mobile-market-layout', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }
