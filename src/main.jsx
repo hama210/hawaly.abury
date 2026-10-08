@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
+import { DollarRates, MarketDesk, DailyBrief, CalendarLinks, AboutPage, InstallPanel, RateWatch } from './components/MarketDesk.jsx';
+import { dashboardCopy } from './lib/dashboard-copy.js';
+import { pageRoute, pagePath, timestamp, quoteState, safeUrl } from './lib/market-tools.js';
+const route = pageRoute(location.pathname);
+let bootstrap = {};
+try { bootstrap = JSON.parse(document.getElementById('hawall-bootstrap')?.textContent || '{}'); } catch {};
 import { fetchNews, getInitialNews } from './services/news.js';
 import { fetchMarkets } from './services/markets.js';
 import { useClientTranslator } from './hooks/useClientTranslator.js';
@@ -9,11 +15,11 @@ import { analyzeArticle, localizeSummary } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
 import { articleText, matchesCategory } from './utils/categories.js';
 
-const categories = ['all', 'iraq', 'forex', 'metals', 'indices', 'geopolitics'];
+const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
 const categoryMap = {
-  ku: { all:'هەموو', iraq:'USD/IQD', forex:'EUR و GBP', metals:'زێڕ و زیو', indices:'Dow و Nasdaq', geopolitics:'جەنگ' },
-  ar: { all:'الكل', iraq:'USD/IQD', forex:'EUR و GBP', metals:'الذهب والفضة', indices:'Dow و Nasdaq', geopolitics:'الحروب' },
-  en: { all:'All', iraq:'USD/IQD', forex:'EUR & GBP', metals:'Gold & Silver', indices:'Dow & Nasdaq', geopolitics:'Wars' }
+  ku: { all:'هەموو', oil:'نەوت', crypto:'کریپتۆ', kurdistan:'کوردستان', iraq:'عێراق / USD/IQD', forex:'EUR و GBP', metals:'زێڕ و زیو', indices:'Dow و Nasdaq', geopolitics:'جەنگ' },
+  ar: { all:'الكل', oil:'النفط', crypto:'العملات الرقمية', kurdistan:'كردستان', iraq:'العراق / USD/IQD', forex:'EUR و GBP', metals:'الذهب والفضة', indices:'Dow و Nasdaq', geopolitics:'الحروب' },
+  en: { all:'All', oil:'Oil', crypto:'Crypto', kurdistan:'Kurdistan', iraq:'Iraq / USD/IQD', forex:'EUR & GBP', metals:'Gold & Silver', indices:'Dow & Nasdaq', geopolitics:'Wars' }
 };
 const uiCopy = {
   ku: {
@@ -62,24 +68,6 @@ const conflictBriefCopy = {
   en: { title:'Middle East Daily Brief', description:'Only the most important war, strike and fighting developments—short and source-attributed.', live:'Live conflict watch', today:'updates today', all:'All', usIran:'USA–Iran', gazaIsrael:'Gaza–Israel', lebanon:'Lebanon', redSea:'Red Sea', iraqSyria:'Iraq–Syria', middleEast:'Middle East', source:'identified source', empty:'No fresh updates in this section.', note:'Conflict developments change quickly. Check each story’s publication time and original source.' }
 };
 const trustBarSources = ['Federal Reserve', 'ECB', 'BoE', 'BLS', 'BEA', 'Reuters', 'FT', 'CNBC', 'CBI', 'Shafaq'];
-const calendarEvents = {
-  ku: [
-    ['وتاری فیدراڵ ڕیزێرڤ', 'USD • XAU', 'high'],
-    ['بڕیاری ECB و BoE', 'EUR • GBP', 'high'],
-    ['نوێکاری CBI و بودجەی عێراق', 'USD/IQD', 'high']
-  ],
-  ar: [
-    ['خطاب الاحتياطي الفيدرالي', 'USD • XAU', 'high'],
-    ['قرارات ECB وBoE', 'EUR • GBP', 'high'],
-    ['تحديثات CBI وموازنة العراق', 'USD/IQD', 'high']
-  ],
-  en: [
-    ['Federal Reserve speech', 'USD • XAU', 'high'],
-    ['ECB and BoE decisions', 'EUR • GBP', 'high'],
-    ['CBI and Iraq budget update', 'USD/IQD', 'high']
-  ]
-};
-
 const effectReasonCopy = {
   ku: { safeHaven:'مەترسی جەنگ داواکاری پەنابەری ئارام زیاد دەکات', riskOff:'مەترسی جەنگ هەستی ڕیسک لاواز دەکات', regionalRisk:'مەترسی ناوچەکە داواکاری دۆلار زیاد دەکات', deescalation:'کەمبوونەوەی گرژی هەستی ڕیسک باشتر دەکات', usRates:'گۆڕانی چاوەڕوانی نرخی سوودی ئەمریکا', euroPolicy:'سیاسەتی ECB و داتای ناوچەی یۆرۆ', ukPolicy:'سیاسەتی BoE و داتای بەریتانیا', iraqPolicy:'CBI، بودجە و داهاتی نەوتی عێراق', preciousMetals:'دۆلار، سوود و داواکاری پەنابەر', indexNews:'سوود، قازانج و هەستی Wall Street', marketNews:'هەستی گشتی بازاڕ' },
   ar: { safeHaven:'مخاطر الحرب ترفع طلب الملاذ الآمن', riskOff:'مخاطر الحرب تضعف شهية المخاطرة', regionalRisk:'المخاطر الإقليمية تزيد طلب الدولار', deescalation:'تراجع التوتر يحسن شهية المخاطرة', usRates:'تغير توقعات الفائدة الأمريكية', euroPolicy:'سياسة ECB وبيانات منطقة اليورو', ukPolicy:'سياسة BoE وبيانات بريطانيا', iraqPolicy:'CBI والموازنة وإيرادات نفط العراق', preciousMetals:'الدولار والفائدة وطلب الملاذ الآمن', indexNews:'الفائدة والأرباح ومعنويات وول ستريت', marketNews:'معنويات السوق العامة' },
@@ -156,9 +144,9 @@ function imageFallback(event) {
 }
 
 function selectMarketItems(markets) {
-  const targets = ['USD/IQD', 'EUR/USD', 'GBP/USD', 'XAU/USD', 'XAG/USD', 'DOW JONES', 'NASDAQ'];
+  const targets = ['EUR/USD', 'GBP/USD', 'XAU/USD', 'XAG/USD', 'WTI/USD', 'BRENT/USD', 'BTC/USD', 'DOW JONES', 'NASDAQ'];
   const selected = targets.map(symbol => markets.find(item => item.symbol === symbol)).filter(Boolean);
-  return [...selected, ...markets.filter(item => !selected.includes(item))].slice(0, 7);
+  return selected;
 }
 
 function directionSymbol(direction) {
@@ -227,7 +215,7 @@ function MiddleEastBrief({ items, lang, onOpen }) {
   return <section className="middle-east-brief" aria-labelledby="middle-east-title">
     <div className="brief-heading"><div><span className="brief-live"><i />{copy.live}</span><h2 id="middle-east-title">{copy.title}</h2><p>{copy.description}</p></div><div className="brief-count"><strong>{todayCount}</strong><span>{copy.today}</span></div></div>
     <div className="brief-filters" role="tablist" aria-label={copy.title}>{filters.map(key => <button key={key} type="button" className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{copy[key]}</button>)}</div>
-    {shown.length ? <div className="brief-list">{shown.map(({ item, region }) => <article className="brief-item" key={item.id}><div className="brief-time"><span>{timeAgo(item.publishedAt, lang)}</span><i /></div><button type="button" className="brief-copy" onClick={() => onOpen(item)}><span className="brief-region">{copy[region]}</span><h3>{translatedTitle(item, lang)}</h3><p>{shorten(translatedSummary(item, lang))}</p><small>{item.source} · {copy.source}</small></button></article>)}</div> : <div className="brief-empty">{copy.empty}</div>}
+    {shown.length ? <div className="brief-list">{shown.map(({ item, region }) => <article className="brief-item" key={item.id}><div className="brief-time"><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><i /></div><button type="button" className="brief-copy" onClick={() => onOpen(item)}><span className="brief-region">{copy[region]}</span><h3>{translatedTitle(item, lang)}</h3><p>{shorten(translatedSummary(item, lang))}</p><small>{item.source} · {copy.source}</small></button></article>)}</div> : <div className="brief-empty">{copy.empty}</div>}
     <p className="brief-note">{copy.note}</p>
   </section>;
 }
@@ -241,7 +229,7 @@ function focusedIntelligence(item) {
 function Header({ lang, setLang, theme, setTheme, query, setQuery, dict, refreshing, onRefresh }) {
   const copy = uiCopy[lang] || uiCopy.ku;
   return <header className="site-header">
-    <a className="brand" href="#top" aria-label={dict.site}>
+    <a className="brand" href={pagePath(lang)} aria-label={dict.site}>
       <span className="brand-mark"><img src="/hawali-logo-96.webp" alt="" /></span>
       <span className="brand-copy"><strong>{dict.site}</strong><small>{copy.brandTagline}</small></span>
     </a>
@@ -268,12 +256,12 @@ function MarketStrip({ markets, lang }) {
   const localCopy = localRateText[lang] || localRateText.en;
   return <section className="market-strip" id="markets" aria-label={copy.markets}>
     {selectMarketItems(markets).map(market => <div className="market-item" key={market.symbol}>
-      <span className="market-symbol">{market.symbol.replace('/USD', '')}</span>
+      <span className="market-symbol" title={market.name}>{market.symbol.replace('/USD', '')}{market.quoteType === 'futures' ? ' · Futures' : ''}</span>
       <span className="market-value">
-        <strong>{formatPrice(market.price)}</strong>
+        <strong>{formatPrice(market.price)}</strong><small>{dashboardCopy[lang][quoteState(market)]}</small>
         {market.marketKind === 'local'
           ? <small>{localCopy.erbil}</small>
-          : <small className={changeClass(market.changePct)}>{formatChange(market.changePct)}</small>}
+          : <small className={changeClass(market.changePct)}>{formatChange(market.changePct)}</small>}<small title={timestamp(market.updatedAt,lang)}>{market.updatedAt ? timestamp(market.updatedAt,lang) : dashboardCopy[lang].undated}</small>{safeUrl(market.sourceUrl) && <a href={safeUrl(market.sourceUrl)} target="_blank" rel="noreferrer">{market.source} ↗</a>}
       </span>
     </div>)}
     {!markets.length && Array.from({ length:7 }, (_, index) => <div className="market-item market-skeleton" key={index}><span>—</span><strong>—</strong></div>)}
@@ -304,34 +292,12 @@ function Hero({ item, lang, dict, onOpen }) {
     <div className="lead-overlay" />
     <div className="lead-copy">
       <span className="lead-label">{uiCopy[lang]?.lead || uiCopy.ku.lead}</span>
-      <h1>{translatedTitle(item, lang)}</h1>
+      <h2>{translatedTitle(item, lang)}</h2>
       <p>{translatedSummary(item, lang)}</p>
       <div className="hero-effects">{intel.effects?.slice(0, 4).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
-      <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span>{isNewStory(item) && <span className="fresh-pill">{uiCopy[lang]?.fresh}</span>}<span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
+      <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span>{isNewStory(item) && <span className="fresh-pill">{uiCopy[lang]?.fresh}</span>}<span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
     </div>
   </article>;
-}
-
-function LocalRatePanel({ markets, lang }) {
-  const copy = uiCopy[lang] || uiCopy.ku;
-  const places = localRateText[lang] || localRateText.en;
-  const local = markets.find(market => market.marketKind === 'local' || market.symbol === 'USD/IQD');
-  const rows = [
-    [places.erbil, local?.erbil?.sell || local?.erbil?.market || local?.erbil?.buy || local?.price],
-    [places.baghdad, local?.baghdad?.sell || local?.baghdad?.market || local?.baghdad?.buy || local?.price]
-  ];
-  return <section className="side-panel rate-panel">
-    <div className="panel-title"><h2>{copy.localDollar}</h2><span>{copy.live}</span></div>
-    {local ? <div className="rate-grid">{rows.map(([place, value]) => <div className="rate-box" key={place}><small>{place}</small><strong>{formatPrice(value)}</strong><span>{copy.sell100}</span></div>)}</div> : <p className="empty-note">{copy.noMarket}</p>}
-  </section>;
-}
-
-function CalendarPanel({ lang }) {
-  const copy = uiCopy[lang] || uiCopy.ku;
-  return <section className="side-panel calendar-panel">
-    <h2>{copy.calendar}</h2>
-    <div className="event-list">{calendarEvents[lang].map(([title, asset, impact]) => <div className="event-row" key={title}><span>{title}</span><small>{asset} • {impact === 'high' ? copy.high : copy.medium}</small></div>)}</div>
-  </section>;
 }
 
 function NewsCard({ item, lang, onOpen }) {
@@ -339,8 +305,8 @@ function NewsCard({ item, lang, onOpen }) {
   return <article className="story-card">
     <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={translatedTitle(item, lang)}><img src={item.image} alt="" loading="lazy" onError={imageFallback} /></button>
     <div className="story-copy">
-      <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}{timeAgo(item.publishedAt, lang)}</span></div>
-      <button className="story-title" type="button" onClick={() => onOpen(item)}>{translatedTitle(item, lang)}</button>
+      <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}<time dateTime={item.publishedAt}>{timestamp(item.publishedAt,lang)}</time></span></div>
+      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noreferrer">{dashboardCopy[lang].original} ↗</a><button className="story-title" type="button" onClick={() => onOpen(item)}>{translatedTitle(item, lang)}</button>
       <div className="card-effects">{intel.effects?.slice(0, 3).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
     </div>
   </article>;
@@ -394,7 +360,7 @@ function ArticleModal({ item, lang, dict, onClose }) {
     <div className="modal-image"><img src={item.image} alt="" onError={imageFallback} /></div>
     <div className="modal-content">
       <button className="modal-close" type="button" onClick={onClose} aria-label={uiCopy[lang]?.close}>×</button>
-      <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>•</span><span>{timeAgo(item.publishedAt, lang)}</span><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>
+      <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>
       <h2 id="modal-title">{translatedTitle(item, lang)}</h2>
       <h3>{copy.content}</h3><p className="article-body">{loadingBody ? copy.loadingContent : body || translatedSummary(item, lang)}</p>
       <h3>{copy.effects}</h3>
@@ -437,7 +403,7 @@ function SourcesDisclosure({ lang, news }) {
 
 function SiteFooter({ lang }) {
   const copy = developerCopy[lang] || developerCopy.en;
-  return <footer className="site-footer"><div><span>{copy.developedBy}</span><strong>{developer.name}</strong></div></footer>;
+  return <footer className="site-footer"><nav>{['home','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{dashboardCopy[lang][page]}</a>)}</nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong></div></footer>;
 }
 
 function MobileNav({ lang }) {
@@ -447,13 +413,13 @@ function MobileNav({ lang }) {
 }
 
 function App() {
-  const [lang, setLang] = useState(localStorage.getItem('lang') || 'ku');
+  const [lang, setLang] = useState(route.lang);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [active, setActive] = useState('all');
   const [query, setQuery] = useState('');
-  const [news, setNews] = useState(getInitialNews);
+  const [news, setNews] = useState(() => bootstrap.news?.length ? bootstrap.news : getInitialNews());
   const [loadingNews, setLoadingNews] = useState(true);
-  const [markets, setMarkets] = useState([]);
+  const [markets, setMarkets] = useState(bootstrap.markets || []);
   const [selected, setSelected] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const dict = t[lang] || t.ku;
@@ -462,7 +428,7 @@ function App() {
   const displayNews = translatedNews.length ? translatedNews : news;
 
   useEffect(() => {
-    document.documentElement.lang = lang;
+    document.documentElement.lang = lang === 'ku' ? 'ckb' : lang;
     document.documentElement.dir = LANGS[lang].dir;
     document.documentElement.dataset.theme = theme;
     localStorage.setItem('lang', lang);
@@ -507,19 +473,26 @@ function App() {
 
   return <div className="page" id="top">
     <div className="shell">
-      <Header lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} />
+      <Header lang={lang} setLang={next => { location.href = pagePath(next, route.page); }} theme={theme} setTheme={setTheme} query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} />
+      {route.page !== 'home' ? <AboutPage lang={lang} page={route.page}/> : <>
+      <section className="desk-intro"><p>{dashboardCopy[lang].subtitle}</p><h1>{dashboardCopy[lang].title}</h1></section>
+      <DollarRates markets={markets} lang={lang}/>
       <MarketStrip markets={markets} lang={lang} />
+      <MarketDesk markets={markets} lang={lang}/>
+      <DailyBrief items={displayNews} lang={lang}/>
       <BreakingBar items={displayNews} lang={lang} dict={dict} />
       <CategoryTabs active={active} setActive={setActive} lang={lang} />
       <TrustBar lang={lang} />
       {filtered.length ? <>
-        <section className="main-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected} /><aside className="home-side"><LocalRatePanel markets={markets} lang={lang} /><CalendarPanel lang={lang} /></aside></section>
+        <section className="main-grid"><Hero item={hero} lang={lang} dict={dict} onOpen={setSelected} /><aside className="home-side"><CalendarLinks lang={lang} /><InstallPanel lang={lang}/></aside></section>
         {(active === 'all' || active === 'geopolitics') && <MiddleEastBrief items={displayNews} lang={lang} onOpen={setSelected} />}
         <section className="latest-section" id="latest">
           <div className="section-heading"><h2>{copy.latest}</h2><span>{translating ? copy.translating : active === 'all' ? copy.allSections : categoryMap[lang]?.[active]}</span></div>
           {rest.length ? <div className="news-grid" aria-live="polite">{rest.map(item => <NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected} />)}</div> : <div className="empty-state">{dict.noResults}</div>}
         </section>
       </> : <div className="empty-state page-empty">{loadingNews ? copy.loadingNews : dict.noResults}</div>}
+      <div className="lower-tools"><RateWatch markets={markets} lang={lang}/>{!filtered.length && <><CalendarLinks lang={lang}/><InstallPanel lang={lang}/></>}</div>
+      </>}
       <SiteFooter lang={lang} />
     </div>
     <MobileNav lang={lang} />
@@ -537,6 +510,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20260805-direct-iran-us-v1', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20261008-market-desk', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }

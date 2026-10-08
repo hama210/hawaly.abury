@@ -1,6 +1,8 @@
 const googleNewsFeed = query => `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
 
 export const FEEDS = [
+  ['Oil Markets','oil',googleNewsFeed('site:reuters.com (oil OR Brent OR WTI OR OPEC) when:7d'),'major'],
+  ['Crypto Markets','crypto',googleNewsFeed('site:coindesk.com (bitcoin OR ethereum OR crypto) when:7d'),'specialist'],
   ['Reuters Markets','markets',googleNewsFeed('site:reuters.com (markets OR Federal Reserve OR inflation) (dollar OR gold OR silver OR Nasdaq OR Dow) when:7d'),'major'],
   ['Reuters Forex','forex',googleNewsFeed('site:reuters.com (EUR/USD OR GBP/USD OR euro OR sterling OR dollar) when:7d'),'major'],
   ['Reuters Metals','metals',googleNewsFeed('site:reuters.com (gold OR silver OR XAU OR XAG) markets when:7d'),'major'],
@@ -210,6 +212,8 @@ function isFreshNewsItem(item, now = Date.now(), maxAgeMs = NEWS_MAX_AGE_MS){
 function isRelevantToFeed(item, feed){
   const text = `${item.title} ${item.summary}`;
   if(feed.tier === 'curated' && feed.url.includes('news.google.com') && !TRUSTED_PUBLISHERS.test(item.source)) return false;
+  if(feed.category === 'oil') return /\b(oil|crude|opec|brent|wti)\b/i.test(text);
+  if(feed.category === 'crypto') return /\b(bitcoin|ethereum|crypto|btc|eth)\b/i.test(text);
   if(feed.category === 'iraq') return isIraqEconomy(item);
   if(feed.category === 'geopolitics'){
     if(feed.format === 'iran-us-direct'){

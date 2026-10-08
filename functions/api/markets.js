@@ -1,5 +1,10 @@
+import { quoteState } from '../../src/lib/market-tools.js';
+
 const SYMBOLS = [
-  { symbol: 'GC=F', pair: 'XAU/USD', name: 'Gold', type: 'commodity' },
+  { symbol: 'CL=F', pair: 'WTI/USD', name: 'WTI crude futures · barrel', type: 'commodity' },
+  { symbol: 'BZ=F', pair: 'BRENT/USD', name: 'Brent crude futures · barrel', type: 'commodity' },
+  { symbol: 'BTC-USD', pair: 'BTC/USD', name: 'Bitcoin', type: 'crypto' },
+  { symbol: 'GC=F', pair: 'XAU/USD', name: 'Gold futures · troy ounce', type: 'commodity' },
   { symbol: 'SI=F', pair: 'XAG/USD', name: 'Silver', type: 'commodity' },
   { symbol: 'EURUSD=X', pair: 'EUR/USD', name: 'Euro / Dollar', type: 'forex' },
   { symbol: 'GBPUSD=X', pair: 'GBP/USD', name: 'Pound / Dollar', type: 'forex' },
@@ -111,7 +116,7 @@ async function fetchYahoo(symbol) {
     const previous = Number(meta.previousClose ?? meta.chartPreviousClose ?? price);
     if (!Number.isFinite(price)) throw new Error('Yahoo Finance returned no price');
     const changePct = Number.isFinite(previous) && previous ? ((price - previous) / previous) * 100 : 0;
-    return { price, changePct };
+    return { price, changePct, updatedAt: Number.isFinite(meta.regularMarketTime) ? new Date(meta.regularMarketTime * 1000).toISOString() : null };
   });
 }
 
@@ -140,21 +145,26 @@ async function fetchShafaqUsdIqd() {
     }
 
     const baghdadMarket = extractNumber(description, /Baghdad(?:'s)?[^.]{0,260}?exchanges?\s+at\s*([\d,]{5,})\s*dinars/i);
-    const baghdadSell = extractNumber(description, /Iraqi capital[^.]{0,280}?sold the dollar at\s*([\d,]{5,})\s*dinars/i);
-    const baghdadBuy = extractNumber(description, /Iraqi capital[^.]{0,360}?bought it at\s*([\d,]{5,})\s*dinars/i);
-    const erbilSell = extractNumber(description, /Erbil[^.]{0,280}?selling\s+prices?\s*(?:stood\s*)?at\s*([\d,]{5,})\s*dinars/i);
-    const erbilBuy = extractNumber(description, /Erbil[^.]{0,360}?buying\s+prices?\s*(?:stood\s*)?at\s*([\d,]{5,})\s*dinars/i);
+    const baghdad = parseCityRate(description, 'baghdad');
+    const erbil = parseCityRate(description, 'erbil');
+    const baghdadSell = baghdad?.sell || null;
+    const baghdadBuy = baghdad?.buy || null;
+    const erbilSell = erbil?.sell || null;
+    const erbilBuy = erbil?.buy || null;
+    const sulaymaniyah = parseCityRate(description, 'sulaymaniyah');
     const previous = extractNumber(description, /(?:down|up)\s+from[^0-9]{0,100}([\d,]{5,})\s*dinars/i);
     const price = erbilSell || baghdadSell || baghdadMarket;
     if (!price) throw new Error('could not parse local USD/IQD price');
 
     const benchmark = baghdadMarket || price;
-    const changePct = previous ? round(((benchmark - previous) / previous) * 100, 2) : 0;
+    const changePct = previous ? round(((benchmark - previous) / previous) * 100, 2) : null;
     return {
       ...USD_IQD,
       price,
-      buyPrice: erbilBuy || baghdadBuy || null,
-      sellPrice: erbilSell || baghdadSell || price,
+      buyPrice: erbilSell ? erbilBuy : baghdadBuy,
+      sellPrice: erbilSell || baghdadSell || null,
+      quoteCity: erbilSell ? 'erbil' : 'baghdad',
+      sulaymaniyah,
       baghdad: baghdadSell || baghdadBuy || baghdadMarket
         ? { market: baghdadMarket, sell: baghdadSell, buy: baghdadBuy }
         : null,
@@ -199,7 +209,8 @@ async function fetchAlanChandUsdIqd() {
       status: 'neutral',
       source: 'AlanChand local market',
       sourceUrl,
-      updatedAt: new Date().toISOString()
+      updatedAt: null,
+      fetchedAt: new Date().toISOString()
     };
   });
 }
@@ -243,7 +254,8 @@ function unavailableItem(descriptor) {
 }
 
 function liveItem(item, now) {
-  return { ...item, dataStatus: 'live', lastLiveAt: now };
+  const state = quoteState(item);
+  return { ...item, dataStatus: state === 'reported' ? 'live' : state, fetchedAt: now, lastLiveAt: now };
 }
 
 function staleItem(item) {
@@ -252,7 +264,7 @@ function staleItem(item) {
 
 function cacheKeyFor(url, kind) {
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('__hawali_cache', `markets-${kind}-v3`);
+  cacheUrl.searchParams.set('__hawali_cache', `markets-${kind}-v4`);
   return new Request(cacheUrl.toString(), { method: 'GET' });
 }
 
@@ -299,6 +311,8 @@ export async function onRequest(context) {
       .map(item => [item.symbol, item])
   );
   const failures = [];
+  const localPromise = fetchUsdIqd(failures);
+  const cbiPromise = fetchCbi().catch(error => { failures.push({ symbol:'CBI USD/IQD', source:'CBI', error:errorMessage(error) }); return null; });
   const yahooResults = await Promise.all(SYMBOLS.map(async descriptor => {
     try {
       const quote = await fetchYahoo(descriptor.symbol);
@@ -310,7 +324,9 @@ export async function onRequest(context) {
         changePct: round(quote.changePct, 2),
         status: rateStatus(quote.changePct),
         source: 'Yahoo Finance',
-        updatedAt: now
+        updatedAt: quote.updatedAt,
+        sourceUrl: `https://finance.yahoo.com/quote/${encodeURIComponent(descriptor.symbol)}/`,
+        quoteType: descriptor.type === 'commodity' ? 'futures' : descriptor.type
       }, now);
     } catch (error) {
       failures.push({ symbol: descriptor.pair, source: 'Yahoo Finance', error: errorMessage(error) });
@@ -318,7 +334,7 @@ export async function onRequest(context) {
     }
   }));
 
-  const usdIqd = await fetchUsdIqd(failures);
+  const [usdIqd, cbi] = await Promise.all([localPromise, cbiPromise]);
   const descriptors = [...SYMBOLS.map((descriptor, index) => ({ descriptor, item: yahooResults[index] })), { descriptor: USD_IQD, item: usdIqd ? liveItem(usdIqd, now) : null }];
   const items = descriptors.map(({ descriptor, item }) => {
     if (item) return item;
@@ -331,13 +347,14 @@ export async function onRequest(context) {
       ...(descriptor.marketKind ? { marketKind: descriptor.marketKind, quoteAmount: descriptor.quoteAmount } : {})
     });
   });
+  items.push(cbi ? liveItem(cbi, now) : previousItems.has('CBI USD/IQD') ? staleItem(previousItems.get('CBI USD/IQD')) : unavailableItem({ symbol:'CBI USD/IQD', name:'CBI reference · 1 USD', marketKind:'official', quoteAmount:1 }));
   const usdIndex = items.findIndex(item => item.symbol === USD_IQD.symbol);
   if (usdIndex > 0) items.unshift(items.splice(usdIndex, 1)[0]);
 
   const liveCount = items.filter(item => item.dataStatus === 'live').length;
   const staleCount = items.filter(item => item.dataStatus === 'stale').length;
-  const unavailableCount = items.length - liveCount - staleCount;
-  const dataStatus = unavailableCount || staleCount ? (liveCount ? 'partial' : staleCount ? 'stale' : 'unavailable') : 'live';
+  const unavailableCount = items.filter(item => item.dataStatus === 'unavailable').length;
+  const dataStatus = unavailableCount || staleCount || items.some(item => item.dataStatus === 'undated') ? (liveCount ? 'partial' : staleCount ? 'stale' : 'unavailable') : 'live';
   if (failures.length) {
     console.warn(JSON.stringify({ event: 'market_sources_incomplete', failed: failures.length, failures }));
   }
@@ -345,7 +362,7 @@ export async function onRequest(context) {
   const payload = {
     updatedAt: now,
     dataStatus,
-    counts: { live: liveCount, stale: staleCount, unavailable: unavailableCount },
+    counts: { live: liveCount, stale: staleCount, unavailable: unavailableCount, undated:items.filter(item => item.dataStatus === 'undated').length },
     failures,
     items
   };
@@ -371,4 +388,38 @@ export async function onRequest(context) {
   }
 
   return response;
+}
+
+
+export function parseCityRate(text, city) {
+  const names = { erbil:'Erbil', baghdad:'Baghdad|Iraqi capital', sulaymaniyah:'Sulaymaniyah|Sulaimaniyah|Sulaimani|Sulaymaniya|Sulaimaniya' };
+  for (const match of text.matchAll(new RegExp(names[city], 'gi'))) {
+    const rest = text.slice(match.index + match[0].length);
+    const next = rest.search(/Erbil|Baghdad|Iraqi capital|Sulaymaniyah|Sulaimaniyah|Sulaimani|Sulaymaniya|Sulaimaniya/i);
+    const chunk = rest.slice(0, next < 0 ? 500 : next);
+    const sell = extractNumber(chunk, /(?:sell(?:ing)?|sold)[^.]{0,100}?([\d,]{5,})\s*(?:Iraqi )?dinars/i);
+    const buy = extractNumber(chunk, /(?:buy(?:ing)?|bought)[^.]{0,100}?([\d,]{5,})\s*(?:Iraqi )?dinars/i);
+    if (sell || buy) return {sell,buy};
+  }
+  return null;
+}
+export function parseCbiRate(html) {
+  const rows = html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/gi) || [];
+  for (const row of rows) {
+    const cells = [...row.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map(match => stripMarkup(match[1]));
+    const index = cells.findIndex(cell => cell === 'USD');
+    if (index < 0) continue;
+    const value = Number(cells[index + 1]?.replace(/,/g, ''));
+    if (value >= 500 && value <= 5000) return value;
+  }
+  throw new Error('CBI USD reference not found');
+}
+async function fetchCbi() {
+  return withTimeout(async signal => {
+    const sourceUrl = 'https://cbi.iq/';
+    const response = await fetch(sourceUrl, { signal, cf:{ cacheTtl:3600 } });
+    if (!response.ok) throw new Error(`CBI ${response.status}`);
+    const html = await readTextLimited(response);
+    return { symbol:'CBI USD/IQD', name:'CBI published reference · 1 USD', marketKind:'official', quoteAmount:1, price:parseCbiRate(html), changePct:null, source:'Central Bank of Iraq', sourceUrl, updatedAt:null };
+  });
 }

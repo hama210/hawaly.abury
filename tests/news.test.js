@@ -163,6 +163,12 @@ test('news parses current Treasury press releases from the official HTML listing
     const request = requestContext('https://example.com/api/news?mode=full&batch=1&limit=40')
     const response = await onRequest(request.context)
     const payload = await response.json()
+    for (let batch = 0; batch < payload.batchCount; batch++) {
+      const extra = requestContext(`https://example.com/api/news?mode=full&batch=${batch}&limit=40`)
+      const other = await (await onRequest(extra.context)).json()
+      await extra.settle()
+      payload.items.push(...other.items)
+    }
     await request.settle()
     assert.equal(response.status, 200)
     assert.equal(payload.items[0].source, 'US Treasury Sanctions')
@@ -191,6 +197,12 @@ test('news parses the official CENTCOM DVIDS feed without Google News or media-o
     const request = requestContext('https://example.com/api/news?mode=full&batch=0&limit=40')
     const response = await onRequest(request.context)
     const payload = await response.json()
+    for (let batch = 0; batch < payload.batchCount; batch++) {
+      const extra = requestContext(`https://example.com/api/news?mode=full&batch=${batch}&limit=40`)
+      const other = await (await onRequest(extra.context)).json()
+      await extra.settle()
+      payload.items.push(...other.items)
+    }
     await request.settle()
     const item = payload.items.find(entry => entry.source === 'CENTCOM Updates')
     assert.ok(item)
@@ -245,7 +257,9 @@ test('news category filters use explicit categories and affected assets', () => 
 
 test('news sources are curated around the focused markets and wars', () => {
   const names = FEEDS.map(feed => feed.source)
-  assert.ok(FEEDS.length < 45)
+  assert.ok(FEEDS.length < 50)
+  assert.ok(names.includes('Oil Markets'))
+  assert.ok(names.includes('Crypto Markets'))
   assert.ok(names.includes('Reuters Forex'))
   assert.ok(names.includes('Reuters Metals'))
   assert.ok(names.includes('Reuters US Indices'))

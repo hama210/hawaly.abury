@@ -14,6 +14,10 @@ const WAR_TERMS = /\b(war|conflict|attack|attacks|airstrike|airstrikes|strike|st
 
 export function matchesCategory(item, category) {
   if (category === 'all') return true;
+  const text = articleText(item);
+  if (category === 'oil') return /\b(oil|crude|opec|brent|wti|somo)\b|نەوت|نفط/.test(text);
+  if (category === 'crypto') return /\b(bitcoin|ethereum|crypto|btc|eth)\b|کریپتۆ|بیتکۆین|بيتكوين/.test(text);
+  if (category === 'kurdistan') return /\b(kurdistan|erbil|sulaimani|sulaymaniyah|duhok|krg)\b|کوردستان|هەولێر|سلێمانی|كردستان|أربيل|السليمانية/.test(text);
   const itemCategory = String(item?.category || '').toLowerCase();
   const assets = assetsFor(item);
   if (category === 'iraq') return itemCategory === 'iraq' || Boolean(item?.intelligence?.iraqImpact || item?.iraqImpact) || assets.has('USD/IQD');

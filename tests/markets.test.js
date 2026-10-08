@@ -4,7 +4,7 @@ import { onRequest } from '../functions/api/markets.js'
 import { MemoryCache, replaceGlobal, requestContext, silenceWarnings } from './helpers.js'
 
 function yahooPayload(){
-  return { chart: { result: [{ meta: { regularMarketPrice: 2500, previousClose: 2475 } }] } }
+  return { chart: { result: [{ meta: { regularMarketPrice: 2500, previousClose: 2475, regularMarketTime: Math.floor(Date.now()/1000) } }] } }
 }
 
 function shafaqFeed(){
@@ -21,6 +21,7 @@ test('markets use verified quotes, then mark last-known-good values stale when s
     if(!sourcesAreLive) return new Response('unavailable', { status: 503 })
     const address = String(url)
     if(address.includes('query1.finance.yahoo.com')) return Response.json(yahooPayload())
+    if(address.includes('cbi.iq')) return new Response('<table><tr><td>U.S. dollar</td><td>USD</td><td>1310.000</td></tr></table>');
     if(address.includes('shafaq.com')) return new Response(shafaqFeed(), { status: 200 })
     return new Response('unavailable', { status: 503 })
   })
@@ -36,9 +37,9 @@ test('markets use verified quotes, then mark last-known-good values stale when s
     assert.equal(usdLive.quoteAmount, 100)
     assert.equal(usdLive.dataStatus, 'live')
     assert.equal(usdLive.source, 'Shafaq News local market')
-    assert.ok(firstPayload.items.every(item => item.dataStatus === 'live'))
+    assert.ok(firstPayload.items.every(item => item.dataStatus === 'live' || item.marketKind === 'official' && item.dataStatus === 'undated'))
 
-    cache.deleteWhere('markets-fresh-v3')
+    cache.deleteWhere('markets-fresh-v4')
     sourcesAreLive = false
     const second = requestContext('https://example.com/api/markets')
     const secondResponse = await onRequest(second.context)
