@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
-import { DollarRates, MarketDesk, DailyBrief, CalendarLinks, AboutPage, InstallPanel, RateWatch } from './components/MarketDesk.jsx';
+import './hawal-features.css';
+import { DollarRates, MarketDesk, DailyBrief, CalendarLinks, AboutPage, InstallPanel } from './components/MarketDesk.jsx';
+import { MarketIntelligence, VerificationDesk, DollarHistory, MarketAlerts } from './components/HawalFeatures.jsx';
 import { dashboardCopy } from './lib/dashboard-copy.js';
 import { pageRoute, pagePath, timestamp, quoteState, safeUrl } from './lib/market-tools.js';
 const route = pageRoute(location.pathname);
@@ -486,7 +488,9 @@ function App() {
       <section className="desk-intro"><p>{dashboardCopy[lang].subtitle}</p><h1>{dashboardCopy[lang].title}</h1></section>
       <DollarRates markets={markets} lang={lang}/>
       <MarketStrip markets={markets} lang={lang} />
+      <section className="hawal-feature-grid" aria-label="Hawal market intelligence and verification"><MarketIntelligence markets={markets} news={displayNews} lang={lang}/><VerificationDesk news={displayNews} lang={lang}/></section>
       <MarketDesk markets={markets} lang={lang}/>
+      <section className="hawal-feature-grid" aria-label="Hawal dollar history and market alerts"><DollarHistory markets={markets} lang={lang}/><MarketAlerts markets={markets} news={displayNews} lang={lang}/></section>
       <DailyBrief items={displayNews} lang={lang}/>
       <BreakingBar items={displayNews} lang={lang} dict={dict} />
       <CategoryTabs active={active} setActive={setActive} lang={lang} />
@@ -499,7 +503,7 @@ function App() {
           {rest.length ? <div className="news-grid" aria-live="polite">{rest.map(item => <NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected} />)}</div> : <div className="empty-state">{dict.noResults}</div>}
         </section>
       </> : <div className="empty-state page-empty">{loadingNews ? copy.loadingNews : dict.noResults}</div>}
-      <div className="lower-tools"><RateWatch markets={markets} lang={lang}/>{!filtered.length && <><CalendarLinks lang={lang}/><InstallPanel lang={lang}/></>}</div>
+      <div className="lower-tools">{!filtered.length && <><CalendarLinks lang={lang}/><InstallPanel lang={lang}/></>}</div>
       </>}
       <SiteFooter lang={lang} />
     </div>
@@ -518,6 +522,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20261008-mobile-market-layout', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20261008-hawal-four-features', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }

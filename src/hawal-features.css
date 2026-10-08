@@ -1,0 +1,63 @@
+
+/* Hawal source-backed tools. A separate stylesheet prevents legacy dashboard overrides. */
+.hawal-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:12px 0 20px;align-items:stretch}
+.hawal-feature-grid>.hawal-feature{margin:0;min-width:0}
+.hawal-feature{min-width:0;overflow:hidden}
+.feature-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.feature-head h2{margin:2px 0 0;font-size:18px;line-height:1.6}
+.feature-kicker{color:var(--primary);font:700 10px Inter,sans-serif;letter-spacing:.12em;margin:0}
+.feature-icon{display:grid;place-items:center;flex:0 0 41px;height:41px;border-radius:12px;border:1px solid var(--line);color:var(--primary);font:700 21px Inter,sans-serif}
+.feature-icon.feature-on{color:var(--green);border-color:var(--green)}
+.feature-description{color:var(--muted);font-size:12px;line-height:1.95;margin:10px 0 16px}
+.feature-field{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1;font-size:12px;color:var(--muted);margin:9px 0}
+.feature-field select,.feature-field input,.feature-field textarea{width:100%;min-width:0;min-height:43px;background:var(--bg-soft);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline-offset:2px;font:inherit;font-size:13px}
+.feature-field textarea{resize:vertical;min-height:84px;line-height:1.65}
+.feature-field input[type=number]{direction:ltr;text-align:start}
+.feature-field select:focus,.feature-field input:focus,.feature-field textarea:focus{outline:2px solid var(--primary)}
+.feature-controls{display:flex;gap:12px;flex-wrap:wrap}
+.feature-controls .feature-field{min-width:135px}
+.option-row{display:flex;justify-content:space-between;gap:12px;margin:16px 0}
+.option-row label{display:flex;align-items:center;gap:8px;min-width:0;font-size:12px;line-height:1.5;color:var(--text)}
+.option-row input{width:17px;height:17px;accent-color:var(--primary)}
+.insight-quote{display:flex;justify-content:space-between;gap:16px;align-items:center;margin:16px 0;padding:15px;border:1px solid var(--line);background:var(--bg-soft);border-radius:13px}
+.insight-quote>div{display:flex;flex-direction:column;min-width:0;gap:6px}
+.insight-quote>div:last-child{text-align:end}
+.insight-quote span,.insight-quote small{font-size:11px;color:var(--muted)}
+.insight-quote strong{font:800 clamp(21px,3vw,28px) Inter,sans-serif;letter-spacing:-.02em}
+.insight-quote b{font:700 16px Inter,sans-serif}
+.hawal-feature h3{font-size:14px;margin:16px 0 7px}
+.feature-foot{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:10px;color:var(--muted);line-height:1.65;margin:8px 0;overflow-wrap:anywhere}
+.feature-foot a,.feature-article-list a,.alert-feed a,.feature-permission{color:var(--primary)}
+.feature-status{display:inline-flex;font-size:11px;color:var(--muted);line-height:1.6}
+.feature-status.on{color:var(--green)}
+.feature-status.caution{color:var(--red)}
+.feature-article-list{list-style:none;margin:10px 0;padding:0}
+.feature-article-list>li{border-bottom:1px solid var(--line);padding:10px 0;min-width:0;line-height:1.7}
+.feature-article-list>li:last-child{border:0}
+.feature-article-list a{display:block;font-size:12px;line-height:1.75;overflow-wrap:anywhere}
+.feature-article-list small{display:block;margin-top:5px;font-size:10px;color:var(--muted);overflow-wrap:anywhere}
+.feature-disclaimer{font-size:10px;line-height:1.9;color:var(--muted);border-top:1px dashed var(--line);margin:12px 0 0;padding-top:10px}
+.claim-form .primary-button,.feature-actions .primary-button{min-height:40px;border:0;padding:9px 15px;border-radius:10px;background:var(--primary);color:var(--primary-ink);font-weight:700;font-size:12px}
+.claim-form .primary-button:disabled,.feature-actions .primary-button:disabled{opacity:.45;cursor:not-allowed}
+.verification-badge{display:inline-block;max-width:100%;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:9px;line-height:1.5}
+.verification-badge.official{border-color:var(--green);color:var(--green)}
+.history-tabs{display:flex;gap:6px;margin:14px 0}
+.history-tabs button{border:1px solid var(--line);color:var(--muted);background:var(--bg-soft);border-radius:8px;min-height:36px;padding:6px 14px;font:700 11px Inter,sans-serif}
+.history-tabs button.selected{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+.history-chart{display:grid;place-items:center;min-height:180px;border:1px solid var(--line);border-radius:12px;background:var(--bg-soft);padding:9px;color:var(--muted)}
+.history-chart svg{display:block;width:100%;height:180px}
+.history-chart p{font-size:12px;line-height:1.9;padding:0 13px;text-align:center}
+.history-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.history-stats>div{min-width:0;border:1px solid var(--line);border-radius:9px;padding:9px;background:var(--bg-soft)}
+.history-stats small{display:block;font-size:10px;color:var(--muted);line-height:1.6}
+.history-stats b{display:block;font:700 13px Inter,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+.feature-actions{display:flex;align-items:center;flex-wrap:wrap;gap:11px;margin:12px 0}
+.feature-permission{display:block;background:transparent;border:0;padding:6px 0;text-decoration:underline;text-underline-offset:3px;text-align:start;font-size:11px;cursor:pointer}
+.alert-feed{display:grid;gap:9px;margin-top:10px}
+.alert-feed>p{font-size:11px;color:var(--muted)}
+.alert-entry{border:1px solid var(--line);background:var(--bg-soft);border-radius:9px;padding:10px;overflow-wrap:anywhere}
+.alert-entry b{font-size:12px}
+.alert-entry p{font-size:11px;line-height:1.6;margin:5px 0}
+.alert-entry a{font-size:10px}
+@media(max-width:850px){.hawal-feature-grid{grid-template-columns:1fr;gap:12px}}
+@media(max-width:520px){.hawal-feature-grid{margin:10px 0 14px}.hawal-feature{padding:14px}.feature-head h2{font-size:16px}.feature-controls{gap:8px}.history-stats b{font-size:11px}.insight-quote strong{font-size:21px}.feature-icon{width:36px;height:36px;flex-basis:36px}}
