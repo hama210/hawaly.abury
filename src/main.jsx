@@ -18,6 +18,7 @@ import { LANGS, t } from './utils/i18n.js';
 import { analyzeArticle, localizeSummary } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
 import { articleText, matchesCategory } from './utils/categories.js';
+import { articleSelection, storyExcerpt, readerCopy } from './lib/article-content.js';
 
 const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
 const categoryMap = {
@@ -309,7 +310,7 @@ function Hero({ item, lang, dict, onOpen }) {
     <div className="lead-copy">
       <span className="lead-label">{uiCopy[lang]?.lead || uiCopy.ku.lead}</span>
       <h2>{translatedTitle(item, lang)}</h2>
-      <p>{translatedSummary(item, lang)}</p>
+      {storyExcerpt(item, lang) && <p>{storyExcerpt(item, lang)}</p>}
       <div className="hero-effects">{intel.effects?.slice(0, 4).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
       <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span>{isNewStory(item) && <span className="fresh-pill">{uiCopy[lang]?.fresh}</span>}<span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
     </div>
@@ -323,14 +324,37 @@ function NewsCard({ item, lang, onOpen }) {
     <div className="story-copy">
       <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}<time dateTime={item.publishedAt}>{timestamp(item.publishedAt,lang)}</time></span></div>
       <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noreferrer">{dashboardCopy[lang].original} ↗</a><button className="story-title" type="button" onClick={() => onOpen(item)}>{translatedTitle(item, lang)}</button>
+      {storyExcerpt(item,lang) && <p className="story-excerpt">{storyExcerpt(item,lang)}</p>}
       <div className="card-effects">{intel.effects?.slice(0, 3).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
     </div>
   </article>;
 }
 
+function articleChunks(value, maxLength=580) {
+  const text=String(value||'').trim();
+  if(!text) return [];
+  const words=text.split(/\s+/u);
+  const chunks=[];
+  let line='';
+  for(const word of words) {
+    if (line && (line.length+word.length+1 > maxLength)) {
+      chunks.push(line);
+      line='';
+    }
+    if(word.length>maxLength) {
+      if(line) {chunks.push(line);line='';}
+      for(let i=0;i<word.length;i+=maxLength) chunks.push(word.slice(i,i+maxLength));
+    } else line+=(line?' ':'')+word;
+  }
+  if(line)chunks.push(line);
+  return chunks.slice(0,8);
+}
 function ArticleModal({ item, lang, dict, onClose }) {
   const [body, setBody] = useState('');
   const [loadingBody, setLoadingBody] = useState(false);
+  const reader = readerCopy[lang] || readerCopy.ku;
+  const selectedText = articleSelection(item,lang);
+  const sourceLink = safeUrl(item?.link);
   useEffect(() => {
     if (!item) return undefined;
     const handleKey = event => { if (event.key === 'Escape') onClose(); };
@@ -344,31 +368,32 @@ function ArticleModal({ item, lang, dict, onClose }) {
       setLoadingBody(false);
       return () => controller.abort();
     }
-    const original = String(item.contentEn || item.content || item.summaryEn || item.summary || '').trim();
-    const originalSummary = String(item.summaryEn || item.summary || '').trim();
-    const localizedSummary = translatedSummary(item, lang);
-    if (lang === 'en' || !original) {
-      setBody(original || localizedSummary);
+    const selected=articleSelection(item,lang);
+    setBody(selected.text);
+    if (!selected.isExtended || lang==='en' || !selected.original) {
       setLoadingBody(false);
       return () => controller.abort();
     }
-    if (original.length <= originalSummary.length + 60) {
-      setBody(localizedSummary);
+    const chunks=articleChunks(selected.original);
+    if (!chunks.length) {
       setLoadingBody(false);
       return () => controller.abort();
     }
-    setBody(localizedSummary);
     setLoadingBody(true);
     fetch('/api/translate', {
       method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify({ lang, texts:[original] }),
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({lang,texts:chunks}),
       signal:controller.signal
-    }).then(response => response.ok ? response.json() : Promise.reject()).then(data => {
-      if (!controller.signal.aborted && data.translated?.[0]) setBody(data.translated[0]);
-    }).catch(() => {}).finally(() => { if (!controller.signal.aborted) setLoadingBody(false); });
+    }).then(response => response.ok ? response.json() : Promise.reject())
+      .then(data => {
+        if (controller.signal.aborted) return;
+        if(data?.ok===false || !Array.isArray(data?.translated) || data.translated.length!==chunks.length) return;
+        const parts=data.translated.map(s=>String(s||'').trim());
+        if(parts.every((s,i)=>s && s!==chunks[i])) setBody(parts.join('\n\n'));
+      }).catch(()=>{}).finally(()=>{if(!controller.signal.aborted)setLoadingBody(false);});
     return () => controller.abort();
-  }, [item, lang]);
+  }, [item,lang]);
   if (!item) return null;
   const intel = focusedIntelligence(item);
   const copy = uiCopy[lang] || uiCopy.ku;
@@ -378,11 +403,16 @@ function ArticleModal({ item, lang, dict, onClose }) {
       <button className="modal-close" type="button" onClick={onClose} aria-label={uiCopy[lang]?.close}>×</button>
       <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>
       <h2 id="modal-title">{translatedTitle(item, lang)}</h2>
-      <h3>{copy.content}</h3><p className="article-body">{loadingBody ? copy.loadingContent : body || translatedSummary(item, lang)}</p>
+      <section className="article-reader" aria-label={copy.content}>
+        <div className="article-reader-heading"><h3>{selectedText.isAvailable ? (selectedText.isExtended ? reader.extended : reader.excerpt) : copy.content}</h3><span className={'article-availability '+(selectedText.isAvailable?'has-text':'title-only')}>{selectedText.isAvailable?'RSS':'—'}</span></div>
+        {selectedText.isAvailable ? <><p className="article-body">{body || selectedText.text}</p>{loadingBody && <p className="article-translation-status" role="status">{reader.translating}</p>}<p className="reader-note">{reader.notice}</p></> :
+          <p className="article-body article-missing">{reader.missing}</p>}
+        {sourceLink && <a className="reader-source-link" href={sourceLink} target="_blank" rel="noopener noreferrer">{reader.original} ↗</a>}
+      </section>
       <h3>{copy.effects}</h3>
       <div className="effect-grid">{intel.effects?.map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} detailed />)}</div>
       <p className="effect-notice">{copy.effectNotice}</p>
-      <div className="modal-actions"><a className="primary-button" href={item.link} target="_blank" rel="noreferrer">{dict.original} ↗</a><button type="button" onClick={() => copyLink(item.link)}>{dict.share}</button></div>
+      <div className="modal-actions">{sourceLink && <a className="primary-button" href={sourceLink} target="_blank" rel="noopener noreferrer">{reader.more} ↗</a>}<button type="button" onClick={() => copyLink(sourceLink || location.href)}>{dict.share}</button></div>
     </div>
   </article></div>;
 }
@@ -574,6 +604,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20261008-hawal-premium-mobile-ui', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20261008-hawal-news-reader-v1', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }

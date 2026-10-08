@@ -1,3 +1,5 @@
+import { meaningfulArticleText } from '../../src/lib/article-content.js';
+
 const googleNewsFeed = query => `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
 
 export const FEEDS = [
@@ -316,12 +318,14 @@ async function fetchFeed(feed, timeoutMs){
       const title = isGoogleFeed ? cleanGoogleTitle(rawTitle) : rawTitle;
       const link = extractLink(entry) || extractTag(entry,'guid') || extractTag(entry,'id') || feed.url;
       const description = extractTag(entry,'description') || extractTag(entry,'summary') || extractTag(entry,'content');
-      const content = (extractTag(entry,'content:encoded') || description).replace(/\s+/g, ' ').trim().slice(0, 1600);
-      const summary = (description || content).replace(/\s+/g, ' ').trim().slice(0, 900);
+      const syndicationText=extractTag(entry,'content:encoded') || extractTag(entry,'content') || description;
+      const content=meaningfulArticleText(syndicationText,title).slice(0,2400);
+      const summary=(meaningfulArticleText(description,title) || content).slice(0,1000);
+      const contentStatus=content.length > summary.length+65 ? 'rss-text' : summary ? 'excerpt' : 'headline-only';
       const publishedAt = extractTag(entry,'pubDate') || extractTag(entry,'published') || extractTag(entry,'updated') || extractTag(entry,'dc:date');
       const image = extractImage(entry) || fallbackImages[feed.category] || fallbackImages.markets;
       const source = isGoogleFeed ? sourceFromGoogleTitle(rawTitle, feed.source) : feed.source;
-      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image, displayMaxAgeDays: Number(feed.maxAgeDays) || 3 };
+      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, contentStatus, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image, displayMaxAgeDays: Number(feed.maxAgeDays) || 3 };
       const intel = analyze(base);
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact, conflictRegion: feed.category === 'geopolitics' ? conflictRegionFor(base) : null };
     }).filter(i=>i.title && (feed.format !== 'centcom-dvids' || i.link.includes('dvidshub.net/news/')))
@@ -354,7 +358,7 @@ async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'fresh-latest-v11-direct-iran-us');
+  cacheUrl.searchParams.set('version', 'fresh-latest-v12-article-reader');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
