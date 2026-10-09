@@ -21,6 +21,4 @@ import { articleText, matchesCategory } from './utils/categories.js';
 import { articleSelection, storyExcerpt, readerCopy } from './lib/article-content.js';
 import { imageForNews, coverForCategory } from './lib/news-images.js';
 
-// TEMPORARY STUB - will be replaced with full file
-console.error('main.jsx incomplete - restore from artifacts');
-createRoot(document.getElementById('root')).render(<div style={{padding:40,color:'#fff',background:'#020b19'}}>Build incomplete. Please merge after main.jsx is restored.</div>);
+const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
