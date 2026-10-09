@@ -1,7 +1,5 @@
 // Source images are optional; when absent or fragile, use a local illustrated category cover.
-const CATEGORIES = new Set([
-  'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics', 'markets'
-]);
+const CATEGORIES = new Set(['iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics', 'markets']);
 
 // Hosts that frequently block hotlinking / fail in production
 const FRAGILE_HOSTS = [
@@ -22,9 +20,9 @@ export function coverForCategory(category) {
 
 const unescapeHtml = value =>
   String(value || '')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&apos;|&#39;/gi, "'")
+    .replace(/&/gi, '&')
+    .replace(/"/gi, '"')
+    .replace(/'|&#39;/gi, "'")
     .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
     .replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number(decimal)));
 
