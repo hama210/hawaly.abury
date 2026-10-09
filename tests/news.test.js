@@ -257,7 +257,7 @@ test('news category filters use explicit categories and affected assets', () => 
 
 test('news sources are curated around the focused markets and wars', () => {
   const names = FEEDS.map(feed => feed.source)
-  assert.ok(FEEDS.length < 50)
+  assert.ok(FEEDS.length < 70)
   assert.ok(names.includes('Oil Markets'))
   assert.ok(names.includes('Crypto Markets'))
   assert.ok(names.includes('Reuters Forex'))
@@ -268,6 +268,9 @@ test('news sources are curated around the focused markets and wars', () => {
   assert.ok(names.includes('US Treasury Sanctions'))
   assert.ok(names.includes('Shafaq Economy'))
   assert.ok(names.includes('Reuters Global Conflict'))
+  for (const name of ['Trump White House','Trump Reuters','Trump Announcements','Saudi War Updates','Reuters Saudi War','CENTCOM Official News','Iraq Dollar Live','Iraq Dollar Reaction','Shafaq USD-IQD']) {
+    assert.ok(names.includes(name), name + ' feed missing');
+  }
   assert.ok(names.includes('Reuters Iran-US Conflict'))
   assert.ok(names.includes('Reuters Middle East Conflict'))
   assert.ok(names.includes('AP Middle East Conflict'))
@@ -320,3 +323,32 @@ test('Middle East conflict stories are classified without mixing in unrelated wa
   assert.equal(conflictRegionFor({ title:'Treasury sanctions Iranian airline network', summary:'Officials announced new financial restrictions' }), null)
   assert.equal(conflictRegionFor({ title:'Russia launches missiles at Ukraine', summary:'The war continues in Europe' }), null)
 })
+
+test('fast news fetch shows verified Trump, Saudi conflict and Iraq dollar headlines with source diagnostics', async () => {
+  const restoreCaches = replaceGlobal('caches', { default: new MemoryCache() });
+  const restoreWarn = silenceWarnings();
+  const published = new Date().toUTCString();
+  const googleItem = (title, link) => '<item><title>' + title + '</title><link>' + link + '</link><description>' + title + '</description><pubDate>' + published + '</pubDate></item>';
+  const restoreFetch = replaceGlobal('fetch', async url => {
+    const search = new URL(String(url)).searchParams.get('q') || '';
+    let item = '';
+    if (search.startsWith('site:reuters.com Trump')) item = googleItem('Trump discusses ceasefire with Iran and oil markets - Reuters', 'https://reuters.com/trump');
+    if (search.startsWith('(Saudi OR Riyadh')) item = googleItem('Saudi airport missile attacks by Houthis prompt flight cancellations - Associated Press', 'https://apnews.com/saudi');
+    if (search.startsWith('(Iraq OR Baghdad OR Erbil OR Kurdistan)')) item = googleItem('Iraq central bank dinar devaluation sparks dollar worries in Baghdad - Shafaq News', 'https://shafaq.com/dollar');
+    return item ? new Response('<rss><channel>' + item + '</channel></rss>', { status:200 }) : new Response('unavailable', { status:503 });
+  });
+  try {
+    const call = requestContext('https://example.com/api/news?mode=fast&limit=48&refresh=1');
+    const result = await (await onRequest(call.context)).json();
+    await call.settle();
+    assert.ok(result.items.some(item => item.sourceGroup === 'Trump Reuters'));
+    assert.ok(result.items.some(item => item.sourceGroup === 'Saudi War Updates'));
+    assert.ok(result.items.some(item => item.sourceGroup === 'Iraq Dollar Live'));
+    assert.ok(result.feedStats.sources.some(source => source.source === 'Iraq Dollar Live' && source.status === 'active'));
+    assert.ok(result.feedStats.sources.some(source => source.source === 'BBC War' && source.status === 'failed'));
+  } finally {
+    restoreFetch();
+    restoreWarn();
+    restoreCaches();
+  }
+});
