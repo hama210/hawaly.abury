@@ -380,3 +380,8 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
     font-size: 16px;
   }
 }
+
+/* Topic shortcuts: fast access to major stories without hiding other news sources. */
+.topic-shortcuts{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 20px}
+.topic-shortcuts button{cursor:pointer;background:var(--card, #10243c);color:var(--text, #e5edf8);border:1px solid rgba(115,162,209,.32);border-radius:999px;padding:10px 15px;font:inherit;font-size:.88rem;font-weight:700}
+.topic-shortcuts button:hover,.topic-shortcuts button[aria-pressed="true"]{border-color:#1685ff;background:rgba(22,133,255,.17)}
