@@ -23,3 +23,18 @@ test('rejects Arabic copy masquerading as Sorani, English copy and canned text',
 test('cleans model thinking or translation labels rather than showing those to readers',()=>{
   assert.equal(normalizeTranslation('<think>analysis</think>Translation: «نرخی دۆلار بەرز بووەوە»'),'نرخی دۆلار بەرز بووەوە');
 });
+
+test('critical names cannot disappear from a translated Iraq or Trump headline',()=>{
+  assert.equal(
+    translationQuality('Trump says Iran talks will continue','بایدن دەڵێت گفتوگۆکان بەردەوام دەبن','ku').reason,
+    'missing-important-name'
+  );
+  assert.equal(
+    translationQuality('Baghdad sees new dollar rules','ڕێسایەکی نوێی دۆلار دەردەچێت','ku').reason,
+    'missing-important-name'
+  );
+  assert.equal(
+    translationQuality('Trump speaks about Iran and Iraq','ترامپ لەبارەی ئێران و عێراقەوە قسە دەکات','ku').valid,
+    true
+  );
+});
