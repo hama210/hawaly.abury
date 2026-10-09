@@ -106,11 +106,16 @@ async function fetchBatch(batch, force) {
   return fetchPayload(`/api/news?mode=full&limit=${NEWS_LIMIT}&batch=${batch}`, force, 32000);
 }
 
-export async function fetchNews(onUpdate, { force = false } = {}) {
+// Hawal currently has three feed batches (22 feeds per batch). Launch all three
+// independently, so an unavailable first response never hides the other feeds.
+const MINIMUM_BATCH_COUNT = 3;
+
+export async function fetchNews(onUpdate, { force = false, onHealth } = {}) {
   const cached = readCachedNews();
   let fastItems = [];
   let fullItems = [];
   let latest = prepareNews(cached);
+  let discoveredBatchCount = MINIMUM_BATCH_COUNT;
 
   const publish = () => {
     latest = prepareNews(fullItems, mergeUnique(fastItems, cached));
@@ -118,31 +123,33 @@ export async function fetchNews(onUpdate, { force = false } = {}) {
     if (typeof onUpdate === 'function') onUpdate(latest);
   };
 
-  try {
-    const fast = await fetchPayload('/api/news?mode=fast&limit=48', force, 15000);
-    fastItems = Array.isArray(fast?.items) ? fast.items : [];
-    if (fastItems.length) publish();
+  const handle = (payload, mode) => {
+    if (!payload || !Array.isArray(payload.items)) return;
+    discoveredBatchCount = Math.max(discoveredBatchCount, Number(payload.batchCount) || 0);
+    if (typeof onHealth === 'function' && payload.feedStats) onHealth(payload.feedStats, mode, payload.batch);
+    if (!payload.items.length) return;
+    if (mode === 'fast') fastItems = mergeUnique(fastItems, payload.items);
+    else fullItems = mergeUnique(fullItems, payload.items);
+    publish();
+  };
 
-    const firstPayload = await fetchBatch(0, force);
-    const payloads = [firstPayload];
-    if (Array.isArray(firstPayload?.items) && firstPayload.items.length) {
-      fullItems = mergeUnique(fullItems, firstPayload.items);
-      publish();
-    }
-    const batchCount = Math.max(1, Number(firstPayload?.batchCount) || 1);
-    if (batchCount > 1) {
-      const remaining = Array.from({ length: batchCount - 1 }, (_, index) => index + 1);
-      payloads.push(...await Promise.all(remaining.map(async batch => {
-        const payload = await fetchBatch(batch, force);
-        if (Array.isArray(payload?.items) && payload.items.length) {
-          fullItems = mergeUnique(fullItems, payload.items);
-          publish();
-        }
-        return payload;
-      })));
-    }
-    return latest;
-  } catch {
-    return latest;
+  // Independent promises update the visible news immediately when any batch arrives.
+  const fastRequest = fetchPayload('/api/news?mode=fast&limit=48', force, 18000)
+    .then(payload => handle(payload, 'fast'));
+  const batchRequest = batch => fetchBatch(batch, force)
+    .then(payload => handle(payload, 'full'));
+
+  await Promise.allSettled([
+    fastRequest,
+    ...Array.from({ length: MINIMUM_BATCH_COUNT }, (_, batch) => batchRequest(batch))
+  ]);
+
+  // If the API grows beyond three batches, load the additional batches too.
+  if (discoveredBatchCount > MINIMUM_BATCH_COUNT) {
+    await Promise.allSettled(
+      Array.from({ length: Math.min(discoveredBatchCount, 12) - MINIMUM_BATCH_COUNT },
+        (_, index) => batchRequest(index + MINIMUM_BATCH_COUNT))
+    );
   }
+  return latest;
 }
