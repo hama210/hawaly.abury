@@ -204,7 +204,6 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
  .markets-screen .market-strip{grid-template-columns:1fr}
 }
 
-
 /* Article excerpts and honest publisher-provided reader state. */
 .story-excerpt{display:-webkit-box;overflow:hidden;margin:1px 0 0;color:var(--muted);font-size:11px;line-height:1.85;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow-wrap:anywhere}
 .article-reader{background:linear-gradient(155deg,var(--card-strong),var(--card));border:1px solid var(--line);border-radius:15px;padding:18px;margin:17px 0}
@@ -219,48 +218,131 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
 .reader-source-link:hover{background:var(--primary-strong)}
 @media(max-width:680px){.article-reader{padding:13px;margin:12px 0}.article-reader .article-body{font-size:13px;line-height:2.05}.story-excerpt{-webkit-line-clamp:2;font-size:10px}.story-copy{gap:5px}}
 
-/* ===== Iraq Market Desk — homepage hierarchy ===== */
+/* ===== VISIBLE UPDATE: Market Desk 6.1 ===== */
+.update-ribbon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #f0c14b 55%, var(--line));
+  background: linear-gradient(90deg,
+    color-mix(in srgb, #0ea5e9 22%, #08111f),
+    color-mix(in srgb, #f0c14b 18%, #0b1628) 55%,
+    color-mix(in srgb, #22c55e 14%, #08111f));
+  box-shadow: 0 0 0 1px color-mix(in srgb, #f0c14b 20%, transparent),
+              0 12px 40px color-mix(in srgb, #0ea5e9 18%, transparent);
+}
+.update-ribbon strong {
+  display: block;
+  color: #f8fafc;
+  font-size: clamp(14px, 2.2vw, 18px);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+.update-ribbon span {
+  display: block;
+  margin-top: 3px;
+  color: color-mix(in srgb, #f0c14b 85%, #fff);
+  font-size: 11px;
+  font-weight: 700;
+}
+.update-ribbon .badge {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #f0c14b;
+  color: #0b1220;
+  font: 900 11px/1 Inter, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .home-rate-board {
-  margin: 0;
+  margin: 0 0 16px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 2px solid color-mix(in srgb, #0ea5e9 45%, var(--line));
+  background:
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, #0ea5e9 16%, transparent), transparent 55%),
+    radial-gradient(100% 70% at 100% 0%, color-mix(in srgb, #f0c14b 12%, transparent), transparent 50%),
+    linear-gradient(165deg, #0a1424, #0d1a2e);
+  box-shadow: 0 18px 50px color-mix(in srgb, #000 45%, transparent);
 }
 .home-rate-board .dollar-panel {
   margin: 0;
-  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--line));
-  background: linear-gradient(160deg, var(--card-strong), var(--card));
-  box-shadow: var(--shadow);
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+.home-rate-board .desk-heading {
+  margin-bottom: 10px;
 }
 .home-rate-board .desk-heading h2 {
-  font-size: clamp(18px, 2.4vw, 24px);
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 900;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
+}
+.home-rate-board .desk-heading p,
+.home-rate-board .desk-heading span {
+  color: color-mix(in srgb, #0ea5e9 70%, #fff);
+  font-weight: 700;
+}
+.home-rate-board .dollar-grid {
+  gap: 10px;
+}
+.home-rate-board .dollar-card {
+  border: 1px solid color-mix(in srgb, #0ea5e9 28%, var(--line));
+  background: color-mix(in srgb, #08111f 70%, #0d1a2e);
+  border-radius: 14px;
+  padding: 12px 14px;
 }
 .home-rate-board .dollar-card > strong,
 .home-rate-board .dollar-card dd {
-  font-size: clamp(20px, 3vw, 28px);
+  font-size: clamp(22px, 3.4vw, 32px);
+  font-weight: 900;
+  color: #f0c14b;
   letter-spacing: -0.03em;
+}
+.home-rate-board .official-card {
+  border-color: color-mix(in srgb, #22c55e 40%, var(--line));
+}
+.home-rate-board .official-card strong,
+.home-rate-board .official-card dd {
+  color: #4ade80;
 }
 .home-rate-board .quote-status.unavailable {
   display: inline-block;
   margin-top: 6px;
-  padding: 4px 8px;
+  padding: 5px 10px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--muted) 12%, var(--card));
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 700;
+  background: color-mix(in srgb, #f59e0b 18%, #0b1220);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 800;
 }
 .home-rate-board .quote-status.reported {
-  color: var(--green);
+  color: #4ade80;
+  font-weight: 800;
 }
 .home-rate-board .quote-status.stale {
-  color: var(--red);
+  color: #fbbf24;
+  font-weight: 800;
 }
+
 .home-screen > .home-stage {
-  display: grid;
-  gap: 10px;
-}
-.home-screen > .home-stage .home-markets {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 4px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, #0ea5e9 18%, var(--line));
+  background: color-mix(in srgb, var(--card) 88%, #0ea5e9);
 }
 .home-feature-main--news-first {
+  margin-top: 6px;
   grid-template-columns: 1fr;
 }
 .story-image,
@@ -275,32 +357,26 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
     radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 55%),
     var(--muted-card);
 }
-.story-image img,
-.lead-story > img,
-.modal-image img {
-  background: transparent;
-}
+
 @media (max-width: 680px) {
+  .update-ribbon {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px;
+  }
   .home-rate-board {
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 40;
+    margin: 0 -4px 12px;
+    padding: 10px;
+    border-radius: 14px;
   }
-  .home-rate-board .dollar-panel {
-    border-radius: 0 0 14px 14px;
-    padding: 12px;
+  .home-rate-board .dollar-card > strong,
+  .home-rate-board .dollar-card dd {
+    font-size: 18px;
   }
-  .home-rate-board .desk-heading {
-    margin-bottom: 8px;
-  }
-  .home-rate-board .dollar-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-  }
-  .home-rate-board .official-card {
-    grid-column: 1 / -1;
-  }
-  .home-screen > .home-stage .home-markets {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .home-rate-board .desk-heading h2 {
+    font-size: 16px;
   }
 }
