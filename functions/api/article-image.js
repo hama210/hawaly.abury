@@ -4,7 +4,7 @@ const MAX_HTML_BYTES=256*1024;
 const MAX_IMAGE_BYTES=4*1024*1024;
 const CACHE_SECONDS=6*60*60;
 
-async function limitedBody(response,maxBytes){
+async function limitedBody(response,maxBytes,{truncate=false}={}){
   const declared=Number(response.headers.get('content-length')||0);
   if(declared>maxBytes)throw new Error('response too large');
   if(!response.body)throw new Error('missing response body');
@@ -13,14 +13,18 @@ async function limitedBody(response,maxBytes){
   for(;;){
     const {done,value}=await reader.read();
     if(done)break;
-    size+=value.byteLength;
-    if(size>maxBytes){
-      await reader.cancel('size limit');
+    if(size+value.byteLength>maxBytes){
+      if(!truncate)throw new Error('response body too large');
+      const remaining=Math.max(0,maxBytes-size);
+      if(remaining)chunks.push(value.subarray(0,remaining));
+      size+=remaining;
+      await reader.cancel('HTML snippet limit');
       break;
     }
+    size+=value.byteLength;
     chunks.push(value);
   }
-  const output=new Uint8Array(Math.min(size,maxBytes));
+  const output=new Uint8Array(size);
   let offset=0;
   for(const chunk of chunks){output.set(chunk,offset);offset+=chunk.length;}
   return output.subarray(0,offset);
@@ -55,7 +59,7 @@ export async function onRequest(context){
     if(!source.ok)throw new Error('publisher page unavailable');
     const type=source.headers.get('content-type')||'';
     if(type && !/html|xml/i.test(type))throw new Error('not article HTML');
-    const html=new TextDecoder().decode(await limitedBody(source,MAX_HTML_BYTES));
+    const html=new TextDecoder().decode(await limitedBody(source,MAX_HTML_BYTES,{truncate:true}));
     const picture=trustedRemoteImage(extractOpenGraphImage(html,article));
     if(!picture)throw new Error('no publisher image');
     const image=await fetch(picture,{
