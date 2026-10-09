@@ -1,14 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 const memory = new Map()
-const CACHE_PREFIX = 'hawali_translate_v5_'
-// Each article produces two Google Translate subrequests (title + summary).
-// Keep each Worker invocation below Cloudflare's subrequest ceiling.
-const ARTICLES_PER_REQUEST = 5
-// One client queue prevents an aborted language's Worker requests from
-// overwhelming Google when the user immediately selects another language.
-const REQUEST_CONCURRENCY = 1
-
+const CACHE_PREFIX = 'hawali_translate_v6_'
 function clean(value = ''){
   return String(value || '').replace(/\s+/g, ' ').trim()
 }
@@ -60,68 +53,52 @@ function translatedFields(item, lang, titleValue, summaryValue){
   return fields
 }
 
-async function translateList(items, lang, update, signal){
-  const output = items.map(item => ({
-    ...item,
-    titleEn: item.titleEn || item.title || '',
-    summaryEn: item.summaryEn || item.summary || ''
-  }))
-  const pending = []
-
-  output.forEach((item, index) => {
-    const key = itemKey(item, lang)
-    const saved = readSaved(key)
-    if(saved) output[index] = { ...item, ...saved }
-    else if ((lang === 'ku' ? (!item.titleKu || !item.summaryKu) : (!item.titleAr || !item.summaryAr)) && (item.titleEn || item.summaryEn)) pending.push({ index, item, key })
-  })
+// Translate headlines first to make the main news usable before summaries finish.
+async function translateList(items,lang,update,signal){
+  const output=items.map(item=>({...item,titleEn:item.titleEn||item.title||'',summaryEn:item.summaryEn||item.summary||''}))
+  const titles=[], summaries=[]
+  for(const [index,item] of output.entries()){
+    const key=itemKey(item,lang)
+    const saved=readSaved(key)
+    if(saved) output[index]={...item,...saved}
+    const titleField=lang==='ku'?'titleKu':'titleAr'
+    const summaryField=lang==='ku'?'summaryKu':'summaryAr'
+    if(!output[index][titleField] && clean(item.titleEn)) titles.push({index,item,key})
+    if(!output[index][summaryField] && clean(item.summaryEn)) summaries.push({index,item,key})
+  }
   update([...output])
 
-  async function translateBatch(batch){
-    const texts = batch.flatMap(({ item }) => [clean(item.titleEn), clean(item.summaryEn)])
-    const response = await fetch('/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lang, texts }),
-      signal
-    })
-    const data = await response.json().catch(() => ({}))
-    if(!response.ok || data.ok === false || !Array.isArray(data.translated) || data.translated.length !== texts.length){
-      throw new Error(data.error || 'Translation request failed')
-    }
-
-    batch.forEach(({ index, item, key }, batchIndex) => {
-      const fields = translatedFields(item, lang, data.translated[batchIndex * 2], data.translated[batchIndex * 2 + 1])
-      if(Object.keys(fields).length){
-        saveFields(key, fields)
-        output[index] = { ...output[index], ...fields }
-      }
+  async function requestBatch(batch,field){
+    const texts=batch.map(({item})=>clean(field==='title'?item.titleEn:item.summaryEn))
+    const response=await fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lang,texts}),signal})
+    const data=await response.json().catch(()=>({}))
+    if(!response.ok||data.ok===false||!Array.isArray(data.translated)||data.translated.length!==texts.length) throw new Error(data.error||'Translation unavailable')
+    batch.forEach(({index,key},offset)=>{
+      const value=usefulText(texts[offset],data.translated[offset])
+      if(!value||((lang==='ku'||lang==='ar')&&!/[\u0600-\u06FF]/u.test(value)))return
+      const fieldName=field==='title'?(lang==='ku'?'titleKu':'titleAr'):(lang==='ku'?'summaryKu':'summaryAr')
+      const fields={...(readSaved(key)||{}),[fieldName]:value}
+      saveFields(key,fields)
+      output[index]={...output[index],...fields}
     })
     update([...output])
+    return Array.isArray(data.sources)&&data.sources.every(status=>status==='unavailable'||status==='original')
   }
 
-  const batches = []
-  for(let offset = 0; offset < pending.length; offset += ARTICLES_PER_REQUEST){
-    batches.push(pending.slice(offset, offset + ARTICLES_PER_REQUEST))
-  }
-  let cursor = 0
-  async function run(){
-    while(cursor < batches.length && !signal.aborted){
-      const batch = batches[cursor++]
-      try{
-        await translateBatch(batch)
-      }catch(error){
-        if(signal.aborted || error?.name === 'AbortError') return
-        // A single bad/large article must not stop all later translations.
-        for(const entry of batch){
-          if(signal.aborted) return
-          try{ await translateBatch([entry]) }catch(retryError){
-            if(signal.aborted || retryError?.name === 'AbortError') return
-          }
-        }
+  async function phase(entries,field){
+    const batches=[]
+    for(let i=0;i<entries.length;i+=8)batches.push(entries.slice(i,i+8))
+    let index=0,unavailable=false
+    async function run(){
+      while(index<batches.length&&!unavailable&&!signal.aborted){
+        try{if(await requestBatch(batches[index++],field))unavailable=true}
+        catch(error){if(signal.aborted||error?.name==='AbortError')return;unavailable=true}
       }
     }
+    await Promise.all(Array.from({length:Math.min(3,batches.length)},run))
+    return !unavailable
   }
-  await Promise.all(Array.from({ length: Math.min(REQUEST_CONCURRENCY, batches.length) }, run))
+  if(await phase(titles,'title')) if(!signal.aborted)await phase(summaries,'summary')
 }
 
 export function useClientTranslator(news, lang){
