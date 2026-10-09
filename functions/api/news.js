@@ -90,7 +90,7 @@ const FAST_CACHE_TTL = 60;
 const FULL_CACHE_TTL = 120;
 const SOURCE_CACHE_TTL = 60;
 const MAX_FEED_BYTES = 768 * 1024;
-const NEWS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const NEWS_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 const NEWS_MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 const IRAQ_TERMS = /\b(iraq|iraqi|baghdad|kurdistan|erbil|sulaimani|sulaymaniyah|duhok|dohuk|basra|mosul|dinar|iqd|cbi|somo|rafidain|rasheed|krg)\b|central bank of iraq|iraq business/i;
 // Category cover images are served from Hawal itself so they're available without external CDNs.
@@ -345,11 +345,11 @@ async function fetchFeedAttempt(feed, timeoutMs){
       const publisherImage=extractNewsImage(entry,feed.url);
       const image=publisherImage || coverForCategory(feed.category);
       const source = isGoogleFeed ? sourceFromGoogleTitle(rawTitle, feed.source) : feed.source;
-      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, contentStatus, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image, imageSource:publisherImage ? 'publisher' : 'illustration', displayMaxAgeDays: Number(feed.maxAgeDays) || 7 };
+      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, contentStatus, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image, imageSource:publisherImage ? 'publisher' : 'illustration', displayMaxAgeDays: Number(feed.maxAgeDays) || 3 };
       const intel = analyze(base);
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact, conflictRegion: feed.category === 'geopolitics' ? conflictRegionFor(base) : null };
     }).filter(i=>i.title && (feed.format !== 'centcom-dvids' || i.link.includes('dvidshub.net/news/')))
-      .filter(i=>isFreshNewsItem(i, Date.now(), (Number(feed.maxAgeDays) || 7) * 24 * 60 * 60 * 1000))
+      .filter(i=>isFreshNewsItem(i, Date.now(), (Number(feed.maxAgeDays) || 3) * 24 * 60 * 60 * 1000))
       .filter(item=>isRelevantToFeed(item, feed));
     if(!items.length){
       return { source: feed.source, ok: false, items: [], durationMs: Date.now() - startedAt, error: 'no usable recent items' };
