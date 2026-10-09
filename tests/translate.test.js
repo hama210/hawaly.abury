@@ -25,7 +25,7 @@ test('translation batches work concurrently and reuse edge-cached text', async (
     await new Promise(resolve => setTimeout(resolve, 5))
     active -= 1
     const original = new URL(String(url)).searchParams.get('q')
-    return Response.json([[[`ترجمة ${original}`]]])
+    return Response.json([[[`تقرير اقتصادي عن الأسواق رقم ${original.match(/\d+$/)?.[0] ?? '0'}`]]])
   })
 
   try{
@@ -106,4 +106,38 @@ test('Cloudflare AI binding translates Sorani headlines without depending on blo
     assert.match(model,/qwen3-30b-a3b-fp8/);
     assert.match(prompt,/Central Kurdish \(Sorani\)/);
   }finally{restoreFetch();restoreCaches();}
+});
+
+test('invalid Sorani translations must not corrupt names, rates or the translation cache',async()=>{
+  const cache=new MemoryCache();
+  const restoreCaches=replaceGlobal('caches',{default:cache});
+  let googleCalls=0,alternateCalls=0;
+  const restore=replaceGlobal('fetch',async url=>{
+    const href=String(url);
+    if(href.includes('translate.googleapis.com')){
+      googleCalls++;
+      const params=new URL(href).searchParams;
+      assert.equal(params.get('sl'),'en');
+      assert.equal(params.get('tl'),'ckb');
+      return Response.json([[['وەزارەتی دارایی: دۆلار بۆ ١٥٢,٠٠٠ دینار بەرز دەبێتەوە']]]);
+    }
+    if(href.includes('mymemory.translated.net')){
+      alternateCalls++;
+      return Response.json({responseStatus:200,responseData:{translatedText:'دۆلار لە عێراق بۆ ١٥١,٠٠٠ دینار بەرز دەبێتەوە'}});
+    }
+    return new Response('unavailable',{status:503});
+  });
+  try{
+    const first=translationRequest(['Dollar rises to 151,000 dinars in Iraq'],{lang:'ku'});
+    const a=await (await onRequest(first.context)).json();
+    await first.settle();
+    assert.equal(a.sources[0],'alternate');
+    assert.match(a.translated[0],/١٥١,٠٠٠/);
+    assert.ok(!a.translated[0].includes('١٥٢,٠٠٠'));
+    const second=translationRequest(['Dollar rises to 151,000 dinars in Iraq'],{lang:'ku'});
+    const b=await (await onRequest(second.context)).json();
+    assert.equal(b.sources[0],'cache');
+    assert.equal(googleCalls,1);
+    assert.equal(alternateCalls,1);
+  }finally{restore();restoreCaches();}
 });
