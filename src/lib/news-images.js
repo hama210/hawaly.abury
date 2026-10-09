@@ -42,7 +42,7 @@ export function extractNewsImage(entry,feedUrl){
     ...matches(source,'media:thumbnail').filter(eligible).map(tag=>attr(tag,'url')),
     ...matches(source,'enclosure').filter(eligible).map(tag=>attr(tag,'url')),
     ...matches(source,'itunes:image').filter(eligible).map(tag=>attr(tag,'href')),
-    ...(source.match(/<image\\b[^>]*>[\\s\\S]*?<url[^>]*>([\\s\\S]*?)<\\/url>/i)?.slice(1,2)||[]),
+    ...(source.match(/<image\b[^>]*>[\s\S]*?<url[^>]*>([\s\S]*?)<\/url>/i)?.slice(1,2)||[]),
     ...matches(source,'img').filter(eligible).map(tag=>attr(tag,'src'))
   ];
   for(const candidate of urls){
