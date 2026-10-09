@@ -379,3 +379,33 @@ test('client continues loading later news batches when the first batch fails', a
     restoreFetch();
   }
 });
+
+test('a blocked original RSS retains the source via publisher-domain headlines', async () => {
+  const cache = replaceGlobal('caches', {default:new MemoryCache()});
+  const warnings = silenceWarnings();
+  let directAttempts = 0, fallbackAttempts = 0;
+  const fresh = new Date().toUTCString();
+  const restore = replaceGlobal('fetch',async url => {
+    const target = String(url);
+    if(target === 'https://feeds.bbci.co.uk/news/business/rss.xml'){
+      directAttempts++;
+      return new Response('blocked',{status:403});
+    }
+    if(target.includes('news.google.com/rss/search') && decodeURIComponent(target).includes('site:bbc.com')){
+      fallbackAttempts++;
+      return new Response('<rss><channel>'+rssItem('Fed inflation moves market shares - BBC News', 'The Federal Reserve affects economy and stock markets.', fresh)+'</channel></rss>',{status:200});
+    }
+    return new Response('unavailable',{status:503});
+  });
+  try{
+    const call=requestContext('https://example.com/api/news?mode=full&batch=0&refresh=1');
+    const data=await (await onRequest(call.context)).json();
+    await call.settle();
+    assert.ok(directAttempts);
+    assert.ok(fallbackAttempts);
+    const news=data.items.find(item=>item.sourceGroup==='BBC Business');
+    assert.ok(news);
+    assert.equal(news.source,'BBC News');
+    assert.ok(data.feedStats.sources.some(entry=>entry.source==='BBC Business'&&entry.via==='publisher-search'&&entry.status==='active'));
+  }finally{restore();warnings();cache();}
+});
