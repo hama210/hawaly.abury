@@ -1,5 +1,6 @@
-// Source images are optional; when absent, render a local illustrated category cover.
+// Source images are optional; when absent or fragile, use a local illustrated category cover.
 const CATEGORIES=new Set(['iraq','kurdistan','forex','metals','oil','crypto','indices','geopolitics','markets']);
+const FRAGILE_HOSTS=['images.mktw.net','media.shafaq.com','i.iranintl.com','ichef.bbci.co.uk','d1ldvf68ux039x.cloudfront.net','cdn.sanity.io','static.aljazeera.net','www.aljazeera.com'];
 export function coverForCategory(category) {
   const categoryKey=String(category||'').toLowerCase();
   return '/news-covers/'+(CATEGORIES.has(categoryKey)?categoryKey:'markets')+'.svg';
@@ -15,6 +16,7 @@ export function verifiedImageUrl(raw,baseUrl='') {
     const url=new URL(text,baseUrl||undefined);
     if(!['http:','https:'].includes(url.protocol)||!url.hostname||url.username||url.password) return '';
     if(/(?:favicon|tracking[-_]?pixel|blank\.gif|1x1)/i.test(url.pathname)) return '';
+    if(FRAGILE_HOSTS.some(h=>url.hostname===h||url.hostname.endsWith('.'+h))) return '';
     return url.href;
   }catch{return '';}
 }
