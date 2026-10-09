@@ -461,6 +461,19 @@ function SourcesDisclosure({ lang, news, sourceHealth = {} }) {
   </aside>;
 }
 
+function TranslationNotice({ lang, items, translating }) {
+  if(lang === 'en' || !items.length) return null;
+  const field=lang === 'ku' ? 'titleKu' : 'titleAr';
+  const translated=items.filter(item => Boolean(item[field])).length;
+  if(translated === items.length) return null;
+  const message=lang === 'ku'
+    ? (translating ? `وەرگێڕانی سەردێڕەکان: ${translated}/${items.length} — هەواڵەکان بەردەوام نوێ دەبنەوە.`
+      : `وەرگێڕان: ${translated}/${items.length}. ئەو سەردێڕانەی وەرنەگێڕدراون بە زمانی ڕەسەن پیشان دەدرێن.`)
+    : (translating ? `ترجمة العناوين: ${translated}/${items.length} — تستمر الأخبار في التحديث.`
+      : `الترجمة: ${translated}/${items.length}. العناوين التي لم تُترجم تظهر بلغتها الأصلية.`);
+  return <p className="translation-notice" role="status">{message}</p>;
+}
+
 function SiteFooter({ lang }) {
   const copy = developerCopy[lang] || developerCopy.en;
   return <footer className="site-footer"><nav>{['home','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{dashboardCopy[lang][page]}</a>)}</nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong></div></footer>;
@@ -569,6 +582,7 @@ function App() {
           </div>
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
+        <TranslationNotice lang={lang} items={displayNews} translating={translating}/>
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
           {rest.length ? <><div className="news-grid">{rest.slice(0, homeVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
