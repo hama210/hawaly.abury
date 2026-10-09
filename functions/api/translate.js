@@ -97,6 +97,26 @@ async function callMyMemory(original, lang){
   finally{clearTimeout(timeoutId);}
 }
 
+// Reliable optional translation backend: add a Cloudflare Workers AI binding
+// named AI to the Pages project. Without it, external providers remain in use.
+async function callWorkersAI(text,lang,ai){
+  if(!ai || typeof ai.run!=='function')return '';
+  const target=lang==='ku'?'Central Kurdish (Sorani), using Kurdish Arabic-script spelling':'Modern Standard Arabic';
+  const prompt='Translate this English news headline or summary into '+target+
+    '. Preserve all names, numbers, quotes, dates and facts accurately. '+
+    'Return ONLY the translation, no commentary or labels. Never add details not in the source. /no_think';
+  try{
+    const reply=await ai.run('@cf/qwen/qwen3-30b-a3b-fp8',{
+      messages:[{role:'system',content:prompt},{role:'user',content:text}],
+      max_tokens:430,temperature:0,stream:false,enable_thinking:false
+    });
+    const raw=String(reply?.response||reply?.choices?.[0]?.message?.content||'');
+    const translated=clean(raw.replace(/<think>[\\s\\S]*?<\\/think>/gi,'').replace(/^["“”']|["“”']$/g,''));
+    if(translated.length>Math.max(240,text.length*4))return '';
+    return isUsefulTranslation(text,translated)&&isScriptAppropriate(translated,lang)?translated:'';
+  }catch{return '';}
+}
+
 async function digest(value){
   const bytes = new TextEncoder().encode(value);
   const hash = await crypto.subtle.digest('SHA-256', bytes);
@@ -120,7 +140,7 @@ async function readCachedTranslation(cache, key){
   }
 }
 
-async function translateOne(text, targets, lang, request, cache, cacheWrites){
+async function translateOne(text, targets, lang, request, cache, cacheWrites, ai){
   const original = clean(text);
   if(!original) return { translated: '', source: 'empty' };
   if(lang === 'en') return { translated: original, source: 'original' };
@@ -128,6 +148,14 @@ async function translateOne(text, targets, lang, request, cache, cacheWrites){
   const cacheKey = cache ? await translationCacheKey(request, lang, original) : null;
   const cached = cacheKey ? await readCachedTranslation(cache, cacheKey) : '';
   if(cached) return { translated: cached, source: 'cache' };
+
+  const generated=await callWorkersAI(original,lang,ai);
+  if(generated){
+    if(cache && cacheKey) cacheWrites.push(cache.put(cacheKey,Response.json({translated:generated},{
+      headers:{'Cache-Control':`public, max-age=${TRANSLATION_CACHE_TTL}`}
+    })));
+    return {translated:generated,source:'workers-ai'};
+  }
 
   for(const target of targets){
     try{
@@ -195,7 +223,7 @@ export async function onRequest(context){
     const texts = body.texts.map(clean);
     const cache = globalThis.caches?.default;
     const cacheWrites = [];
-    const results = await mapWithConcurrency(texts, TRANSLATE_CONCURRENCY, text => translateOne(text, TARGETS[lang], lang, request, cache, cacheWrites));
+    const results = await mapWithConcurrency(texts, TRANSLATE_CONCURRENCY, text => translateOne(text, TARGETS[lang], lang, request, cache, cacheWrites, context.env?.AI));
     if(cacheWrites.length){
       const write = Promise.all(cacheWrites).catch(error => {
         console.warn(JSON.stringify({ event: 'translation_cache_write_failed', error: errorMessage(error) }));
