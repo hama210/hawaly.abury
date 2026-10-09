@@ -51,5 +51,14 @@ test('mobile design matches navy-blue screenshot while supporting narrow and RTL
   assert.match(css,/@media\(max-width:370px\)/);
   assert.match(css,/\.pulse-card strong\{[^}]*overflow:hidden/);
   assert.match(css,/\[data-theme="light"\]/);
-  assert.match(sw,/v28-news-images/);
+  assert.match(sw,/v29-news-feed/);
+});
+
+test('the actual homepage renders more than four news cards and mobile grid stays readable',()=>{
+  assert.doesNotMatch(main,/rest\.slice\(0,4\)/);
+  assert.match(main,/rest\.slice\(0,\s*homeVisibleCount\)/);
+  assert.match(main,/setHomeVisibleCount/);
+  assert.match(main,/filtered\.slice\(0,\s*newsVisibleCount\)/);
+  assert.match(css,/\.home-news \.news-grid,\.news-screen \.news-grid/);
+  assert.match(css,/grid-template-columns:minmax\(0,1fr\)!important/);
 });
