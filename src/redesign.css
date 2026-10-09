@@ -218,3 +218,89 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
 .reader-source-link{display:flex;align-items:center;justify-content:center;min-height:46px;margin-top:17px;padding:10px 15px;border:1px solid var(--primary);border-radius:10px;color:#fff;background:var(--primary);font-size:12px;font-weight:800;line-height:1.6;text-align:center}
 .reader-source-link:hover{background:var(--primary-strong)}
 @media(max-width:680px){.article-reader{padding:13px;margin:12px 0}.article-reader .article-body{font-size:13px;line-height:2.05}.story-excerpt{-webkit-line-clamp:2;font-size:10px}.story-copy{gap:5px}}
+
+/* ===== Iraq Market Desk — homepage hierarchy ===== */
+.home-rate-board {
+  margin: 0;
+}
+.home-rate-board .dollar-panel {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--line));
+  background: linear-gradient(160deg, var(--card-strong), var(--card));
+  box-shadow: var(--shadow);
+}
+.home-rate-board .desk-heading h2 {
+  font-size: clamp(18px, 2.4vw, 24px);
+}
+.home-rate-board .dollar-card > strong,
+.home-rate-board .dollar-card dd {
+  font-size: clamp(20px, 3vw, 28px);
+  letter-spacing: -0.03em;
+}
+.home-rate-board .quote-status.unavailable {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--muted) 12%, var(--card));
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.home-rate-board .quote-status.reported {
+  color: var(--green);
+}
+.home-rate-board .quote-status.stale {
+  color: var(--red);
+}
+.home-screen > .home-stage {
+  display: grid;
+  gap: 10px;
+}
+.home-screen > .home-stage .home-markets {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.home-feature-main--news-first {
+  grid-template-columns: 1fr;
+}
+.story-image,
+.lead-story,
+.modal-image {
+  background: linear-gradient(145deg, var(--muted-card), var(--card-strong));
+}
+.story-image.img-failed,
+.lead-story.img-failed,
+.modal-image.img-failed {
+  background:
+    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 55%),
+    var(--muted-card);
+}
+.story-image img,
+.lead-story > img,
+.modal-image img {
+  background: transparent;
+}
+@media (max-width: 680px) {
+  .home-rate-board {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  .home-rate-board .dollar-panel {
+    border-radius: 0 0 14px 14px;
+    padding: 12px;
+  }
+  .home-rate-board .desk-heading {
+    margin-bottom: 8px;
+  }
+  .home-rate-board .dollar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .home-rate-board .official-card {
+    grid-column: 1 / -1;
+  }
+  .home-screen > .home-stage .home-markets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
