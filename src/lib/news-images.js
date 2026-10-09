@@ -114,7 +114,13 @@ export function imageForNews(item){
   const url=verifiedImageUrl(item?.image);
   if(url)return isProxyableNewsImage(url) ? '/api/news-image?src='+encodeURIComponent(url) : url;
   const article=trustedArticleUrl(item?.link);
-  if(article && item?.imageSource==='illustration')
-    return '/api/article-image?article='+encodeURIComponent(article)+'&category='+encodeURIComponent(item?.category||'markets');
+  let google=false;
+  try{
+    const link=new URL(item?.link);
+    google=link.protocol==='https:' && link.hostname==='news.google.com' &&
+      /^\/(?:rss\/)?(?:articles|read)\/[A-Za-z0-9_-]{12,1500}$/.test(link.pathname);
+  }catch{}
+  if((article||google) && item?.imageSource==='illustration')
+    return '/api/article-image?article='+encodeURIComponent(article||item.link)+'&category='+encodeURIComponent(item?.category||'markets');
   return coverForCategory(item?.category);
 }
