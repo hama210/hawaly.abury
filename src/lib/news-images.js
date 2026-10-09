@@ -77,8 +77,44 @@ export function extractOpenGraphImage(html, articleUrl){
   }
   return '';
 }
+const ARTICLE_PUBLISHERS=[
+  'bbc.com','bbc.co.uk','cnbc.com','marketwatch.com','theguardian.com',
+  'aljazeera.com','shafaq.com','rudaw.net','kurdistan24.net','reuters.com',
+  'apnews.com','dw.com','euronews.com','ft.com','npr.org','nbcnews.com',
+  'cbsnews.com','iranintl.com','fxstreet.com','forexlive.com','coindesk.com',
+  'iraq-businessnews.com','ina.iq','dvidshub.net','federalreserve.gov',
+  'ecb.europa.eu','bankofengland.co.uk','bea.gov','bls.gov','treasury.gov','cbi.iq'
+];
+export function trustedArticleUrl(raw){
+  try{
+    const url=new URL(raw);
+    if(url.protocol!=='https:' || url.username || url.password || url.port) return '';
+    const hostname=url.hostname.toLowerCase();
+    if(!ARTICLE_PUBLISHERS.some(domain=>hostname===domain||hostname.endsWith('.'+domain)))return '';
+    return url.href;
+  }catch{return '';}
+}
+const IMAGE_CDN_DOMAINS=[
+  ...IMAGE_PROXY_HOSTS,
+  'images.unsplash.com','cdn.cnn.com','media.cnn.com','assets.bwbx.io',
+  'cloudfront.net','akamaihd.net','wp.com','bbci.co.uk','aljazeera.com',
+  'theguardian.com','shafaq.com','reuters.com','apnews.com','euronews.com',
+  'npr.org','cnbc.com','ft.com','marketwatch.com','coindesk.com',
+  'rudaw.net','kurdistan24.net','fxstreet.com','forexlive.com','dw.com',
+  'dvidshub.net','iranintl.com','ina.iq'
+];
+export function trustedRemoteImage(raw){
+  const url=verifiedImageUrl(raw);
+  if(!url)return '';
+  const hostname=new URL(url).hostname.toLowerCase();
+  return IMAGE_CDN_DOMAINS.some(domain=>hostname===domain||hostname.endsWith('.'+domain)) ? url : '';
+}
+
 export function imageForNews(item){
   const url=verifiedImageUrl(item?.image);
-  if(!url)return coverForCategory(item?.category);
-  return isProxyableNewsImage(url) ? '/api/news-image?src='+encodeURIComponent(url) : url;
+  if(url)return isProxyableNewsImage(url) ? '/api/news-image?src='+encodeURIComponent(url) : url;
+  const article=trustedArticleUrl(item?.link);
+  if(article && item?.imageSource==='illustration')
+    return '/api/article-image?article='+encodeURIComponent(article)+'&category='+encodeURIComponent(item?.category||'markets');
+  return coverForCategory(item?.category);
 }
