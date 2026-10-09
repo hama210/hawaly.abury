@@ -1,5 +1,5 @@
 const TARGETS = {
-  ku: ['ckb', 'ku'],
+  ku: ['ckb'],
   ar: ['ar'],
   en: ['en']
 };
@@ -8,7 +8,7 @@ const MAX_BODY_BYTES = 64 * 1024;
 // subrequests. Ten texts remains safely below the per-invocation limit.
 const MAX_TEXTS = 10;
 const TRANSLATE_CONCURRENCY = 6;
-const TRANSLATE_TIMEOUT_MS = 5000;
+const TRANSLATE_TIMEOUT_MS = 4500;
 const TRANSLATION_CACHE_TTL = 7 * 24 * 60 * 60;
 
 function clean(value = ''){
@@ -24,35 +24,11 @@ function isUsefulTranslation(original, translated){
   return Boolean(output) && comparable(output) !== comparable(original);
 }
 
-const FALLBACKS = {
-  ku: [
-    { test: /central[- ]?bank messaging|major currency pairs/i, text: 'نامەکانی بانکی ناوەندی دەتوانن کاریگەری لەسەر دۆلار، زێڕ و هاوتاکانی دراو دروست بکەن.' },
-    { test: /depends heavily on oil revenue|export or price changes/i, text: 'چونکە عێراق زۆر پشت بە داهاتی نەوت دەبەستێت، گۆڕانی هەناردە یان نرخ کاریگەریی ئابووری هەیە.' },
-    { test: /market[- ]?moving update|trusted sources/i, text: 'نوێکارییەکی کاریگەر لە بازاڕەکان لە سەرچاوە باوەڕپێکراوەکان.' },
-    { test: /federal reserve|interest rates?|central bank|fed\b|inflation|cpi/i, text: 'فیدڕاڵ ڕیزێرڤ نیشانەی ڕێبازێکی بەئاگاداری لەسەر نرخی سوود دەدات.' },
-    { test: /kurdistan region|erbil|sulaimani|duhok/i, text: 'هەواڵەکانی هەرێمی کوردستان لە هەولێر، سلێمانی و دهۆک چاودێری دەکرێن.' },
-    { test: /iraq|baghdad|dinar|cbi|budget|banking|iraqi/i, text: 'ئابووری عێراق سەرنجی لەسەر بودجە، بانکداری، دینار و داهاتی نەوتە.' },
-    { test: /oil|opec|brent|wti|crude|energy|pipeline/i, text: 'نرخی نەوت چاودێری مەترسییەکانی ڕۆژهەڵاتی ناوەڕاست و نیشانەکانی دابینکردنی ئۆپێک دەکات.' },
-    { test: /bitcoin|crypto|etf|coindesk/i, text: 'بازرگانانی بیتکۆین چاودێری هەستی ڕیسک و ڕەوتی ETF دەکەن.' },
-    { test: /trump|tariff|white house|geopolitic/i, text: 'سیاسەت و باجە بازرگانییەکانی ئەمریکا کاریگەری لەسەر بازاڕە جیهانییەکان دەهێڵن.' }
-  ],
-  ar: [
-    { test: /central[- ]?bank messaging|major currency pairs/i, text: 'قد تؤثر رسائل البنوك المركزية مباشرة في الدولار والذهب وأزواج العملات الرئيسية.' },
-    { test: /depends heavily on oil revenue|export or price changes/i, text: 'لأن العراق يعتمد كثيراً على إيرادات النفط، فإن تغير الصادرات أو الأسعار مهم اقتصادياً.' },
-    { test: /market[- ]?moving update|trusted sources/i, text: 'تحديث مؤثر في الأسواق من مصادر موثوقة.' },
-    { test: /federal reserve|interest rates?|central bank|fed\b|inflation|cpi/i, text: 'يشير الاحتياطي الفيدرالي إلى نهج حذر بشأن أسعار الفائدة.' },
-    { test: /kurdistan region|erbil|sulaimani|duhok/i, text: 'تتم متابعة أخبار إقليم كردستان من أربيل والسليمانية ودهوك.' },
-    { test: /iraq|baghdad|dinar|cbi|budget|banking|iraqi/i, text: 'يتجه تركيز اقتصاد العراق إلى الموازنة والمصارف والدينار وإيرادات النفط.' },
-    { test: /oil|opec|brent|wti|crude|energy|pipeline/i, text: 'تراقب أسعار النفط مخاطر الشرق الأوسط وإشارات إمدادات أوبك.' },
-    { test: /bitcoin|crypto|etf|coindesk/i, text: 'يراقب متداولو بيتكوين معنويات المخاطر وتدفقات صناديق ETF.' },
-    { test: /trump|tariff|white house|geopolitic/i, text: 'تؤثر السياسة والرسوم التجارية الأميركية في الأسواق العالمية.' }
-  ]
-};
-
-function fallbackTranslate(text, lang){
-  const original = clean(text);
-  const options = FALLBACKS[lang] || [];
-  return options.find(item => item.test.test(original))?.text || original;
+// Do not replace a publisher's real headline with an unrelated canned sentence.
+// If every provider is unavailable, leave the original text intact and mark it unavailable.
+function isScriptAppropriate(text, lang){
+  if(lang === 'ku' || lang === 'ar') return /[\u0600-\u06FF]/u.test(text);
+  return true;
 }
 
 function responseHeaders(request){
@@ -100,6 +76,27 @@ async function callGoogle(text, target){
   }
 }
 
+// Secondary translation source when Google is blocked or times out at the edge.
+// Public MyMemory access is rate-limited; never assume translation succeeded.
+async function callMyMemory(original, lang){
+  if(new TextEncoder().encode(original).length > 480) return '';
+  const target = lang === 'ku' ? 'ckb-IQ' : 'ar';
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort('alternate translation timeout'), 3500);
+  try{
+    const url = 'https://api.mymemory.translated.net/get?q=' +
+      encodeURIComponent(original) + '&langpair=' + encodeURIComponent('en|' + target);
+    const response = await fetch(url, {signal:controller.signal,headers:{'Accept':'application/json'}});
+    if(!response.ok) return '';
+    const payload = await response.json();
+    if(Number(payload?.responseStatus) !== 200) return '';
+    const translated = clean(payload?.responseData?.translatedText || '');
+    if(/MYMEMORY WARNING|TRANSLATED\.NET|QUOTA EXCEEDED/i.test(translated)) return '';
+    return isUsefulTranslation(original,translated) && isScriptAppropriate(translated,lang) ? translated : '';
+  }catch{return '';}
+  finally{clearTimeout(timeoutId);}
+}
+
 async function digest(value){
   const bytes = new TextEncoder().encode(value);
   const hash = await crypto.subtle.digest('SHA-256', bytes);
@@ -135,7 +132,7 @@ async function translateOne(text, targets, lang, request, cache, cacheWrites){
   for(const target of targets){
     try{
       const translated = await callGoogle(original, target);
-      if(isUsefulTranslation(original, translated)){
+      if(isUsefulTranslation(original, translated) && isScriptAppropriate(translated, lang)){
         if(cache && cacheKey){
           cacheWrites.push(cache.put(cacheKey, Response.json({ translated }, {
             headers: { 'Cache-Control': `public, max-age=${TRANSLATION_CACHE_TTL}` }
@@ -146,8 +143,14 @@ async function translateOne(text, targets, lang, request, cache, cacheWrites){
     }catch{}
   }
 
-  const fallback = fallbackTranslate(original, lang);
-  return { translated: fallback, source: fallback === original ? 'original' : 'fallback' };
+  const alternate = await callMyMemory(original, lang);
+  if(alternate){
+    if(cache && cacheKey) cacheWrites.push(cache.put(cacheKey, Response.json({ translated: alternate }, {
+      headers:{ 'Cache-Control': `public, max-age=${TRANSLATION_CACHE_TTL}` }
+    })));
+    return { translated:alternate, source:'alternate' };
+  }
+  return { translated:original, source:'unavailable' };
 }
 
 async function mapWithConcurrency(values, concurrency, mapper){
