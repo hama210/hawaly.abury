@@ -482,6 +482,8 @@ function App() {
     }));
   };
   const [loadingNews, setLoadingNews] = useState(true);
+  const [homeVisibleCount, setHomeVisibleCount] = useState(24);
+  const [newsVisibleCount, setNewsVisibleCount] = useState(36);
   const [markets, setMarkets] = useState(bootstrap.markets || []);
   const [selected, setSelected] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -569,7 +571,8 @@ function App() {
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
-          {rest.length ? <div className="news-grid">{rest.slice(0,4).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div> :
+          {rest.length ? <><div className="news-grid">{rest.slice(0, homeVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
+            {rest.length > homeVisibleCount && <button className="news-load-more" onClick={() => setHomeVisibleCount(value => value + 24)}>{lang==='ku' ? 'هەواڵی زیاتر پیشان بدە' : lang==='ar' ? 'عرض المزيد من الأخبار' : 'Show more news'} ({rest.length - homeVisibleCount})</button>}</> :
             <div className="empty-state">{loadingNews?copy.loadingNews:dict.noResults}</div>}
         </section>
         {(active==='all'||active==='geopolitics') && <MiddleEastBrief items={displayNews} lang={lang} onOpen={setSelected}/>}
@@ -600,7 +603,8 @@ function App() {
         </div>
         <section className="latest-section" id="latest">
           <div className="section-heading"><h2>{copy.latest}</h2><span>{translating?copy.translating:active==='all'?copy.allSections:categoryMap[lang]?.[active]}</span></div>
-          {filtered.length ? <div className="news-grid" aria-live="polite">{filtered.map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div> :
+          {filtered.length ? <><div className="news-grid" aria-live="polite">{filtered.slice(0, newsVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
+            {filtered.length > newsVisibleCount && <button className="news-load-more" onClick={() => setNewsVisibleCount(value => value + 36)}>{lang==='ku' ? 'هەواڵی زیاتر پیشان بدە' : lang==='ar' ? 'عرض المزيد من الأخبار' : 'Show more news'} ({filtered.length - newsVisibleCount})</button>}</> :
             <div className="empty-state">{loadingNews?copy.loadingNews:dict.noResults}</div>}
         </section>
         {(active==='all'||active==='geopolitics') && <MiddleEastBrief items={displayNews} lang={lang} onOpen={setSelected}/>}
