@@ -89,8 +89,8 @@ const FULL_FEED_TIMEOUT_MS = 8000;
 const FAST_CACHE_TTL = 60;
 const FULL_CACHE_TTL = 120;
 const SOURCE_CACHE_TTL = 60;
-const MAX_FEED_BYTES = 384 * 1024;
-const NEWS_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
+const MAX_FEED_BYTES = 768 * 1024;
+const NEWS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const NEWS_MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 const IRAQ_TERMS = /\b(iraq|iraqi|baghdad|kurdistan|erbil|sulaimani|sulaymaniyah|duhok|dohuk|basra|mosul|dinar|iqd|cbi|somo|rafidain|rasheed|krg)\b|central bank of iraq|iraq business/i;
 // Category cover images are served from Hawal itself so they're available without external CDNs.
@@ -313,7 +313,7 @@ function treasuryHtmlToFeedXml(html, feedUrl){
   return `<rss><channel>${items.join('')}</channel></rss>`;
 }
 
-async function fetchFeed(feed, timeoutMs){
+async function fetchFeedAttempt(feed, timeoutMs){
   const startedAt = Date.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(()=>controller.abort('feed timeout'), Math.max(timeoutMs, Number(feed.timeoutMs) || 0));
@@ -324,10 +324,10 @@ async function fetchFeed(feed, timeoutMs){
       headers: { 'user-agent': 'HawaliAburiBot/1.7' }
     });
     if(!res.ok) throw new Error(String(res.status));
-    const perFeedLimit = feed.format === 'centcom-dvids' ? 32
-      : feed.format === 'iran-us-direct' ? 20
-      : feed.format?.startsWith('priority-') ? 24
-      : feed.category === 'iraq' ? 12 : 8;
+    const perFeedLimit = feed.format === 'centcom-dvids' ? 36
+      : feed.format === 'iran-us-direct' ? 28
+      : feed.format?.startsWith('priority-') ? 35
+      : feed.category === 'iraq' ? 30 : 24;
     let xml = await readFeedBody(res, perFeedLimit);
     if(feed.format === 'treasury-html') xml = treasuryHtmlToFeedXml(xml, feed.url);
     const items = [...xml.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
@@ -345,11 +345,11 @@ async function fetchFeed(feed, timeoutMs){
       const publisherImage=extractNewsImage(entry,feed.url);
       const image=publisherImage || coverForCategory(feed.category);
       const source = isGoogleFeed ? sourceFromGoogleTitle(rawTitle, feed.source) : feed.source;
-      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, contentStatus, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image, imageSource:publisherImage ? 'publisher' : 'illustration', displayMaxAgeDays: Number(feed.maxAgeDays) || 3 };
+      const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, contentStatus, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image, imageSource:publisherImage ? 'publisher' : 'illustration', displayMaxAgeDays: Number(feed.maxAgeDays) || 7 };
       const intel = analyze(base);
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact, conflictRegion: feed.category === 'geopolitics' ? conflictRegionFor(base) : null };
     }).filter(i=>i.title && (feed.format !== 'centcom-dvids' || i.link.includes('dvidshub.net/news/')))
-      .filter(i=>isFreshNewsItem(i, Date.now(), (Number(feed.maxAgeDays) || 3) * 24 * 60 * 60 * 1000))
+      .filter(i=>isFreshNewsItem(i, Date.now(), (Number(feed.maxAgeDays) || 7) * 24 * 60 * 60 * 1000))
       .filter(item=>isRelevantToFeed(item, feed));
     if(!items.length){
       return { source: feed.source, ok: false, items: [], durationMs: Date.now() - startedAt, error: 'no usable recent items' };
@@ -361,6 +361,42 @@ async function fetchFeed(feed, timeoutMs){
   }finally{
     clearTimeout(timeoutId);
   }
+}
+
+// Some publishers block RSS fetches from Cloudflare or change their feed URLs.
+// Keep the original source configured, and discover only genuinely published
+// articles from that same publisher's domain when its direct feed fails.
+const FALLBACK_DOMAINS = {
+  'feeds.bbci.co.uk':'bbc.com', 'rss.dw.com':'dw.com',
+  'feeds.content.dowjones.io':'marketwatch.com',
+  'feeds.nbcnews.com':'nbcnews.com',
+  'feeds.npr.org':'npr.org',
+  'apps.bea.gov':'bea.gov'
+};
+function publisherDomain(feed){
+  try{
+    const hostname = new URL(feed.url).hostname.replace(/^www\./,'');
+    if(hostname === 'news.google.com') return '';
+    return FALLBACK_DOMAINS[hostname] || hostname;
+  }catch{return '';}
+}
+async function fetchFeed(feed, timeoutMs){
+  const primary = await fetchFeedAttempt(feed, timeoutMs);
+  if(primary.ok) return { ...primary, via:'direct' };
+  const domain = publisherDomain(feed);
+  if(!domain) return primary;
+  const backup = await fetchFeedAttempt({
+    ...feed,
+    url:googleNewsFeed('site:' + domain + ' when:7d'),
+    format:'fallback-google'
+  }, Math.min(7000, timeoutMs));
+  if(!backup.ok) return primary;
+  return {
+    ...backup,
+    source:feed.source,
+    via:'publisher-search',
+    directError:primary.error
+  };
 }
 
 async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
@@ -378,7 +414,7 @@ async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'priority-news-v14');
+  cacheUrl.searchParams.set('version', 'more-news-v15');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
@@ -445,6 +481,8 @@ export async function onRequest(context) {
     status:result.ok ? 'active' : result.error === 'no usable recent items' ? 'quiet' : 'failed',
     articles:result.items.length,
     durationMs:result.durationMs,
+    via:result.via || 'direct',
+    ...(result.directError ? { directError:result.directError } : {}),
     ...(result.error ? { reason:result.error } : {})
   }));
   if(failures.length){
