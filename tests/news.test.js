@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { FEEDS, conflictRegionFor, onRequest } from '../functions/api/news.js'
+import { fetchNews } from '../src/services/news.js'
 import { matchesCategory } from '../src/utils/categories.js'
 import { MemoryCache, replaceGlobal, requestContext, silenceWarnings } from './helpers.js'
 
@@ -350,5 +351,31 @@ test('fast news fetch shows verified Trump, Saudi conflict and Iraq dollar headl
     restoreFetch();
     restoreWarn();
     restoreCaches();
+  }
+});
+
+test('client continues loading later news batches when the first batch fails', async () => {
+  const publishedAt = new Date().toISOString();
+  const failedBatches = [];
+  const restoreFetch = replaceGlobal('fetch', async url => {
+    const path = String(url);
+    if (path.includes('mode=fast')) return Response.json({ items:[], batchCount:3 });
+    if (path.includes('batch=0')) { failedBatches.push(0); return new Response('unavailable', { status:503 }); }
+    if (path.includes('batch=1')) return Response.json({ batchCount:3, items:[{
+      id:'iraq-dollar-breaking', title:'Iraq dollar devaluation sparks trader reaction', sourceGroup:'Iraq Dollar Reaction',
+      source:'Shafaq News', category:'iraq', publishedAt, summary:'Dollar rates cause concern in Iraq markets.'
+    }] });
+    if (path.includes('batch=2')) return Response.json({ batchCount:3, items:[] });
+    return new Response('unavailable', { status:503 });
+  });
+  try {
+    const updates = [];
+    const articles = await fetchNews(items => updates.push(items));
+    assert.deepEqual(failedBatches, [0]);
+    assert.ok(updates.length);
+    assert.equal(articles[0].id, 'iraq-dollar-breaking');
+    assert.equal(articles[0].source, 'Shafaq News');
+  } finally {
+    restoreFetch();
   }
 });
