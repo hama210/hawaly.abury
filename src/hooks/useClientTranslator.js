@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { translationQuality } from '../lib/translation-quality.js';
 
 // Persistent, incremental translations survive each incoming RSS batch.
 const memory=new Map();
 const failedUntil=new Map();
-const CACHE_PREFIX='hawali_translate_v7_';
+const CACHE_PREFIX='hawali_translate_v8_quality_checked_';
 const MAX_BATCH=5;
 const CONCURRENCY=2;
 
 function clean(value=''){return String(value||'').replace(/\s+/g,' ').trim();}
 function comparable(value=''){return clean(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();}
 function fieldKey(item,lang){return lang+':'+(item.titleEn||item.title||'')+':'+(item.summaryEn||item.summary||'');}
-function textIsTranslated(original,output){
-  return Boolean(clean(output)) && comparable(output)!==comparable(original) && /[\u0600-\u06FF]/u.test(output);
+function textIsTranslated(original,output,lang){
+  return translationQuality(original,output,lang).valid;
 }
 function savedFields(key){
   if(memory.has(key))return memory.get(key);
@@ -39,12 +40,23 @@ export function useClientTranslator(news,lang,visibleLimit=24){
   const [translating,setTranslating]=useState(false);
   const current=useRef(null);
 
-  const translatedNews=useMemo(()=>source.map(item=>({
-    ...item,
-    titleEn:item.titleEn||item.title||'',
-    summaryEn:item.summaryEn||item.summary||'',
-    ...(lang==='en'?{}:savedFields(fieldKey(item,lang)))
-  })),[source,lang,revision]);
+  // Validate every persisted field and any pretranslated input before display.
+  // Old broken translations are deliberately not reused after this version bump.
+  const translatedNews=useMemo(()=>source.map(item=>{
+    const englishTitle=item.titleEn||item.title||'';
+    const englishSummary=item.summaryEn||item.summary||'';
+    const base={...item,titleEn:englishTitle,summaryEn:englishSummary};
+    if(lang==='en')return base;
+    const titleName=lang==='ku'?'titleKu':'titleAr';
+    const summaryName=lang==='ku'?'summaryKu':'summaryAr';
+    const saved=savedFields(fieldKey(item,lang));
+    const title=saved[titleName] || item[titleName] || '';
+    const summary=saved[summaryName] || item[summaryName] || '';
+    return {...base,
+      [titleName]:textIsTranslated(englishTitle,title,lang) ? title : '',
+      [summaryName]:textIsTranslated(englishSummary,summary,lang) ? summary : ''
+    };
+  }),[source,lang,revision]);
 
   useEffect(()=>{
     let work=current.current;
@@ -95,7 +107,7 @@ export function useClientTranslator(news,lang,visibleLimit=24){
             let changed=false,unavailable=0;
             batch.forEach((job,index)=>{
               const output=result.translated[index];
-              if(textIsTranslated(job.text,output)){
+              if(textIsTranslated(job.text,output,work.lang)){
                 saveFields(job.key,{[job.destination]:clean(output)});
                 changed=true;
               }else{
