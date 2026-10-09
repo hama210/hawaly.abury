@@ -68,3 +68,22 @@ test('translation accepts only same-origin POST requests and enforces the body l
   assert.equal(tooManyResponse.status, 413)
   assert.match(tooManyPayload.error, /maximum of 10 texts/i)
 })
+
+test('translation preserves exact headlines when Google fails and uses a Sorani alternate only if available',async()=>{
+  const restoreCaches=replaceGlobal('caches',{default:new MemoryCache()});
+  const restoreFetch=replaceGlobal('fetch',async url=>{
+    if(String(url).includes('translate.googleapis.com')) return new Response('blocked',{status:503});
+    if(String(url).includes('mymemory.translated.net')){
+      const request=new URL(String(url));
+      const original=request.searchParams.get('q');
+      return Response.json({responseStatus:200,responseData:{translatedText:original.includes('first')?'نرخی دۆلار لە عێراق':'MYMEMORY WARNING: QUOTA EXCEEDED'}});
+    }
+    return new Response('Unavailable',{status:503});
+  });
+  try{
+    const call=translationRequest(['first original headline','second original headline'],{lang:'ku'});
+    const data=await (await onRequest(call.context)).json();await call.settle();
+    assert.deepEqual(data.translated,['نرخی دۆلار لە عێراق','second original headline']);
+    assert.deepEqual(data.sources,['alternate','unavailable']);
+  }finally{restoreFetch();restoreCaches();}
+});
