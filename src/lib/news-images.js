@@ -1,6 +1,18 @@
 // Source images are optional; when absent or fragile, use a local illustrated category cover.
 const CATEGORIES=new Set(['iraq','kurdistan','forex','metals','oil','crypto','indices','geopolitics','markets']);
-const FRAGILE_HOSTS=['images.mktw.net','media.shafaq.com','i.iranintl.com','ichef.bbci.co.uk','d1ldvf68ux039x.cloudfront.net','cdn.sanity.io','static.aljazeera.net','www.aljazeera.com'];
+// These publishers serve legitimate news photos, but some refuse browser hotlinking.
+// Do not discard them: serve their images through our restricted same-origin proxy.
+export const IMAGE_PROXY_HOSTS=[
+  'images.mktw.net','media.shafaq.com','i.iranintl.com','ichef.bbci.co.uk',
+  'd1ldvf68ux039x.cloudfront.net','cdn.sanity.io','static.aljazeera.net',
+  'www.aljazeera.com','media.guim.co.uk'
+];
+export function isProxyableNewsImage(url){
+  try{
+    const u=new URL(url);
+    return u.protocol==='https:' && IMAGE_PROXY_HOSTS.some(host => u.hostname === host);
+  }catch{return false;}
+}
 export function coverForCategory(category) {
   const categoryKey=String(category||'').toLowerCase();
   return '/news-covers/'+(CATEGORIES.has(categoryKey)?categoryKey:'markets')+'.svg';
@@ -16,7 +28,6 @@ export function verifiedImageUrl(raw,baseUrl='') {
     const url=new URL(text,baseUrl||undefined);
     if(!['http:','https:'].includes(url.protocol)||!url.hostname||url.username||url.password) return '';
     if(/(?:favicon|tracking[-_]?pixel|blank\.gif|1x1)/i.test(url.pathname)) return '';
-    if(FRAGILE_HOSTS.some(h=>url.hostname===h||url.hostname.endsWith('.'+h))) return '';
     return url.href;
   }catch{return '';}
 }
@@ -51,6 +62,23 @@ export function extractNewsImage(entry,feedUrl){
   }
   return '';
 }
+// OpenGraph photos are usually present on direct publisher article pages even
+// when the publisher RSS feed contains a headline without media.
+export function extractOpenGraphImage(html, articleUrl){
+  const source=String(html||'').slice(0,256*1024);
+  const tags=[...source.matchAll(/<meta\b[^>]*>/gi)].map(entry=>entry[0]);
+  for(const key of ['og:image:secure_url','og:image','twitter:image','twitter:image:src']){
+    for(const tag of tags){
+      const label=(attr(tag,'property')||attr(tag,'name')).toLowerCase();
+      if(label!==key)continue;
+      const found=verifiedImageUrl(attr(tag,'content'),articleUrl);
+      if(found)return found;
+    }
+  }
+  return '';
+}
 export function imageForNews(item){
-  return verifiedImageUrl(item?.image)||coverForCategory(item?.category);
+  const url=verifiedImageUrl(item?.image);
+  if(!url)return coverForCategory(item?.category);
+  return isProxyableNewsImage(url) ? '/api/news-image?src='+encodeURIComponent(url) : url;
 }
