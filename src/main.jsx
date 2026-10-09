@@ -504,7 +504,7 @@ function App() {
   const [featureTarget, setFeatureTarget] = useState(null);
   const dict = t[lang] || t.ku;
   const copy = uiCopy[lang] || uiCopy.ku;
-  const { translatedNews, translating } = useClientTranslator(news, lang);
+  const { translatedNews, translating } = useClientTranslator(news, lang, activeView==='news' ? newsVisibleCount : homeVisibleCount+1);
   const displayNews = translatedNews.length ? translatedNews : news;
   const designCopy = navigationCopy[lang] || navigationCopy.ku;
   const navigate = view => {
@@ -582,7 +582,7 @@ function App() {
           </div>
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
-        <TranslationNotice lang={lang} items={displayNews} translating={translating}/>
+        <TranslationNotice lang={lang} items={displayNews.slice(0,activeView==='news'?newsVisibleCount:homeVisibleCount+1)} translating={translating}/>
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
           {rest.length ? <><div className="news-grid">{rest.slice(0, homeVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
@@ -607,7 +607,7 @@ function App() {
         {activeView==='news' && <VerificationDesk news={displayNews} lang={lang}/>}
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
-        <TranslationNotice lang={lang} items={displayNews} translating={translating}/>
+        <TranslationNotice lang={lang} items={displayNews.slice(0,activeView==='news'?newsVisibleCount:homeVisibleCount+1)} translating={translating}/>
         <div className="topic-shortcuts" aria-label="News topics">
           {[
             ['Trump','Trump','ترامپ','ترامب'],
