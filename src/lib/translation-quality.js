@@ -12,6 +12,16 @@ const KURDISH_GENERIC=/^(?:هەواڵێکی گرنگ لە بازاڕ|نوێکا�
 const NUMERIC=/[0-9٠-٩۰-۹][0-9٠-٩۰-۹,،٫٬.\s]*[0-9٠-٩۰-۹]|[0-9٠-٩۰-۹]/gu;
 const PAIR=/\b(?:USD|EUR|GBP|IQD|XAU|XAG|BTC|ETH)\/(?:USD|EUR|GBP|IQD|XAU|XAG|BTC|ETH)\b/gi;
 
+// Preserve named entities most likely to move markets or be confused in news.
+const IMPORTANT_ENTITIES=[
+  { english:/\btrump\b/i, target:/ترام[پب]|تر[ەم]*م[پب]/u },
+  { english:/\biraq\b/i, target:/عێراق|العراق|عراق/u },
+  { english:/\biran\b/i, target:/ئێران|إيران|ايران|ایران/u },
+  { english:/\bsaudi(?: arabia)?\b/i, target:/سعود|سعوود/u },
+  { english:/\bbaghdad\b/i, target:/بەغدا|بغداد/u },
+  { english:/\berbil\b/i, target:/هەولێر|أربيل|اربيل|اربیل/u }
+];
+
 function digits(value){
   return String(value).replace(/[٠-٩]/g,ch=>String(ch.charCodeAt(0)-0x660))
     .replace(/[۰-۹]/g,ch=>String(ch.charCodeAt(0)-0x6f0));
@@ -57,6 +67,8 @@ export function translationQuality(source, candidate, lang){
     return {valid:false,text:output,reason:'not-arabic'};
   if(!sameMeaningNumbers(original,output))
     return {valid:false,text:output,reason:'changed-numbers'};
+  if(IMPORTANT_ENTITIES.some(entity=>entity.english.test(original)&&!entity.target.test(output)))
+    return {valid:false,text:output,reason:'missing-important-name'};
   const oldPairs=tickerPairs(original),newPairs=tickerPairs(output);
   if(oldPairs.length!==newPairs.length || oldPairs.some((p,i)=>p!==newPairs[i]))
     return {valid:false,text:output,reason:'changed-market-pair'};
