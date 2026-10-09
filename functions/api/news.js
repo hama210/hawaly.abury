@@ -25,6 +25,13 @@ export const FEEDS = [
   ['US Employment (BLS)','markets','https://www.bls.gov/feed/empsit.rss','official',11000],
   ['US Economy (BEA)','markets','https://apps.bea.gov/rss/rss.xml','official',11000],
   ['Reuters Global Conflict','geopolitics',googleNewsFeed('site:reuters.com (war OR strikes OR missile OR ceasefire OR sanctions) when:7d'),'major'],
+  // Dedicated coverage for US decisions, Saudi regional conflict and oil/market risk.
+  ['Trump White House','geopolitics',googleNewsFeed('site:whitehouse.gov Trump (Iran OR Saudi OR Iraq OR oil OR tariffs OR economy OR sanctions) when:7d'),'official',9000,'priority-trump',7],
+  ['Trump Reuters','geopolitics',googleNewsFeed('site:reuters.com Trump (Iran OR Saudi OR Iraq OR missiles OR ceasefire OR oil OR tariffs) when:3d'),'major',9000,'priority-trump',5],
+  ['Trump Announcements','geopolitics',googleNewsFeed('("Trump" OR "White House") (Iran OR Saudi OR Iraq OR war OR oil OR sanctions OR dollar OR tariffs) when:3d'),'curated',9000,'priority-trump',5],
+  ['Saudi War Updates','geopolitics',googleNewsFeed('(Saudi OR Riyadh OR Abha OR Jeddah) (Houthi OR Houthis OR Yemen OR missiles OR attacks OR airstrike) when:3d'),'curated',9000,'priority-conflict',5],
+  ['Reuters Saudi War','geopolitics',googleNewsFeed('site:reuters.com (Saudi OR Riyadh OR Yemen) (Houthis OR missiles OR attacks OR war) when:7d'),'major',9000,'priority-conflict',7],
+  ['CENTCOM Official News','geopolitics',googleNewsFeed('site:centcom.mil (Iran OR Iraq OR missile OR military OR operation OR strike) when:14d'),'official',9000,'priority-conflict',14],
   ['US Treasury Sanctions','geopolitics','https://home.treasury.gov/news/press-releases','official',12000,'treasury-html'],
   ['NBC News World','geopolitics','https://feeds.nbcnews.com/nbcnews/public/world','major',10000,'iran-us-direct'],
   ['BBC War','geopolitics','https://feeds.bbci.co.uk/news/world/middle_east/rss.xml','major',7000],
@@ -46,6 +53,9 @@ export const FEEDS = [
   ['AP Iraq Economy','iraq',googleNewsFeed('site:apnews.com Iraq (economy OR oil OR budget OR Kurdistan) when:30d'),'major'],
   ['INA Iraq Economy','iraq',googleNewsFeed('site:ina.iq/en Iraq (economy OR budget OR oil OR dinar OR investment) when:30d'),'official'],
   ['Shafaq Economy','iraq','https://shafaq.com/rss/en/Economy','local'],
+  ['Iraq Dollar Live','iraq',googleNewsFeed('(Iraq OR Baghdad OR Erbil OR Kurdistan) (dollar OR dinar OR "exchange rate" OR "USD/IQD") when:3d'),'curated',9000,'priority-iraq',7],
+  ['Iraq Dollar Reaction','iraq',googleNewsFeed('(Iraq OR Baghdad OR Erbil) (dinar OR dollar OR devaluation) (protests OR traders OR public OR parliament OR prices) when:7d'),'curated',9000,'priority-iraq',7],
+  ['Shafaq USD-IQD','iraq',googleNewsFeed('site:shafaq.com/en/Economy/ (dollar OR dinar OR "USD/IQD" OR devaluation) when:7d'),'local',9000,'priority-iraq',7],
   ['Rudaw Economy','iraq',googleNewsFeed('site:rudaw.net/english Iraq Kurdistan (economy OR oil OR budget OR salaries) when:30d'),'local'],
   ['Kurdistan24 Economy','iraq',googleNewsFeed('site:kurdistan24.net/en Iraq Kurdistan (economy OR oil OR budget OR salaries) when:30d'),'local'],
   ['Iraq Business News','iraq','https://www.iraq-businessnews.com/feed/','specialist'],
@@ -56,17 +66,21 @@ const MAX_FEEDS_PER_REQUEST = 22;
 const FETCH_CONCURRENCY = 11;
 const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
 const FAST_FEED_SOURCES = [
-  'CNBC Markets',
-  'MarketWatch',
-  'FXStreet',
   'Shafaq Economy',
-  'Iraq Business News',
+  'Shafaq USD-IQD',
+  'Iraq Dollar Live',
+  'Iraq Dollar Reaction',
+  'Trump White House',
+  'Trump Reuters',
+  'Trump Announcements',
+  'Saudi War Updates',
+  'Reuters Saudi War',
+  'Reuters Iran-US Conflict',
+  'AP Middle East Conflict',
+  'CENTCOM Updates',
   'BBC War',
   'Al Jazeera War',
-  'Guardian Iran',
-  'NPR World',
-  'Iran International',
-  'CENTCOM Updates',
+  'CNBC Markets'
 ];
 const FAST_FEED_TIMEOUT_MS = 9000;
 const FULL_FEED_TIMEOUT_MS = 8000;
@@ -208,6 +222,12 @@ function isFreshNewsItem(item, now = Date.now(), maxAgeMs = NEWS_MAX_AGE_MS){
 function isRelevantToFeed(item, feed){
   const text = `${item.title} ${item.summary}`;
   if(feed.tier === 'curated' && feed.url.includes('news.google.com') && !TRUSTED_PUBLISHERS.test(item.source)) return false;
+  if(feed.format === 'priority-trump') return /\b(trump|white house|president|administration|tariff|sanction)\b/i.test(text)
+    && /\b(iran|iraq|saudi|yemen|houthi|war|military|ceasefire|tariff|oil|economy|economic|dollar|market|sanction|trade|hormuz)\b/i.test(text);
+  if(feed.format === 'priority-conflict') return CONFLICT_DEVELOPMENT_TERMS.test(text)
+    && /\b(saudi|riyadh|abha|jeddah|yemen|houthi|iran|iraq|middle east|centcom|israel|lebanon|hormuz)\b/i.test(text);
+  if(feed.format === 'priority-iraq') return IRAQ_TERMS.test(text)
+    && /\b(dollar|dinar|usd|iqd|devaluation|exchange|currency|cbi|market|prices|protest|budget|bank|traders)\b/i.test(text);
   if(feed.category === 'oil') return /\b(oil|crude|opec|brent|wti)\b/i.test(text);
   if(feed.category === 'crypto') return /\b(bitcoin|ethereum|crypto|btc|eth)\b/i.test(text);
   if(feed.category === 'iraq') return isIraqEconomy(item);
@@ -302,7 +322,10 @@ async function fetchFeed(feed, timeoutMs){
       headers: { 'user-agent': 'HawaliAburiBot/1.7' }
     });
     if(!res.ok) throw new Error(String(res.status));
-    const perFeedLimit = feed.format === 'centcom-dvids' ? 32 : feed.format === 'iran-us-direct' ? 20 : feed.category === 'iraq' ? 12 : 8;
+    const perFeedLimit = feed.format === 'centcom-dvids' ? 32
+      : feed.format === 'iran-us-direct' ? 20
+      : feed.format?.startsWith('priority-') ? 24
+      : feed.category === 'iraq' ? 12 : 8;
     let xml = await readFeedBody(res, perFeedLimit);
     if(feed.format === 'treasury-html') xml = treasuryHtmlToFeedXml(xml, feed.url);
     const items = [...xml.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
@@ -353,7 +376,7 @@ async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'fresh-latest-v13-news-images');
+  cacheUrl.searchParams.set('version', 'priority-news-v14');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
@@ -415,6 +438,13 @@ export async function onRequest(context) {
   const failures = feedResults
     .filter(result => !result.ok)
     .map(({ source, error, durationMs }) => ({ source, error, durationMs }));
+  const sourceHealth = feedResults.map(result => ({
+    source:result.source,
+    status:result.ok ? 'active' : result.error === 'no usable recent items' ? 'quiet' : 'failed',
+    articles:result.items.length,
+    durationMs:result.durationMs,
+    ...(result.error ? { reason:result.error } : {})
+  }));
   if(failures.length){
     console.warn(JSON.stringify({
       event: 'news_feed_batch_incomplete',
@@ -435,7 +465,7 @@ export async function onRequest(context) {
     mode,
     batch: mode === 'fast' ? 'fast' : batch,
     batchCount: BATCH_COUNT,
-    feedStats: { total: FEEDS.length, requested: selectedFeeds.length, succeeded, failed: failures.length, failures },
+    feedStats: { total: FEEDS.length, requested: selectedFeeds.length, succeeded, failed: failures.length, failures, sources:sourceHealth },
     items
   }, { headers: {
     'Cache-Control': `public, max-age=${ttl}, must-revalidate`,
