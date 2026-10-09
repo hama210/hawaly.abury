@@ -111,7 +111,7 @@ async function callWorkersAI(text,lang,ai){
       max_tokens:430,temperature:0,stream:false,enable_thinking:false
     });
     const raw=String(reply?.response||reply?.choices?.[0]?.message?.content||'');
-    const translated=clean(raw.replace(/<think>[\\s\\S]*?<\\/think>/gi,'').replace(/^["“”']|["“”']$/g,''));
+    const translated=clean(raw.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/^["“”']|["“”']$/g,''));
     if(translated.length>Math.max(240,text.length*4))return '';
     return isUsefulTranslation(text,translated)&&isScriptAppropriate(translated,lang)?translated:'';
   }catch{return '';}
