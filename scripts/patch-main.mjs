@@ -1,8 +1,3 @@
-#!/usr/bin/env node
-/**
- * Build-time patch: harden imageFallback + promote City Rate Board on homepage.
- * Safe to re-run; only applies when the old patterns are still present.
- */
 import fs from 'node:fs';
 
 const path = 'src/main.jsx';
@@ -25,25 +20,25 @@ const oldFb = `function imageFallback(event) {
 }`;
 
 const newFb = `function imageFallback(event) {
-  const element = event.currentTarget;
-  element.onerror = null;
-  if (element.dataset.fallback === 'logo') {
-    element.style.opacity = '0';
-    element.parentElement?.classList.add('img-failed');
+  const element=event.currentTarget;
+  element.onerror=null;
+  element.classList.add('img-failed');
+  if(element.dataset.fallback==='logo') {
+    element.style.visibility='hidden';
     return;
   }
-  if (element.dataset.fallback === 'category') {
-    element.dataset.fallback = 'logo';
-    element.src = '/hawali-logo-512.png';
-    element.onerror = imageFallback;
+  if(element.dataset.fallback==='category') {
+    element.dataset.fallback='logo';
+    element.src='/hawali-logo-96.webp';
+    element.onerror=imageFallback;
     return;
   }
-  element.dataset.fallback = 'category';
-  element.src = coverForCategory(element.dataset.newsCategory || 'markets');
-  element.onerror = imageFallback;
+  element.dataset.fallback='category';
+  element.src=coverForCategory(element.dataset.newsCategory||'markets');
+  element.onerror=imageFallback;
 }`;
 
-if (src.includes("element.style.visibility='hidden'")) {
+if (src.includes("element.style.visibility='hidden'") && src.includes('function imageFallback')) {
   if (!src.includes(oldFb)) {
     console.error('patch-main: imageFallback pattern not found; skip');
   } else {
@@ -66,6 +61,13 @@ const oldHome = `      <section className={'hawal-screen home-screen '+(activeVi
         </div>`;
 
 const newHome = `      <section className={'hawal-screen home-screen '+(activeView==='home'?'':'is-hidden-view')} aria-label={designCopy.home}>
+        <div className="update-ribbon" role="status">
+          <div>
+            <strong>{lang==='en' ? 'Iraq Market Desk is live' : lang==='ar' ? 'مكتب سوق العراق مباشر' : 'مێزی بازاڕی عێراق چالاکە'}</strong>
+            <span>{lang==='en' ? 'City USD rates first · clearer empty states · reliable news covers' : lang==='ar' ? 'أسعار الدولار حسب المدينة أولاً · حالات فارغة أوضح · صور أخبار موثوقة' : 'نرخی دۆلاری شارەکان لە پێشەوە · دۆخی بەتاڵ ڕوونتر · وێنەی هەواڵی باوەڕپێکراو'}</span>
+          </div>
+          <div className="badge">v6.1</div>
+        </div>
         <div className="home-rate-board">
           <DollarRates markets={markets} lang={lang}/>
         </div>
@@ -78,13 +80,13 @@ const newHome = `      <section className={'hawal-screen home-screen '+(activeVi
             <div className="screen-intro"><p>HAWAL · NEWS</p><h1>{copy.loadingNews}</h1><span>{dashboardCopy[lang].subtitle}</span></div>}
         </div>`;
 
-if (src.includes('home-market-aside') && !src.includes('home-rate-board')) {
+if (src.includes('home-market-aside') && !src.includes('update-ribbon')) {
   if (!src.includes(oldHome)) {
     console.error('patch-main: home-screen pattern not found; skip');
   } else {
     src = src.replace(oldHome, newHome);
     changed = true;
-    console.log('patch-main: homepage rate board elevated');
+    console.log('patch-main: homepage rate board + update ribbon');
   }
 }
 
