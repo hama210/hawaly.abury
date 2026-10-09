@@ -109,13 +109,16 @@ export function useClientTranslator(news,lang,visibleLimit=24){
               work.pausedUntil=Date.now()+2*60*1000;
               work.queueTitles.length=0;
               work.queueSummaries.length=0;
+              work.scheduled.clear();
             }
           }).catch(error=>{
             if(work.cancelled||error?.name==='AbortError')return;
             work.pausedUntil=Date.now()+2*60*1000;
             work.queueTitles.length=0;
             work.queueSummaries.length=0;
+            work.scheduled.clear();
           }).finally(()=>{
+            batch.forEach(job=>work.scheduled.delete(job.taskId));
             work.running--;
             if(!work.cancelled)work.pump();
           });
