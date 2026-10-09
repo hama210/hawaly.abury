@@ -1,3 +1,5 @@
+import { translationQuality } from '../../src/lib/translation-quality.js';
+
 const TARGETS = {
   ku: ['ckb'],
   ar: ['ar'],
@@ -59,7 +61,7 @@ async function callGoogle(text, target){
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort('translation timeout'), TRANSLATE_TIMEOUT_MS);
   try{
-    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + encodeURIComponent(target) + '&dt=t&q=' + encodeURIComponent(q);
+    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=' + encodeURIComponent(target) + '&dt=t&q=' + encodeURIComponent(q);
     const res = await fetch(url, {
       signal: controller.signal,
       headers: {
@@ -102,9 +104,13 @@ async function callMyMemory(original, lang){
 async function callWorkersAI(text,lang,ai){
   if(!ai || typeof ai.run!=='function')return '';
   const target=lang==='ku'?'Central Kurdish (Sorani), using Kurdish Arabic-script spelling':'Modern Standard Arabic';
-  const prompt='Translate this English news headline or summary into '+target+
-    '. Preserve all names, numbers, quotes, dates and facts accurately. '+
-    'Return ONLY the translation, no commentary or labels. Never add details not in the source. /no_think';
+  const glossary = lang==='ku'
+    ? 'You must write genuine Iraqi Central Kurdish (Sorani) in Kurdish Arabic script, not Arabic or Latin Kurmanji. Examples of terminology: Iraq=عێراق; Baghdad=بەغدا; Erbil=هەولێر; Iran=ئێران; Trump=ترامپ; dollar=دۆلار; dinar=دینار; exchange rate=نرخی ئاڵوگۆڕ; interest rates=نرخی سوود; central bank=بانکی ناوەندی; war=جەنگ; ceasefire=ئاگربەست; Saudi Arabia=عەرەبستانی سعوودی. Use natural Sorani journalism.'
+    : 'Write idiomatic Modern Standard Arabic used by professional news agencies; never use Kurdish wording.';
+  const prompt='You are a professional financial news translator. Translate the exact English text into '+target+
+    '. '+glossary+
+    ' Preserve exact numerical values, currency pairs such as USD/IQD and XAU/USD, percentages, names, dates, places, and attribution. '+
+    'Never add explanations, invented facts, a generic summary, or a disclaimer. Output only the faithful translation. /no_think';
   try{
     const reply=await ai.run('@cf/qwen/qwen3-30b-a3b-fp8',{
       messages:[{role:'system',content:prompt},{role:'user',content:text}],
@@ -125,7 +131,7 @@ async function digest(value){
 
 async function translationCacheKey(request, lang, text){
   const hash = await digest(`${lang}\n${comparable(text)}`);
-  return new Request(`${new URL(request.url).origin}/__hawali_translation_cache/v2/${lang}/${hash}`, { method: 'GET' });
+  return new Request(`${new URL(request.url).origin}/__hawali_translation_cache/v3/${lang}/${hash}`, { method: 'GET' });
 }
 
 async function readCachedTranslation(cache, key){
@@ -147,36 +153,42 @@ async function translateOne(text, targets, lang, request, cache, cacheWrites, ai
 
   const cacheKey = cache ? await translationCacheKey(request, lang, original) : null;
   const cached = cacheKey ? await readCachedTranslation(cache, cacheKey) : '';
-  if(cached) return { translated: cached, source: 'cache' };
+  if(cached){
+    const quality=translationQuality(original,cached,lang);
+    if(quality.valid) return { translated: quality.text, source: 'cache' };
+  }
 
   const generated=await callWorkersAI(original,lang,ai);
-  if(generated){
-    if(cache && cacheKey) cacheWrites.push(cache.put(cacheKey,Response.json({translated:generated},{
+  const aiQuality=translationQuality(original,generated,lang);
+  if(aiQuality.valid){
+    if(cache && cacheKey) cacheWrites.push(cache.put(cacheKey,Response.json({translated:aiQuality.text},{
       headers:{'Cache-Control':`public, max-age=${TRANSLATION_CACHE_TTL}`}
     })));
-    return {translated:generated,source:'workers-ai'};
+    return {translated:aiQuality.text,source:'workers-ai'};
   }
 
   for(const target of targets){
     try{
       const translated = await callGoogle(original, target);
-      if(isUsefulTranslation(original, translated) && isScriptAppropriate(translated, lang)){
+      const quality=translationQuality(original,translated,lang);
+      if(quality.valid){
         if(cache && cacheKey){
-          cacheWrites.push(cache.put(cacheKey, Response.json({ translated }, {
+          cacheWrites.push(cache.put(cacheKey, Response.json({ translated: quality.text }, {
             headers: { 'Cache-Control': `public, max-age=${TRANSLATION_CACHE_TTL}` }
           })));
         }
-        return { translated, source: 'live' };
+        return { translated: quality.text, source: 'live' };
       }
     }catch{}
   }
 
   const alternate = await callMyMemory(original, lang);
-  if(alternate){
-    if(cache && cacheKey) cacheWrites.push(cache.put(cacheKey, Response.json({ translated: alternate }, {
+  const alternateQuality=translationQuality(original,alternate,lang);
+  if(alternateQuality.valid){
+    if(cache && cacheKey) cacheWrites.push(cache.put(cacheKey, Response.json({ translated: alternateQuality.text }, {
       headers:{ 'Cache-Control': `public, max-age=${TRANSLATION_CACHE_TTL}` }
     })));
-    return { translated:alternate, source:'alternate' };
+    return { translated:alternateQuality.text, source:'alternate' };
   }
   return { translated:original, source:'unavailable' };
 }
