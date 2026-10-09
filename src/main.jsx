@@ -427,7 +427,7 @@ function ArticleModal({ item, lang, dict, onClose }) {
   </article></div>;
 }
 
-function SourcesDisclosure({ lang, news }) {
+function SourcesDisclosure({ lang, news, sourceHealth = {} }) {
   const [open, setOpen] = useState(false);
   const [sources, setSources] = useState([]);
   const copy = uiCopy[lang] || uiCopy.ku;
@@ -436,7 +436,11 @@ function SourcesDisclosure({ lang, news }) {
     ar: { all:'المصادر المهمة والمختارة', loading:'تحميل المصادر', note:'تُستخدم فقط المصادر الرسمية والعالمية والمالية والمحلية المهمة لـ USD/IQD والعملات والمعادن والمؤشرات والحروب. المحتوى يعود إلى ناشريه الأصليين.' },
     en: { all:'Important curated sources', loading:'Loading sources', note:'Only important official, global, financial, and local sources are used for USD/IQD, currencies, metals, indices, and wars. Content belongs to its original publishers.' }
   }[lang];
-  const statusCopy = { ku:{ active:'هەواڵی تازە', quiet:'هەواڵی تازە نییە' }, ar:{ active:'أخبار حديثة', quiet:'لا أخبار حديثة' }, en:{ active:'Recent news', quiet:'No recent news' } }[lang];
+  const statusCopy = {
+    ku:{ active:'هەواڵی تازە', quiet:'هیچ هەواڵێکی تازەی گونجاو نییە', failed:'سەرچاوە وەڵام نادات', unchecked:'هێشتا پشکنین نەکراوە' },
+    ar:{ active:'أخبار حديثة', quiet:'لا توجد أخبار حديثة مناسبة', failed:'المصدر غير متاح', unchecked:'لم يتم الفحص بعد' },
+    en:{ active:'Fresh headlines', quiet:'No matching recent news', failed:'Feed unavailable', unchecked:'Not checked yet' }
+  }[lang];
   const activeSources = useMemo(() => new Set(news.flatMap(item => [item.sourceGroup, item.source]).filter(Boolean)), [news]);
   useEffect(() => {
     let alive = true;
@@ -451,7 +455,7 @@ function SourcesDisclosure({ lang, news }) {
     {open && <div className="sources-panel" role="dialog" aria-label={disclosure.all}>
       <div className="sources-head"><div><strong>{disclosure.all}</strong><small>{sources.length ? `${sources.length} ${t[lang]?.sources}` : disclosure.loading}</small></div><button type="button" onClick={() => setOpen(false)} aria-label={copy.close}>×</button></div>
       <p>{disclosure.note}</p>
-      <div className="sources-list">{sources.length ? sources.map(source => { const active = activeSources.has(source.source); return <span className={active ? 'source-active' : 'source-quiet'} key={source.source}><b>{source.source}</b><small>{sourceTierCopy[lang]?.[source.tier] || sourceTierCopy.en.curated} · {active ? statusCopy.active : statusCopy.quiet}</small></span>; }) : <span>{disclosure.loading}...</span>}</div>
+      <div className="sources-list">{sources.length ? sources.map(source => { const status = sourceHealth[source.source]?.status || (activeSources.has(source.source) ? 'active' : 'unchecked'); const active = status === 'active'; return <span className={active ? 'source-active' : 'source-quiet'} key={source.source}><b>{source.source}</b><small>{sourceTierCopy[lang]?.[source.tier] || sourceTierCopy.en.curated} · {statusCopy[status] || statusCopy.unchecked}</small></span>; }) : <span>{disclosure.loading}...</span>}</div>
     </div>}
     <button className="sources-toggle" type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}><span>Sources</span><b>{sources.length || '...'}</b></button>
   </aside>;
@@ -469,6 +473,14 @@ function App() {
   const [active, setActive] = useState('all');
   const [query, setQuery] = useState('');
   const [news, setNews] = useState(() => bootstrap.news?.length ? bootstrap.news : getInitialNews());
+  const [sourceHealth, setSourceHealth] = useState({});
+  const receiveHealth = stats => {
+    if (!Array.isArray(stats?.sources)) return;
+    setSourceHealth(previous => ({
+      ...previous,
+      ...Object.fromEntries(stats.sources.map(source => [source.source, source]))
+    }));
+  };
   const [loadingNews, setLoadingNews] = useState(true);
   const [markets, setMarkets] = useState(bootstrap.markets || []);
   const [selected, setSelected] = useState(null);
@@ -503,7 +515,7 @@ function App() {
   useEffect(() => {
     let alive = true;
     const update = items => { if (alive && items?.length) setNews(items); };
-    const load = (initial = false) => fetchNews(update).then(update).finally(() => { if (alive && initial) setLoadingNews(false); });
+    const load = (initial = false) => fetchNews(update, { onHealth: stats => { if (alive) receiveHealth(stats); } }).then(update).finally(() => { if (alive && initial) setLoadingNews(false); });
     load(true);
     const interval = setInterval(() => load(false), 120000);
     return () => { alive = false; clearInterval(interval); };
@@ -521,7 +533,7 @@ function App() {
     if (refreshing) return;
     setRefreshing(true);
     try {
-      const [latest, nextMarkets] = await Promise.all([fetchNews(items => { if (items?.length) setNews(items); }, { force:true }), fetchMarkets()]);
+      const [latest, nextMarkets] = await Promise.all([fetchNews(items => { if (items?.length) setNews(items); }, { force:true, onHealth:receiveHealth }), fetchMarkets()]);
       if (latest?.length) setNews(latest);
       setMarkets(nextMarkets);
     } finally {
@@ -578,6 +590,14 @@ function App() {
         {activeView==='news' && <VerificationDesk news={displayNews} lang={lang}/>}
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
+        <div className="topic-shortcuts" aria-label="News topics">
+          {[
+            ['Trump','Trump','ترامپ','ترامب'],
+            ['Saudi','Saudi / Yemen','سعوودیە / یەمەن','السعودية / اليمن'],
+            ['dollar','Iraq dollar','دۆلاری عێراق','دولار العراق'],
+            ['Iran','Iran / US','ئێران / ئەمریکا','إيران / أمريكا']
+          ].map(([term,en,ku,ar]) => <button key={term} type="button" aria-pressed={query.toLowerCase() === term.toLowerCase()} onClick={() => {setActive('all'); setQuery(query.toLowerCase() === term.toLowerCase() ? '' : term);}}>{lang==='ku'?ku:lang==='ar'?ar:en}</button>)}
+        </div>
         <section className="latest-section" id="latest">
           <div className="section-heading"><h2>{copy.latest}</h2><span>{translating?copy.translating:active==='all'?copy.allSections:categoryMap[lang]?.[active]}</span></div>
           {filtered.length ? <div className="news-grid" aria-live="polite">{filtered.map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div> :
@@ -600,7 +620,7 @@ function App() {
       <SiteFooter lang={lang}/>
     </div>
     {route.page==='home' && <Navigation mobile active={activeView} onNavigate={navigate} lang={lang}/>}
-    <SourcesDisclosure lang={lang} news={displayNews}/>
+    <SourcesDisclosure lang={lang} news={displayNews} sourceHealth={sourceHealth}/>
     <ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/>
   </div>;
 }
