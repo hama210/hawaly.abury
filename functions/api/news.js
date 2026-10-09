@@ -80,6 +80,8 @@ const FAST_FEED_SOURCES = [
   'CENTCOM Updates',
   'BBC War',
   'Al Jazeera War',
+  'Guardian Iran',
+  'FXStreet',
   'CNBC Markets'
 ];
 const FAST_FEED_TIMEOUT_MS = 9000;
