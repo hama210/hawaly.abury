@@ -87,3 +87,23 @@ test('translation preserves exact headlines when Google fails and uses a Sorani 
     assert.deepEqual(data.sources,['alternate','unavailable']);
   }finally{restoreFetch();restoreCaches();}
 });
+
+test('Cloudflare AI binding translates Sorani headlines without depending on blocked public APIs',async()=>{
+  const restoreCaches=replaceGlobal('caches',{default:new MemoryCache()});
+  const restoreFetch=replaceGlobal('fetch',async()=>{throw Error('No external translation provider should be used when AI works');});
+  let model='', prompt='';
+  try{
+    const call=translationRequest(['Iraq central bank changes dollar trading rules'],{lang:'ku'});
+    call.context.env={AI:{run:async(name,input)=>{
+      model=name;
+      prompt=input.messages[0].content;
+      return {response:'بانکی ناوەندی عێراق یاساکانی مامەڵەکردن بە دۆلار دەگۆڕێت'};
+    }}};
+    const result=await (await onRequest(call.context)).json();
+    await call.settle();
+    assert.equal(result.sources[0],'workers-ai');
+    assert.match(result.translated[0],/بانکی ناوەندی عێراق/);
+    assert.match(model,/qwen3-30b-a3b-fp8/);
+    assert.match(prompt,/Central Kurdish \(Sorani\)/);
+  }finally{restoreFetch();restoreCaches();}
+});
