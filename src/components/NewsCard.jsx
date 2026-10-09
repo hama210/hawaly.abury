@@ -1,10 +1,24 @@
 import { Bookmark, ExternalLink, Share2 } from 'lucide-react'
 import { getSummary, getTitle, safeImage, sourceLogo, timeAgo } from '../utils/news.js'
+import { imageForNews, coverForCategory } from '../lib/news-images.js'
 import ImpactBadge from './ImpactBadge.jsx'
 
 export default function NewsCard({ item, lang, t, onOpen, onShare, onSave, saved, onAsset }){
   return <article className="news-card-pro" onClick={()=>onOpen(item)}>
-    <button className="card-image" onClick={()=>onOpen(item)}><img src={safeImage(item)} onError={e=>{e.currentTarget.src='https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1400&q=80'}} alt=""/><span>{sourceLogo(item.source)}</span></button>
+    <button className="card-image" onClick={()=>onOpen(item)}>
+      <img
+        src={imageForNews(item)}
+        data-news-category={item.category || 'markets'}
+        alt=""
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onError={e => {
+          e.currentTarget.onerror = null;
+          e.currentTarget.src = coverForCategory(item.category || 'markets');
+        }}
+      />
+      <span>{sourceLogo(item.source)}</span>
+    </button>
     <div className="card-body">
       <div className="card-meta"><ImpactBadge impact={item.impact}/><span>{item.category}</span><span>{timeAgo(item.publishedAt, lang)}</span></div>
       <h3>{getTitle(item, lang)}</h3>
