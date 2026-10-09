@@ -607,6 +607,7 @@ function App() {
         {activeView==='news' && <VerificationDesk news={displayNews} lang={lang}/>}
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
+        <TranslationNotice lang={lang} items={displayNews} translating={translating}/>
         <div className="topic-shortcuts" aria-label="News topics">
           {[
             ['Trump','Trump','ترامپ','ترامب'],
