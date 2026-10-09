@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { extractOpenGraphImage, imageForNews, verifiedImageUrl, trustedArticleUrl } from '../src/lib/news-images.js';
 import { onRequest as articlePicture } from '../functions/api/article-image.js';
 import { onRequest as proxyPicture } from '../functions/api/news-image.js';
+import { resolveGoogleNewsArticle } from '../functions/lib/google-news.js';
 import { MemoryCache, replaceGlobal, requestContext } from './helpers.js';
 
 test('real publisher photos are accepted instead of discarded by the former fragile host blacklist',()=>{
@@ -61,4 +62,32 @@ test('image proxy rejects dangerous URLs, serves approved publisher images and r
     assert.equal(result.status,200);
     assert.equal(result.headers.get('content-type'),'image/png');
   }finally{restore();cache();}
+});
+
+test('encoded Google News RSS link resolves to a trusted publisher before reading its photo',async()=>{
+  const token='AU_yqLabcdefghijklmnopqrstu123456789';
+  const google='https://news.google.com/rss/articles/'+token+'?oc=5';
+  assert.match(imageForNews({category:'geopolitics',imageSource:'illustration',link:google}),/^\/api\/article-image/);
+  let pageCalls=0, rpcCalls=0;
+  const restore=replaceGlobal('fetch',async(url,options={})=>{
+    if(String(url).includes('/rss/articles/'+token)){
+      pageCalls++;
+      return new Response('<html><div data-n-a-sg="AV_SAMPLE_SIG" data-n-a-ts="1750000000"></div></html>',{status:200});
+    }
+    if(String(url).includes('batchexecute')){
+      rpcCalls++;
+      const req=new URLSearchParams(options.body).get('f.req');
+      assert.ok(JSON.stringify(JSON.parse(req)).includes(token));
+      return new Response(")]}'\n\n"+JSON.stringify([
+        ['wrb.fr','Fbv4je',JSON.stringify(['garturlres','https://www.bbc.com/news/story'])],
+        ['di',3]
+      ]),{status:200});
+    }
+    return new Response('failure',{status:503});
+  });
+  try{
+    assert.equal(await resolveGoogleNewsArticle(google),'https://www.bbc.com/news/story');
+    assert.equal(pageCalls,1);
+    assert.equal(rpcCalls,1);
+  }finally{restore();}
 });
