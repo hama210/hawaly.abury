@@ -1,4 +1,5 @@
 import { coverForCategory, extractOpenGraphImage, trustedArticleUrl, trustedRemoteImage } from '../../src/lib/news-images.js';
+import { isGoogleNewsArticle, resolveGoogleNewsArticle } from '../lib/google-news.js';
 
 const MAX_HTML_BYTES=256*1024;
 const MAX_IMAGE_BYTES=4*1024*1024;
@@ -31,26 +32,33 @@ async function limitedBody(response,maxBytes,{truncate=false}={}){
 }
 
 function fallback(category){
-  return Response.redirect(coverForCategory(category),302);
+  return new Response(null,{status:302,headers:{
+    'Location':coverForCategory(category),
+    'Cache-Control':'public,max-age=900'
+  }});
 }
 
 export async function onRequest(context){
   const request=context.request;
   if(request.method!=='GET')return new Response('GET only',{status:405});
   const url=new URL(request.url);
-  const article=trustedArticleUrl(url.searchParams.get('article')||'');
+  const raw=url.searchParams.get('article')||'';
+  const direct=trustedArticleUrl(raw);
+  const google=isGoogleNewsArticle(raw);
   const category=url.searchParams.get('category')||'markets';
-  if(!article)return fallback(category);
+  if(!direct&&!google)return fallback(category);
   const cache=globalThis.caches?.default;
-  const key=new Request(url.origin+url.pathname+'?article='+encodeURIComponent(article)+'&category='+encodeURIComponent(category));
+  const key=new Request(url.origin+url.pathname+'?article='+encodeURIComponent(raw)+'&category='+encodeURIComponent(category));
   if(cache){
     const previous=await cache.match(key);
     if(previous)return previous;
   }
   const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort('publisher image timeout'),6500);
+  const timeout=setTimeout(()=>controller.abort('publisher image timeout'),10500);
   let output;
   try{
+    const article=direct||await resolveGoogleNewsArticle(raw,{signal:controller.signal});
+    if(!article)throw new Error('original publisher URL unavailable');
     const source=await fetch(article,{
       signal:controller.signal,redirect:'manual',
       headers:{'Accept':'text/html,application/xhtml+xml'},
@@ -80,7 +88,7 @@ export async function onRequest(context){
   }catch{
     output=fallback(category);
   }finally{clearTimeout(timeout);}
-  if(cache && output.ok){
+  if(cache && (output.ok||output.status===302)){
     const cacheWrite=cache.put(key,output.clone()).catch(()=>{});
     if(context.waitUntil)context.waitUntil(cacheWrite);
     else await cacheWrite;
