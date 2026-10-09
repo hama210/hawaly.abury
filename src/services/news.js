@@ -78,7 +78,17 @@ function saveCachedNews(items) {
 }
 
 function prepareNews(primary = [], backup = []) {
-  return withIntelligence(latestFirst(mergeUnique(primary, backup)).slice(0, NEWS_LIMIT), 'live');
+  const all = latestFirst(mergeUnique(primary, backup));
+  // Preserve a few high-interest headlines across high-volume RSS batches.
+  // Final presentation remains strictly latest-first with genuine timestamps.
+  const priorities = [
+    /^(Trump White House|Trump Reuters|Trump Announcements)$/,
+    /^(Saudi War Updates|Reuters Saudi War)$/,
+    /^(Iraq Dollar Live|Iraq Dollar Reaction|Shafaq USD-IQD)$/
+  ];
+  const mustShow = priorities.flatMap(group => all.filter(item => group.test(item.sourceGroup || '')).slice(0, 5));
+  const selected = mergeUnique(mustShow, all).slice(0, NEWS_LIMIT);
+  return withIntelligence(latestFirst(selected), 'live');
 }
 
 export function getInitialNews() {
