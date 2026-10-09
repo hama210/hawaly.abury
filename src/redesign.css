@@ -396,3 +396,5 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
  .home-news .story-copy,.news-screen .story-copy{min-width:0}
  .home-news .story-title,.news-screen .story-title{overflow-wrap:anywhere}
 }
+
+.translation-notice{margin:0;padding:9px 13px;border-radius:10px;border:1px solid color-mix(in srgb,var(--primary) 30%,var(--line));background:color-mix(in srgb,var(--primary) 8%,var(--card));color:var(--muted);font-size:11px;line-height:1.8}
