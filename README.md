@@ -36,18 +36,16 @@ Currency conversions use USD-per-currency, with explicit city/side, CBI or manua
 
 `npm run check` runs tests and the production build. Source failure must preserve a labelled last-known quote or show unavailable; it must never generate a substitute quote. The service worker uses network-first navigation and a clearly labelled offline page, never a cached document presented as current rates.
 
-## Inline news translation (October 2026)
+## News translation
 
-Hawal translates news titles, summaries and available article text **inside the website** using **Google Translate only**, with Central Kurdish (Sorani, code `ckb`) and Arabic (`ar`). No Microsoft Translator code is used.
+The translator is rebuilt around the Cloudflare Workers AI binding `AI`, using Google's `@cf/google/gemma-4-26b-a4b-it` model. The deployment configuration is in `wrangler.jsonc`; neither the browser nor the server needs a translation API key. The previous public Google endpoint, browser fallback, and legacy translated fields are removed.
 
-No API key, billing account or secret is required. The browser first requests the public Google Translate endpoint with cookies omitted. Headlines, summaries and article chunks share a serial queue and a 24-hour session cache. No proxy service is used.
+Selecting Sorani (`ckb`), Arabic (`ar`), or English (`en`) queues every headline, summary, and publisher-provided article body in the loaded feed. Headlines have priority, and opening a story raises its article text to the front of the queue. Long text is split without truncation, and displayed only after every chunk succeeds. Native text needs no translation. The publisher's original stays available when a request fails.
 
-If the browser route fails, the app tries the same keyless Google service through Pages. A failed route cools down for one minute instead of repeatedly sending the feed into a rate limit. Google’s public endpoint is unofficial and may still be unavailable. Existing Google and Microsoft secrets are ignored.
+Successful results use a shared browser cache for 24 hours and an edge cache for seven days, keyed by the original text, language, and translator version. Language changes cancel that view's pending work without cancelling another reader's request. Output checks reject missing figures, altered currency pairs, malformed results, or unexpected scripts; these checks do not certify translation quality.
 
-After deployment, open `/api/translation-status` for the active version and `/api/translation-health` to check the server fallback. The health response labels its route; server failure does not describe the browser route. Verify Kurdish and Arabic headlines, summaries and the article reader in the actual preview before merging.
+Cloudflare Workers AI includes a daily free allocation. The existing account's plan and usage limits apply; this configuration does not enable or upgrade a paid plan. Exhausted quota or unavailable inference leaves originals visible with a Retry action.
 
-Every translation is checked for suspicious output, numeric alterations and changed currency pairs. If the Google service is unavailable or a translation fails checks, the original news text remains visible; a Retry button is provided. For longer articles, all chunks must pass before any translated version is shown.
-
-Previously cached translations were invalidated so Microsoft-origin results cannot be reused by the browser or Cloudflare cache. Tradukka is not integrated.
+Check `/api/translation-status` for the deployed binding and `/api/translation-health` for a real Sorani inference. Verify Kurdish and Arabic headlines, summaries, and the reader in a preview before merging. For local inference use Cloudflare Pages development with the `AI` binding; Vite alone reports that inference is not configured.
 
 Publisher images use approved media and verified OpenGraph photos when possible. Missing photos remain clearly labelled illustrations, not invented images.

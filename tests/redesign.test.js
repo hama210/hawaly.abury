@@ -51,7 +51,7 @@ test('mobile design matches navy-blue screenshot while supporting narrow and RTL
   assert.match(css,/@media\(max-width:370px\)/);
   assert.match(css,/\.pulse-card strong\{[^}]*overflow:hidden/);
   assert.match(css,/\[data-theme="light"\]/);
-  assert.match(sw,/v32-keyless-google/);
+  assert.match(sw,/v33-news-translator/);
 });
 
 test('the actual homepage renders more than four news cards and mobile grid stays readable',()=>{
@@ -64,8 +64,8 @@ test('the actual homepage renders more than four news cards and mobile grid stay
 });
 
 test('Sorani and Arabic machine translation happens within Hawal with original fallback',()=>{
-  assert.match(main,/useClientTranslator/);
-  assert.match(main,/translateArticleBody/);
+  assert.match(main,/useNewsTranslation/);
+  assert.match(main,/newsTranslator.translate/);
   assert.match(main,/const displayNews=translatedNews/);
   assert.match(main,/selectedText\.original/);
   assert.match(main,/translation-inline-status/);

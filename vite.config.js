@@ -1,12 +1,10 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { FEEDS } from './functions/api/news.js';
 import { onRequest as translateRequest } from './functions/api/translate.js';
 import { onRequest as translationStatusRequest } from './functions/api/translation-status.js';
 
-// Use the SAME production translation handlers in Vite development.
-// The previous dev-only handler sent generic hard-coded topic sentences and
-// omitted translatedFlags, so the UI discarded its apparent translations.
+// Vite exposes the production contract. Real inference runs through Pages AI bindings.
 const jsonHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Cache-Control': 'no-store',
@@ -24,7 +22,7 @@ function readRequestBody(req) {
     req.setEncoding('utf8');
     req.on('data', chunk => {
       body += chunk;
-      if (Buffer.byteLength(body, 'utf8') > 16000) {
+      if (Buffer.byteLength(body, 'utf8') > 65536) {
         reject(Object.assign(new Error('Request too large'), { status: 413 }));
         req.pause();
       }
@@ -55,9 +53,7 @@ function devTranslateApi() {
   return {
     name: 'hawali-dev-translate-api',
     configureServer(server) {
-      // Keys stay on the dev server. Only VITE_-prefixed variables are exposed
-      // by Vite to client code; the official translator keys are never copied.
-      const env = { ...loadEnv(server.config.mode, server.config.root, ''), ...process.env };
+      const env = {};
 
       server.middlewares.use('/api/sources', (req, res) => {
         if (req.method !== 'GET') {
