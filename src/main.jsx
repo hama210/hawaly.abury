@@ -379,8 +379,6 @@ function ArticleModal({ item, lang, dict, onClose }) {
       .finally(()=>{if(!controller.signal.aborted)setArticleTranslating(false);});
     return ()=>controller.abort();
   },[item,lang]);
-  const tradukkaUrl = tradukkaHeadlineUrl(item);
-  const tradukka = tradukkaLinkCopy(lang);
   useEffect(() => {
     if (!item) return undefined;
     const handleKey = event => { if (event.key === 'Escape') onClose(); };
