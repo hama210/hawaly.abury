@@ -84,12 +84,15 @@ async function translateOne(text,target,request,context){
   if(context.env?.MICROSOFT_TRANSLATOR_KEY)providers.push(['microsoft',()=>microsoft(text,target,context.env)]);
   if(context.env?.GOOGLE_TRANSLATE_API_KEY)providers.push(['google-cloud',()=>googleCloud(text,target,context.env)]);
   providers.push(['google-public',()=>googlePublic(text,target)]);
-  let failureReason='no-provider';
+  const failures=[];
   for(const [name,provider] of providers){
     try{
       const result=await provider();
       const checked=validateTranslation(text,result,target);
-      if(!checked.ok){failureReason=name+':'+checked.reason;continue;}
+      if(!checked.ok){
+        failures.push(name+':'+checked.reason);
+        continue;
+      }
       if(cache && key){
         const put=cache.put(key,Response.json({text:checked.text},{headers:{'Cache-Control':'public,max-age='+TTL}})).catch(()=>{});
         context.waitUntil?.(put);
@@ -100,11 +103,11 @@ async function translateOne(text,target,request,context){
       // article text, request headers or secret API keys.
       const status=/translator status (\d+)/.exec(String(error?.message||''))?.[1];
       const kind=status?'http-'+status:error?.name==='AbortError'?'timeout':'network-error';
-      failureReason=name+':'+kind;
-      console.warn('[Hawal translator] '+failureReason);
+      failures.push(name+':'+kind);
+      console.warn('[Hawal translator] '+name+':'+kind);
     }
   }
-  return {text,translated:false,provider:'original',reason:failureReason};
+  return {text,translated:false,provider:'original',reason:failures.join(',')||'no-provider'};
 }
 async function mapBounded(values,concurrency,mapper){
   let cursor=0;
