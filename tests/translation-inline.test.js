@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {onRequest} from '../functions/api/translate.js';
+import {onRequest as checkTranslationHealth} from '../functions/api/translation-health.js';
 import {validateTranslation,alreadyInTargetLanguage} from '../src/lib/translation-check.js';
 import {translateArticleBody,articleChunks} from '../src/lib/article-translation.js';
 import {getTitle,getSummary} from '../src/utils/news.js';
@@ -153,4 +154,54 @@ test('Vite development routes share the actual Pages translator contract',()=>{
   assert.match(vite,/onRequest as translationStatusRequest/);
   assert.match(vite,/serveProductionHandler/);
   assert.doesNotMatch(vite,/fallbackTranslate|FALLBACKS/);
+});
+
+test('fixed-input translation-health checks real Microsoft provider without exposing secrets',async()=>{
+  const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});
+  let calls=0;
+  const restoreFetch=replaceGlobal('fetch',async (url,options)=>{
+    calls++;
+    assert.match(String(url),/api\.cognitive\.microsofttranslator\.com/);
+    assert.equal(options.headers['Ocp-Apim-Subscription-Key'],'private-test-key');
+    const input=JSON.parse(options.body);
+    assert.equal(input[0].Text,'Gold prices fell in Baghdad today.');
+    return Response.json([{translations:[{to:'ku',text:'نرخی زێڕ ئەمڕۆ لە بەغدا دابەزی.'}]}]);
+  });
+  try{
+    const check=requestContext('https://hawal.example/api/translation-health');
+    check.context.env={MICROSOFT_TRANSLATOR_KEY:'private-test-key'};
+    const result=await (await checkTranslationHealth(check.context)).json();
+    await check.settle();
+    assert.equal(result.ok,true);
+    assert.equal(result.provider,'microsoft');
+    assert.match(result.sampleTranslation,/زێڕ/);
+    assert.doesNotMatch(JSON.stringify(result),/private-test-key/);
+    const second=requestContext('https://hawal.example/api/translation-health');
+    second.context.env=check.context.env;
+    assert.equal((await (await checkTranslationHealth(second.context)).json()).ok,true);
+    assert.equal(calls,1);
+  }finally{restoreFetch();restoreCache();}
+});
+
+test('translation-health reports safe Microsoft HTTP failures, never key values',async()=>{
+  const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});
+  const restoreFetch=replaceGlobal('fetch',async (url)=>{
+    return new Response('unauthorized',{status:String(url).includes('microsofttranslator')?401:429});
+  });
+  try{
+    const check=requestContext('https://hawal.example/api/translation-health');
+    check.context.env={MICROSOFT_TRANSLATOR_KEY:'private-test-key'};
+    const result=await (await checkTranslationHealth(check.context)).json();
+    assert.equal(result.ok,false);
+    assert.match(result.failure,/microsoft:http-401/);
+    assert.doesNotMatch(JSON.stringify(result),/private-test-key/);
+  }finally{restoreFetch();restoreCache();}
+});
+
+test('reader exposes recoverable errors instead of silently leaving all headlines untranslated',()=>{
+  const hook=fs.readFileSync('src/hooks/useClientTranslator.js','utf8');
+  const main=fs.readFileSync('src/main.jsx','utf8');
+  assert.match(hook,/translationIssue/);
+  assert.match(hook,/retryTranslations/);
+  assert.match(main,/onClick=\{retryTranslations\}/);
 });
