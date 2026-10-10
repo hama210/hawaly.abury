@@ -1,5 +1,5 @@
 export function articleText(item = {}) {
-  return `${item.title || ''} ${item.titleEn || ''} ${item.titleKu || ''} ${item.titleAr || ''} ${item.summary || ''} ${item.summaryEn || ''} ${item.summaryKu || ''} ${item.summaryAr || ''} ${item.content || ''} ${item.source || ''} ${item.sourceGroup || ''} ${item.category || ''}`.toLowerCase();
+  return `${item.title || ''} ${item.titleEn || ''} ${item.summary || ''} ${item.summaryEn || ''} ${item.content || ''} ${item.source || ''} ${item.sourceGroup || ''} ${item.category || ''}`.toLowerCase();
 }
 
 function assetsFor(item = {}) {
