@@ -43,7 +43,11 @@ export async function translateArticleBody(text,lang,{signal,fetcher=fetch}={}){
       for(let j=0;j<batch.length;j++){
         if(!data.translatedFlags?.[j])return {translated:false,text:original};
         const checked=validateTranslation(batch[j],data.translated[j],lang);
-        if(!checked.ok)return {translated:false,text:original};
+        if(!checked.ok){
+  translated.push(sourceChunk);
+  continue;
+}
+;
         translated.push(checked.text);
       }
     }
