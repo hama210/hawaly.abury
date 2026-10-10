@@ -322,6 +322,7 @@ export function useClientTranslator(
                     work.setIssue('');
                   } else {
                     const reason = String(result.failureReasons?.[index] || 'translation-unavailable');
+                    console.warn('[Hawal translator] '+reason.slice(0,180));
                     work.setIssue(reason.slice(0,180));
 
                     skipped.set(
