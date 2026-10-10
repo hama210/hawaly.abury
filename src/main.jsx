@@ -31,7 +31,8 @@ import { analyzeArticle } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
 import { articleText, matchesCategory } from './utils/categories.js';
 import { articleSelection, storyExcerpt, readerCopy } from './lib/article-content.js';
-import { tradukkaHeadlineUrl, tradukkaLinkCopy } from './lib/tradukka.js';
+import { useClientTranslator } from './hooks/useClientTranslator.js';
+import { translateArticleBody } from './lib/article-translation.js';
 import { imageForNews, coverForCategory } from './lib/news-images.js';
 
 const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
@@ -116,12 +117,12 @@ function isNewStory(item) {
   return Number.isFinite(publishedAt) && Date.now() - publishedAt <= 90 * 60 * 1000;
 }
 
-function sourceTitle(item) {
-  return getTitle(item || {}) || item?.title || '';
+function sourceTitle(item,lang) {
+  return getTitle(item || {},lang) || item?.title || '';
 }
 
-function sourceSummary(item) {
-  return getSummary(item || {});
+function sourceSummary(item,lang) {
+  return getSummary(item || {},lang);
 }
 
 function formatPrice(value) {
@@ -204,7 +205,7 @@ function TrustBar({ lang }) {
 }
 
 function clientConflictRegion(item, lang) {
-  const rawText = `${item?.titleEn || item?.title || ''} ${item?.summaryEn || item?.summary || ''} ${sourceTitle(item)} ${sourceSummary(item)}`;
+  const rawText = `${item?.titleEn || item?.title || ''} ${item?.summaryEn || item?.summary || ''} ${sourceTitle(item,lang)} ${sourceSummary(item,lang)}`;
   const text = rawText.toLowerCase();
   const iran = /\b(iran|iranian|tehran|irgc)\b|strait of hormuz|\bhormuz\b/i.test(rawText);
   const usa = /(?:^|[^A-Za-z])(?:US|USA|U\.S\.?)(?=[^A-Za-z]|$)/.test(rawText) || /\b(united states|american|pentagon|centcom|white house|trump|rubio)\b/i.test(rawText);
@@ -243,7 +244,7 @@ function MiddleEastBrief({ items, lang, onOpen }) {
   return <section className="middle-east-brief" aria-labelledby="middle-east-title">
     <div className="brief-heading"><div><span className="brief-live"><i />{copy.live}</span><h2 id="middle-east-title">{copy.title}</h2><p>{copy.description}</p></div><div className="brief-count"><strong>{todayCount}</strong><span>{copy.today}</span></div></div>
     <div className="brief-filters" role="tablist" aria-label={copy.title}>{filters.map(key => <button key={key} type="button" className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{copy[key]}</button>)}</div>
-    {shown.length ? <div className="brief-list">{shown.map(({ item, region }) => <article className="brief-item" key={item.id}><div className="brief-time"><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><i /></div><button type="button" className="brief-copy" onClick={() => onOpen(item)}><span className="brief-region">{copy[region]}</span><h3 dir="auto">{sourceTitle(item)}</h3><p dir="auto">{shorten(sourceSummary(item))}</p><small>{item.source} · {copy.source}</small></button></article>)}</div> : <div className="brief-empty">{copy.empty}</div>}
+    {shown.length ? <div className="brief-list">{shown.map(({ item, region }) => <article className="brief-item" key={item.id}><div className="brief-time"><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><i /></div><button type="button" className="brief-copy" onClick={() => onOpen(item)}><span className="brief-region">{copy[region]}</span><h3 dir="auto">{sourceTitle(item,lang)}</h3><p dir="auto">{shorten(sourceSummary(item,lang))}</p><small>{item.source} · {copy.source}</small></button></article>)}</div> : <div className="brief-empty">{copy.empty}</div>}
     <p className="brief-note">{copy.note}</p>
   </section>;
 }
@@ -313,7 +314,7 @@ function BreakingBar({ items, lang, dict }) {
   const stories = (highImpact.length ? highImpact : items).slice(0, 2);
   return <section className="breaking-bar" aria-label={dict.breaking}>
     <strong className="breaking-label"><span className="live-dot" />{dict.breaking}</strong>
-    <div className="breaking-copy">{stories.map((item, index) => <span key={item.id || index} dir="auto">{sourceTitle(item)}</span>)}</div>
+    <div className="breaking-copy">{stories.map((item, index) => <span key={item.id || index} dir="auto">{sourceTitle(item,lang)}</span>)}</div>
   </section>;
 }
 
@@ -332,7 +333,7 @@ function Hero({ item, lang, dict, onOpen }) {
     <div className="lead-overlay" />
     <div className="lead-copy">
       <span className="lead-label">{uiCopy[lang]?.lead || uiCopy.ku.lead}</span>
-      <h2 dir="auto">{sourceTitle(item)}</h2>
+      <h2 dir="auto">{sourceTitle(item,lang)}</h2>
       {storyExcerpt(item, lang) && <p dir="auto">{storyExcerpt(item, lang)}</p>}
       <div className="hero-effects">{intel.effects?.slice(0, 4).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
       <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span>{isNewStory(item) && <span className="fresh-pill">{uiCopy[lang]?.fresh}</span>}<span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
@@ -342,14 +343,11 @@ function Hero({ item, lang, dict, onOpen }) {
 
 function NewsCard({ item, lang, onOpen }) {
   const intel = focusedIntelligence(item);
-  const tradukkaUrl = tradukkaHeadlineUrl(item);
-  const tradukka = tradukkaLinkCopy(lang);
   return <article className="story-card">
-    <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={sourceTitle(item)}><img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={imageFallback} /></button>
+    <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={sourceTitle(item,lang)}><img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={imageFallback} /></button>
     <div className="story-copy">
       <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}<time dateTime={item.publishedAt}>{timestamp(item.publishedAt,lang)}</time></span></div>
-      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noopener noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" type="button" onClick={() => onOpen(item)}>{sourceTitle(item)}</button>
-      {tradukkaUrl && <a className="tradukka-headline-link" href={tradukkaUrl} target="_blank" rel="noopener noreferrer" title={tradukka.notice}>{tradukka.label}</a>}
+      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noopener noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" type="button" onClick={() => onOpen(item)}>{sourceTitle(item,lang)}</button>
       {storyExcerpt(item,lang) && <p dir="auto" className="story-excerpt">{storyExcerpt(item,lang)}</p>}
       <div className="card-effects">{intel.effects?.slice(0, 3).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
     </div>
@@ -360,6 +358,27 @@ function ArticleModal({ item, lang, dict, onClose }) {
   const reader = readerCopy[lang] || readerCopy.ku;
   const selectedText = articleSelection(item);
   const sourceLink = safeUrl(item?.link);
+  const [articleBody,setArticleBody]=useState(selectedText.original);
+  const [articleTranslating,setArticleTranslating]=useState(false);
+  const [articleTranslated,setArticleTranslated]=useState(false);
+  useEffect(()=>{
+    const controller=new AbortController();
+    setArticleBody(selectedText.original);
+    setArticleTranslated(false);
+    if(!item||!selectedText.isAvailable||lang==='en'){
+      setArticleTranslating(false);
+      return ()=>controller.abort();
+    }
+    setArticleTranslating(true);
+    translateArticleBody(selectedText.original,lang,{signal:controller.signal})
+      .then(result=>{
+        if(controller.signal.aborted)return;
+        setArticleBody(result.text);
+        setArticleTranslated(result.translated);
+      }).catch(()=>{})
+      .finally(()=>{if(!controller.signal.aborted)setArticleTranslating(false);});
+    return ()=>controller.abort();
+  },[item,lang]);
   const tradukkaUrl = tradukkaHeadlineUrl(item);
   const tradukka = tradukkaLinkCopy(lang);
   useEffect(() => {
@@ -376,15 +395,17 @@ function ArticleModal({ item, lang, dict, onClose }) {
     <div className="modal-content">
       <button className="modal-close" type="button" onClick={onClose} aria-label={uiCopy[lang]?.close}>×</button>
       <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>
-      <h2 id="modal-title" dir="auto">{sourceTitle(item)}</h2>
+      <h2 id="modal-title" dir="auto">{sourceTitle(item,lang)}</h2>
       <section className="article-reader" aria-label={copy.content}>
         <div className="article-reader-heading"><h3>{selectedText.isAvailable ? (selectedText.isExtended ? reader.extended : reader.excerpt) : copy.content}</h3><span className={'article-availability '+(selectedText.isAvailable?'has-text':'title-only')}>{selectedText.isAvailable?'RSS':'—'}</span></div>
         {selectedText.isAvailable ? <>
-          <p className="article-body" dir="auto">{selectedText.original}</p>
+          <p className="article-body" dir={articleTranslated?(lang==='en'?'auto':'rtl'):'auto'}>{articleBody || selectedText.original}</p>
+          {articleTranslating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی ناوەڕۆک...':lang==='ar'?'جارٍ ترجمة محتوى الخبر...':'Translating article...'}</p>}
+          {!articleTranslating && lang!=='en' && !articleTranslated &&
+            <small className="translation-inline-note">{lang==='ku'?'وەرگێڕانی دڵنیا بەردەست نییە؛ دەقی ڕەسەنی سەرچاوە پیشان دەدرێت.':'لا توجد ترجمة موثوقة؛ يُعرض نص المصدر الأصلي.'}</small>}
           <p className="reader-note">{reader.notice}</p></> :
           <p className="article-body article-missing">{reader.missing}</p>}
         {sourceLink && <a className="reader-source-link" href={sourceLink} target="_blank" rel="noopener noreferrer">{reader.original} ↗</a>}
-        {tradukkaUrl && <div className="tradukka-reader-action"><a href={tradukkaUrl} target="_blank" rel="noopener noreferrer">{tradukka.label}</a><small>{tradukka.notice}</small></div>}
       </section>
       <h3>{copy.effects}</h3>
       <div className="effect-grid">{intel.effects?.map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} detailed />)}</div>
@@ -458,8 +479,9 @@ function App() {
   const [featureTarget, setFeatureTarget] = useState(null);
   const dict = t[lang] || t.ku;
   const copy = uiCopy[lang] || uiCopy.ku;
-  // News text remains in the original publisher language on every UI locale.
-  const displayNews = news;
+  // Source wording remains the fallback whenever translation is unavailable.
+  const {translatedNews,translating}=useClientTranslator(news,lang,activeView==='news'?newsVisibleCount:homeVisibleCount+1);
+  const displayNews=translatedNews;
   const designCopy = navigationCopy[lang] || navigationCopy.ku;
   const navigate = view => {
     setActiveView(view);
@@ -536,6 +558,7 @@ function App() {
           </div>
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
+        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':''}</p>}
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
           {rest.length ? <><div className="news-grid">{rest.slice(0, homeVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
@@ -560,6 +583,7 @@ function App() {
         {activeView==='news' && <VerificationDesk news={displayNews} lang={lang}/>}
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
+        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':''}</p>}
         <div className="topic-shortcuts" aria-label="News topics">
           {[
             ['Trump','Trump','ترامپ','ترامب'],
