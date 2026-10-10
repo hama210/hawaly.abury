@@ -59,3 +59,21 @@ test('partial translations of long, detailed headlines are not presented as comp
   const tiny='بانکی ناوەندی بڕیارێکی نوێی ڕاگەیاند';
   assert.equal(translationQuality(headline,tiny,'ku').reason,'implausible-length');
 });
+
+test('rejects screenshot-style Sorani hallucinated repeated words and sentence loops',()=>{
+  const source='The Iraqi central bank announced new dollar exchange regulations for banks and travellers. The policy applies to approved money transfers and commercial transactions.';
+  const gibberish='بانکی ناوەندی عێراق بڕیارێکی نوێی دا: گەشەکردنی گەشەکردنی گەشەکردنی گەشەکردنی گەشەکردنی گەشەکردنی گەشەکردنی گەشەکردنی گەشەکردنی گەشەکردنی لە بازاڕدا';
+  assert.equal(translationQuality(source,gibberish,'ku').reason,'repetitive-output');
+  const loop='بانکی ناوەندی لە بازاڕدا بڕیار دا. بانکی ناوەندی لە بازاڕدا بڕیار دا. بانکی ناوەندی لە بازاڕدا بڕیار دا. بانکی ناوەندی لە بازاڕدا بڕیار دا.';
+  assert.equal(translationQuality(source,loop,'ku').reason,'repetitive-output');
+});
+test('rejects untranslated English paragraph glued to the end of Sorani text',()=>{
+  const source='The central bank announced new exchange regulations for Iraq. The bank said its foreign reserves cover external transfers and dollar sales to travellers.';
+  const output='بانکی ناوەندی عێراق ڕێنمایی نوێی بۆ ئاڵوگۆڕی دراو ڕاگەیاند. The bank said its foreign reserves cover external transfers and dollar sales to travellers without restrictions';
+  assert.equal(translationQuality(source,output,'ku').reason,'mixed-language-output');
+});
+test('accepts normal Sorani sentences that mention English ticker symbols and outlets',()=>{
+  const source='The dollar falls in Iraq while Brent Oil increases';
+  const output='نرخی دۆلار لە عێراق دابەزیوە، لە کاتێکدا نرخی Brent Oil بەرزبووەتەوە';
+  assert.equal(translationQuality(source,output,'ku').valid,true);
+});
