@@ -43,11 +43,9 @@ export async function translateArticleBody(text,lang,{signal,fetcher=fetch}={}){
       for(let j=0;j<batch.length;j++){
         if(!data.translatedFlags?.[j])return {translated:false,text:original};
         const checked=validateTranslation(batch[j],data.translated[j],lang);
-        if(!checked.ok){
-  translated.push(sourceChunk);
-  continue;
-}
-;
+        // Never mix untranslated source chunks into a translated article.
+        // If a single chunk fails validation, keep the entire original text.
+        if(!checked.ok)return {translated:false,text:original};
         translated.push(checked.text);
       }
     }
