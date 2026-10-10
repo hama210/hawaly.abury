@@ -4,7 +4,7 @@ import { translationQuality } from '../lib/translation-quality.js';
 // Persistent, incremental translations survive each incoming RSS batch.
 const memory=new Map();
 const failedUntil=new Map();
-const CACHE_PREFIX='hawali_translate_v8_quality_checked_';
+const CACHE_PREFIX='hawali_translate_v9_contextual_sorani_';
 const MAX_BATCH=5;
 const CONCURRENCY=2;
 
@@ -85,7 +85,7 @@ export function useClientTranslator(news,lang,visibleLimit=24){
         const taskId=key+':'+field;
         if(!text||cached[destination]||item[destination]||work.scheduled.has(taskId)||(failedUntil.get(taskId)||0)>now)continue;
         work.scheduled.add(taskId);
-        queue.push({key,taskId,text,destination});
+        queue.push({key,taskId,text,destination,context:field==='title'?summary:title});
       }
     }
 
@@ -96,7 +96,11 @@ export function useClientTranslator(news,lang,visibleLimit=24){
           const list=work.queueTitles.length?work.queueTitles:work.queueSummaries;
           const batch=list.splice(0,MAX_BATCH);
           work.running++;
-          const body=JSON.stringify({lang:work.lang,texts:batch.map(job=>job.text)});
+          const body=JSON.stringify({
+            lang:work.lang,
+            texts:batch.map(job=>job.text),
+            contexts:batch.map(job=>job.context)
+          });
           fetch('/api/translate',{
             method:'POST',headers:{'Content-Type':'application/json'},body,
             signal:work.controller.signal
