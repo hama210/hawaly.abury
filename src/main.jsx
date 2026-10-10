@@ -478,7 +478,7 @@ function App() {
   const dict = t[lang] || t.ku;
   const copy = uiCopy[lang] || uiCopy.ku;
   // Source wording remains the fallback whenever translation is unavailable.
-  const {translatedNews,translating}=useClientTranslator(news,lang,activeView==='news'?newsVisibleCount:homeVisibleCount+1);
+  const {translatedNews,translating,translationIssue,retryTranslations}=useClientTranslator(news,lang,activeView==='news'?newsVisibleCount:homeVisibleCount+1);
   const displayNews=translatedNews;
   const designCopy = navigationCopy[lang] || navigationCopy.ku;
   const navigate = view => {
@@ -557,6 +557,7 @@ function App() {
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':''}</p>}
+        {translationIssue && !translating && lang!=='en' && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.': 'تعذرت الترجمة؛ يظهر النص الأصلي.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':'إعادة المحاولة'}</button></div>}
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
           {rest.length ? <><div className="news-grid">{rest.slice(0, homeVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
@@ -582,6 +583,7 @@ function App() {
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
         {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':''}</p>}
+        {translationIssue && !translating && lang!=='en' && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.': 'تعذرت الترجمة؛ يظهر النص الأصلي.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':'إعادة المحاولة'}</button></div>}
         <div className="topic-shortcuts" aria-label="News topics">
           {[
             ['Trump','Trump','ترامپ','ترامب'],
