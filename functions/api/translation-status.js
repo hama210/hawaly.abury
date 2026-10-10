@@ -3,7 +3,7 @@ export async function onRequest(context){
   const microsoft=Boolean(context.env?.MICROSOFT_TRANSLATOR_KEY);
   const googleCloud=Boolean(context.env?.GOOGLE_TRANSLATE_API_KEY);
   return Response.json({
-    revision:'hawal-inline-v11',
+    revision:'hawal-inline-v12',
     inlineTranslation:true,
     languages:{ku:'Central Kurdish (Sorani)',ar:'Arabic'},
     microsoftConfigured:microsoft,
