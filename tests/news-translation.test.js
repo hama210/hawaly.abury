@@ -38,7 +38,7 @@ test('server runs the translation model through its AI binding without keys or e
   let calls = 0;
   const env = { AI: { async run(model, input) {
     calls++;
-    assert.equal(model, '@cf/openai/gpt-oss-120b');
+    assert.equal(model, '@cf/qwen/qwen3.8-27b');
     assert.match(input.messages[0].content, /Central Kurdish/);
     assert.ok(input.max_tokens > 256);
     assert.deepEqual(JSON.parse(input.messages[1].content).texts, [{ id: 0, text: source }]);

@@ -38,7 +38,7 @@ Currency conversions use USD-per-currency, with explicit city/side, CBI or manua
 
 ## News translation
 
-The translator is rebuilt around the Cloudflare Workers AI binding `AI`, using the open-weight `@cf/openai/gpt-oss-120b` model. The deployment configuration is in `wrangler.jsonc`; neither the browser nor the server needs a translation API key. The previous public Google endpoint, browser fallback, and legacy translated fields are removed.
+The translator is rebuilt around the Cloudflare Workers AI binding `AI`, using `@cf/qwen/qwen3.8-27b` for Sorani and Google's `@cf/google/gemma-4-26b-a4b-it` for Arabic and English. The deployment configuration is in `wrangler.jsonc`; neither the browser nor the server needs a translation API key. The previous public Google endpoint, browser fallback, and legacy translated fields are removed.
 
 Selecting Sorani (`ckb`), Arabic (`ar`), or English (`en`) queues every headline, summary, and publisher-provided article body in the loaded feed. Headlines have priority, and opening a story raises its article text to the front of the queue. Long text is split without truncation, and displayed only after every chunk succeeds. Native text needs no translation. The publisher's original stays available when a request fails.
 
