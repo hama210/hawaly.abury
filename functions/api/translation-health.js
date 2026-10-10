@@ -4,7 +4,7 @@
 import { onRequest as translate } from './translate.js';
 
 const SAMPLE='Gold prices fell in Baghdad today.';
-const KEY_PATH='/__hawal_translation_health_v1';
+const KEY_PATH='/__hawal_google_translation_health_v2';
 const TTL=120;
 
 export async function onRequest(context){
@@ -30,7 +30,7 @@ export async function onRequest(context){
     // The only translated text that may be returned is the fixed, public sample.
     const body={
       ok:valid,
-      revision:'hawal-translation-check-v1',
+      revision:'hawal-google-translation-check-v2',
       sampleSource:SAMPLE,
       sampleTranslation:valid?String(result.translated?.[0]||''):null,
       provider:valid?result.sources?.[0]||'unknown':'unavailable',
@@ -46,7 +46,7 @@ export async function onRequest(context){
     }
     return response;
   }catch{
-    return Response.json({ok:false,revision:'hawal-translation-check-v1',provider:'unavailable',failure:'internal-error'},
+    return Response.json({ok:false,revision:'hawal-google-translation-check-v2',provider:'unavailable',failure:'internal-error'},
       {status:200,headers:{'Cache-Control':'no-store'}});
   }
 }

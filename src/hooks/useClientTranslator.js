@@ -4,7 +4,7 @@ import {
   validateTranslation
 } from '../lib/translation-check.js';
 
-const PREFIX = 'hawal-inline-translation-v13:';
+const PREFIX = 'hawal-google-only-translation-v1:';
 const TTL = 24 * 60 * 60 * 1000;
 
 const BATCH = 8;

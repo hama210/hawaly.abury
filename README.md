@@ -38,47 +38,18 @@ Currency conversions use USD-per-currency, with explicit city/side, CBI or manua
 
 ## Inline news translation (October 2026)
 
-Hawal translates RSS headlines, summaries and available article text directly
-**inside its own website**. The interface remains Kurdish, Arabic and English.
-The translator uses Central Kurdish (Sorani) and Arabic targets:
+Hawal translates news titles, summaries and available article text **inside the website** using **Google Translate only**, with Central Kurdish (Sorani, code `ckb`) and Arabic (`ar`). No Microsoft Translator code is used.
 
-1. If `MICROSOFT_TRANSLATOR_KEY` is configured on Cloudflare Pages, use the
-   official Azure Translator API with target `ku`. A regional Microsoft
-   resource may also require `MICROSOFT_TRANSLATOR_REGION`.
-2. If `GOOGLE_TRANSLATE_API_KEY` is configured, use the official Cloud
-   Translation API with target `ckb` for Sorani.
-3. Without either key, try Google's public web translation endpoint as a
-   **best-effort fallback**. This is not a documented production API: it
-   may stop working, rate-limit or return inaccurate translations.
+1. When the `GOOGLE_TRANSLATE_API_KEY` encrypted secret is configured in Cloudflare Pages, translation uses the officially supported Google Cloud Translation API.
+2. Otherwise (or when the Cloud API temporarily fails), the server attempts Google's public web translation endpoint. This endpoint is **unofficial and best-effort**: it can be rate-limited, blocked or changed without notice. It should not be considered guaranteed in production.
+3. Never put translation keys in the browser, repo or a `VITE_` variable. Google Cloud Translation might incur charges.
 
-To configure the reliable supported provider: open Cloudflare Dashboard →
-Workers & Pages → Hawal Pages project → Settings → Variables and Secrets.
-Add the Microsoft or Google key as an encrypted **secret**, not as a GitHub file
-or browser variable. With Microsoft regional resources, also set the region.
-Save and redeploy. Translation API credentials are never returned to clients.
-Cloud translation products may have usage costs. Verify entitlements with
-your cloud account before enabling.
+Cloudflare Dashboard → Workers & Pages → Hawal project → Settings → Variables and Secrets → add `GOOGLE_TRANSLATE_API_KEY` if using Google Cloud. Previous Microsoft secrets may be manually deleted from Cloudflare; even if left in place, the app ignores them.
 
-Check `/api/translation-status` for the deployment revision and whether a
-provider key is configured. Use `/api/translation-health` to run a cached
-fixed-text English-to-Sorani translation on the deployed site. The health
-endpoint returns a non-secret provider label and safe failure codes (for
-example `microsoft:http-401`), not API keys, headers or private feed text.
-An Azure key configured in Cloudflare is NOT proof that real translations
-work: verify `ok:true` and `provider:"microsoft"` in translation-health.
-The Kurdish/Arabic news screens also offer a Retry button if translation
-fails; they never present an unverified translation as publisher text.
+After deployment, open `/api/translation-status` for the active configuration and `/api/translation-health` to run a fixed sample translation through the same backend. A successful build cannot guarantee Google's live service: confirm the health endpoint reports `ok: true` and a Google provider.
 
-Every translation is screened for repeated gibberish, foreign-script output,
-English leakage, broken numbers and altered currency pairs before use.
-The app keeps publisher original text when translation does not validate.
-Successful translations are cached, while historical machine translations
-from earlier builds are ignored. An article body only switches to translated
-text if all of its chunks complete and validate successfully; partial
-translations are never assembled together with original-language paragraphs.
+Every translation is checked for suspicious output, numeric alterations and changed currency pairs. If the Google service is unavailable or a translation fails checks, the original news text remains visible; a Retry button is provided. For longer articles, all chunks must pass before any translated version is shown.
 
-Tradukka was not integrated because a suitable official API could not be
-confirmed. There is no Tradukka link or redirect in the actual UI.
+Previously cached translations were invalidated so Microsoft-origin results cannot be reused by the browser or Cloudflare cache. Tradukka is not integrated.
 
-Publisher images use approved media and verified OpenGraph photos when possible.
-Missing photos remain clearly labelled illustrations, not invented images.
+Publisher images use approved media and verified OpenGraph photos when possible. Missing photos remain clearly labelled illustrations, not invented images.

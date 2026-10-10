@@ -1,12 +1,12 @@
 import {validateTranslation,alreadyInTargetLanguage} from '../../src/lib/translation-check.js';
 
-const TRANSLATION_VERSION='hawal-inline-v12';
+const TRANSLATION_VERSION='hawal-google-v1';
 const TTL=24*60*60;
 const REQUEST_LIMIT=10;
 const MAX_TEXT_CHARS=950;
 const MAX_BODY_BYTES=16000;
 const TIMEOUT_MS=7000;
-const targetCodes={ku:{microsoft:'ku',google:'ckb'},ar:{microsoft:'ar',google:'ar'}};
+const targetCodes={ku:'ckb',ar:'ar'};
 
 function headers(){return {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};}
 function clean(value){return String(value||'').replace(/\s+/gu,' ').trim();}
@@ -31,35 +31,21 @@ async function fetchJson(url,options={}){
     return await response.json();
   }finally{clearTimeout(timer);}
 }
-async function microsoft(text,target,env){
-  const key=env?.MICROSOFT_TRANSLATOR_KEY;
-  if(!key)return '';
-  const region=env?.MICROSOFT_TRANSLATOR_REGION;
-  const reqHeaders={
-    'Ocp-Apim-Subscription-Key':key,
-    'Content-Type':'application/json'
-  };
-  if(region)reqHeaders['Ocp-Apim-Subscription-Region']=region;
-  const result=await fetchJson('https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to='+targetCodes[target].microsoft,{
-    method:'POST',headers:reqHeaders,body:JSON.stringify([{Text:text}])
-  });
-  return clean(result?.[0]?.translations?.find(row=>row.to===targetCodes[target].microsoft)?.text || result?.[0]?.translations?.[0]?.text);
-}
 async function googleCloud(text,target,env){
   const key=env?.GOOGLE_TRANSLATE_API_KEY;
   if(!key)return '';
   const result=await fetchJson('https://translation.googleapis.com/language/translate/v2?key='+encodeURIComponent(key),{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({q:[text],target:targetCodes[target].google,format:'text'})
+    body:JSON.stringify({q:[text],target:targetCodes[target],format:'text'})
   });
   return htmlDecode(clean(result?.data?.translations?.[0]?.translatedText));
 }
 async function googlePublic(text,target){
   // Unauthenticated Google web endpoint: best effort only, not a guaranteed API.
-  // Prefer a licensed Microsoft or Google Cloud resource in production.
-  const url='https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl='+targetCodes[target].google+'&dt=t&q='+encodeURIComponent(text);
+  // Prefer the supported Google Cloud Translation API when configured.
+  const url='https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl='+targetCodes[target]+'&dt=t&q='+encodeURIComponent(text);
   const result=await fetchJson(url,{headers:{'Accept':'application/json'}});
-  return clean((result?.[0]||[]).map(segment=>Array.isArray(segment)?segment[0]:'').join(''));
+  return htmlDecode(clean((result?.[0]||[]).map(segment=>Array.isArray(segment)?segment[0]:'').join('')));
 }
 async function cacheKey(request,text,target){
   const payload=new TextEncoder().encode(TRANSLATION_VERSION+'\n'+target+'\n'+text);
@@ -81,7 +67,6 @@ async function translateOne(text,target,request,context){
     }
   }
   const providers=[];
-  if(context.env?.MICROSOFT_TRANSLATOR_KEY)providers.push(['microsoft',()=>microsoft(text,target,context.env)]);
   if(context.env?.GOOGLE_TRANSLATE_API_KEY)providers.push(['google-cloud',()=>googleCloud(text,target,context.env)]);
   providers.push(['google-public',()=>googlePublic(text,target)]);
   const failures=[];
