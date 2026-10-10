@@ -1,6 +1,6 @@
 import {validateTranslation,alreadyInTargetLanguage} from '../../src/lib/translation-check.js';
 
-const TRANSLATION_VERSION='hawal-inline-v11';
+const TRANSLATION_VERSION='hawal-inline-v12';
 const TTL=24*60*60;
 const REQUEST_LIMIT=10;
 const MAX_TEXT_CHARS=950;
@@ -84,19 +84,27 @@ async function translateOne(text,target,request,context){
   if(context.env?.MICROSOFT_TRANSLATOR_KEY)providers.push(['microsoft',()=>microsoft(text,target,context.env)]);
   if(context.env?.GOOGLE_TRANSLATE_API_KEY)providers.push(['google-cloud',()=>googleCloud(text,target,context.env)]);
   providers.push(['google-public',()=>googlePublic(text,target)]);
+  let failureReason='no-provider';
   for(const [name,provider] of providers){
     try{
       const result=await provider();
       const checked=validateTranslation(text,result,target);
-      if(!checked.ok)continue;
+      if(!checked.ok){failureReason=name+':'+checked.reason;continue;}
       if(cache && key){
         const put=cache.put(key,Response.json({text:checked.text},{headers:{'Cache-Control':'public,max-age='+TTL}})).catch(()=>{});
         context.waitUntil?.(put);
       }
       return {text:checked.text,translated:true,provider:name};
-    }catch{ /* try the next provider; never emit a misleading translation */ }
+    }catch(error){
+      // Keep provider errors observable in Cloudflare logs without logging
+      // article text, request headers or secret API keys.
+      const status=/translator status (\\d+)/.exec(String(error?.message||''))?.[1];
+      const kind=status?'http-'+status:error?.name==='AbortError'?'timeout':'network-error';
+      failureReason=name+':'+kind;
+      console.warn('[Hawal translator] '+failureReason);
+    }
   }
-  return {text,translated:false,provider:'original'};
+  return {text,translated:false,provider:'original',reason:failureReason};
 }
 async function mapBounded(values,concurrency,mapper){
   let cursor=0;
@@ -135,6 +143,7 @@ export async function onRequest(context){
     lang,
     translated:result.map(row=>row.text),
     translatedFlags:result.map(row=>row.translated),
-    sources:result.map(row=>row.provider)
+    sources:result.map(row=>row.provider),
+    failureReasons:result.map(row=>row.translated?null:(row.reason||null))
   });
 }
