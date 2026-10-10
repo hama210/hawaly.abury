@@ -105,7 +105,8 @@ export function useClientTranslator(news,lang,visibleLimit=28){
               if(result.translatedFlags?.[i]&&save(work.lang,job.text,result.translated[i])){
                 changed=true;
               }else{
-                skipped.set(job.key,Date.now()+5*60*1000);
+               skipped.set(job.key,Date.now()+30*1000);
+;
               }
             });
             if(changed&&!work.closed)work.setTick(old=>old+1);
