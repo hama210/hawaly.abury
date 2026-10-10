@@ -78,8 +78,9 @@ test('redesigned modal offers a source link and a helpful empty state',()=>{
   assert.match(main,/reader\.original/);
   assert.match(main,/const sourceLink = safeUrl\(item\?\.link\)/);
   assert.doesNotMatch(main,/function articleChunks\(/);
-  assert.doesNotMatch(main,/api\/translate/);
-  assert.match(main,/dir="auto">\{selectedText\.original\}/);
+  assert.match(main,/translateArticleBody/);
+  assert.match(main,/articleBody \|\| selectedText\.original/);
+  assert.match(main,/articleTranslated/);
   assert.match(css,/\.article-reader/);
   assert.match(css,/\.story-excerpt/);
   assert.doesNotMatch(main,/body \|\| translatedSummary\(item, lang\)/);
