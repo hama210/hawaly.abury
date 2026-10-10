@@ -8,6 +8,19 @@ import { MarketIntelligence, VerificationDesk, DollarHistory, MarketAlerts } fro
 import { Navigation, NavIcon, HomeMarkets, FeatureShortcuts, ScreenIntro, navigationCopy } from './components/HawalDashboard.jsx';
 import { dashboardCopy } from './lib/dashboard-copy.js';
 import { pageRoute, pagePath, timestamp, quoteState, safeUrl } from './lib/market-tools.js';
+// One-time cleanup: remove previous erroneous machine translations from this
+// browser without touching market-rate notes or other unrelated user settings.
+try {
+  for(let i=sessionStorage.length-1;i>=0;i--){
+    const key=sessionStorage.key(i);
+    if(key?.startsWith('hawali_translate_')) sessionStorage.removeItem(key);
+  }
+  for(let i=localStorage.length-1;i>=0;i--){
+    const key=localStorage.key(i);
+    if(key?.startsWith('hawali_translate_')) localStorage.removeItem(key);
+  }
+}catch{}
+
 const route = pageRoute(location.pathname);
 let bootstrap = {};
 try { bootstrap = JSON.parse(document.getElementById('hawall-bootstrap')?.textContent || '{}'); } catch {};
@@ -32,7 +45,7 @@ const uiCopy = {
     sell100:'فرۆشتن / $100', calendar:'ڕۆژژمێری ئابووری', latest:'دوایین هەواڵەکان', allSections:'هەموو بەشەکان',
     refresh:'نوێکردنەوە', theme:'گۆڕینی ڕەنگ', language:'زمان', search:'گەڕان', menu:'بەشەکانی هەواڵ',
     home:'سەرەکی', markets:'بازاڕ', news:'هەواڵ', high:'گرنگ', medium:'مامناوەند', live:'زیندوو', fresh:'نوێ',
-    noMarket:'نرخی ناوخۆ بەردەست نییە', translating:'وەرگێڕانی هەواڵەکان...', loadingNews:'هەواڵە نوێیەکان بار دەکرێن...', close:'داخستن',
+    noMarket:'نرخی ناوخۆ بەردەست نییە', loadingNews:'هەواڵە نوێیەکان بار دەکرێن...', close:'داخستن',
     effects:'کاریگەری لەسەر بازاڕ', content:'ناوەڕۆکی هەواڵ', loadingContent:'وەرگێڕانی ناوەڕۆک...', up:'فشاری بەرەو سەرەو', down:'فشاری بەرەو خوارەوە', watch:'چاودێری', effectNotice:'ئەمە هەڵسەنگاندنی ئاڕاستەی بازاڕە، نەک سیگناڵی مامەڵەکردن.'
   },
   ar: {
@@ -40,7 +53,7 @@ const uiCopy = {
     sell100:'بيع / 100$', calendar:'التقويم الاقتصادي', latest:'أحدث الأخبار', allSections:'كل الأقسام',
     refresh:'تحديث', theme:'تغيير المظهر', language:'اللغة', search:'بحث', menu:'أقسام الأخبار',
     home:'الرئيسية', markets:'الأسواق', news:'الأخبار', high:'مهم', medium:'متوسط', live:'مباشر', fresh:'جديد',
-    noMarket:'السعر المحلي غير متاح', translating:'جاري ترجمة الأخبار...', loadingNews:'جاري تحميل أحدث الأخبار...', close:'إغلاق',
+    noMarket:'السعر المحلي غير متاح', loadingNews:'جاري تحميل أحدث الأخبار...', close:'إغلاق',
     effects:'التأثير في الأسواق', content:'محتوى الخبر', loadingContent:'جاري ترجمة المحتوى...', up:'ضغط صعودي', down:'ضغط هبوطي', watch:'مراقبة', effectNotice:'هذا تقدير لاتجاه ضغط السوق وليس إشارة تداول.'
   },
   en: {
@@ -48,7 +61,7 @@ const uiCopy = {
     sell100:'Sell / $100', calendar:'Economic Calendar', latest:'Latest News', allSections:'All sections',
     refresh:'Refresh', theme:'Change theme', language:'Language', search:'Search', menu:'News sections',
     home:'Home', markets:'Markets', news:'News', high:'High', medium:'Medium', live:'Live', fresh:'New',
-    noMarket:'Local rate unavailable', translating:'Translating news...', loadingNews:'Loading the latest news...', close:'Close',
+    noMarket:'Local rate unavailable', loadingNews:'Loading the latest news...', close:'Close',
     effects:'Market Effects', content:'News Content', loadingContent:'Translating content...', up:'Upward pressure', down:'Downward pressure', watch:'Watch', effectNotice:'This is directional market context, not a trading signal.'
   }
 };
@@ -229,7 +242,7 @@ function MiddleEastBrief({ items, lang, onOpen }) {
   return <section className="middle-east-brief" aria-labelledby="middle-east-title">
     <div className="brief-heading"><div><span className="brief-live"><i />{copy.live}</span><h2 id="middle-east-title">{copy.title}</h2><p>{copy.description}</p></div><div className="brief-count"><strong>{todayCount}</strong><span>{copy.today}</span></div></div>
     <div className="brief-filters" role="tablist" aria-label={copy.title}>{filters.map(key => <button key={key} type="button" className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{copy[key]}</button>)}</div>
-    {shown.length ? <div className="brief-list">{shown.map(({ item, region }) => <article className="brief-item" key={item.id}><div className="brief-time"><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><i /></div><button type="button" className="brief-copy" onClick={() => onOpen(item)}><span className="brief-region">{copy[region]}</span><h3 dir="auto">{sourceTitle(item)}</h3><p>{shorten(sourceSummary(item))}</p><small>{item.source} · {copy.source}</small></button></article>)}</div> : <div className="brief-empty">{copy.empty}</div>}
+    {shown.length ? <div className="brief-list">{shown.map(({ item, region }) => <article className="brief-item" key={item.id}><div className="brief-time"><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><i /></div><button type="button" className="brief-copy" onClick={() => onOpen(item)}><span className="brief-region">{copy[region]}</span><h3 dir="auto">{sourceTitle(item)}</h3><p dir="auto">{shorten(sourceSummary(item))}</p><small>{item.source} · {copy.source}</small></button></article>)}</div> : <div className="brief-empty">{copy.empty}</div>}
     <p className="brief-note">{copy.note}</p>
   </section>;
 }
