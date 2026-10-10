@@ -36,27 +36,18 @@ Currency conversions use USD-per-currency, with explicit city/side, CBI or manua
 
 `npm run check` runs tests and the production build. Source failure must preserve a labelled last-known quote or show unavailable; it must never generate a substitute quote. The service worker uses network-first navigation and a clearly labelled offline page, never a cached document presented as current rates.
 
-## Real article pictures and Sorani translation (October 2026)
+## News images and original-language articles (October 2026)
 
-The news feed now keeps publisher thumbnails instead of discarding major image
-hosts. A restricted image proxy serves approved publishers' media when hotlinking
-is blocked. If a feed has no photo, `/api/article-image` attempts to retrieve
-the publisher's own OpenGraph image. It can also resolve encoded Google News RSS
-article links on a best-effort basis. When a publisher blocks access, a clearly
-illustrated local category cover remains; the site must never invent a photo or
-claim a placeholder is original news imagery.
+Hawal displays news headlines, RSS summaries and source-supplied article text
+**in the original publisher's language**. There is no automatic translation
+in the website, including Kurdish and Arabic interface routes. The language
+switcher still localizes navigation labels, dates and market tools.
 
-The client translates visible headlines first, caches successful translations
-and does not restart an unfinished queue every time another feed loads.
+The former machine-translation API, Workers AI translator, fallback translator,
+client translation queue, translated sample headlines and their test pages have
+been removed. Translation storage from previous versions is cleared when visitors
+load the updated site. Old server translation-cache entries may expire naturally
+but are not read or served.
 
-**Recommended for reliable Kurdish Sorani (ckb) and Arabic translation:** add a
-Cloudflare Workers AI binding called `AI` to the **production** Pages project:
-Workers & Pages → Hawal Pages project → Settings → Bindings → Add → Workers AI
-→ variable name `AI` → Save → **Redeploy**. Before enabling AI, review the
-applicable Workers AI quota and charges in your Cloudflare account. The code
-does not enable a paid AI service on its own. After redeploying, visit
-`/api/translation-status` and check `workersAIConfigured`. Hawal uses a
-Cloudflare-hosted multilingual model if configured; otherwise it tries the
-existing third-party free endpoints, which may throttle or reject requests.
-Untranslated headlines remain in their original language and must be labelled
-rather than replaced with unrelated generic Kurdish or Arabic text.
+Hawal keeps publisher thumbnails when available and retrieves trusted OpenGraph
+photos as a best-effort fallback. It never invents missing article images or text.
