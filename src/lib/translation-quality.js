@@ -57,7 +57,7 @@ export function translationQuality(source, candidate, lang){
     return {valid:false,text:output,reason:'unchanged'};
   if(REFUSAL.test(output)||KURDISH_GENERIC.test(output))
     return {valid:false,text:output,reason:'generic-or-refusal'};
-  if(output.length>Math.max(230,original.length*4) || output.length<Math.max(2,original.length*.12))
+  if(output.length>Math.max(230,original.length*4) || output.length<Math.max(3,original.length*(original.length>55?.30:.20)))
     return {valid:false,text:output,reason:'implausible-length'};
   if(arabicScriptRatio(output)<0.50)
     return {valid:false,text:output,reason:'wrong-script'};
