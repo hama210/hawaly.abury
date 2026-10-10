@@ -51,7 +51,7 @@ test('mobile design matches navy-blue screenshot while supporting narrow and RTL
   assert.match(css,/@media\(max-width:370px\)/);
   assert.match(css,/\.pulse-card strong\{[^}]*overflow:hidden/);
   assert.match(css,/\[data-theme="light"\]/);
-  assert.match(sw,/v30-original-news/);
+  assert.match(sw,/v31-inline-sorani/);
 });
 
 test('the actual homepage renders more than four news cards and mobile grid stays readable',()=>{
