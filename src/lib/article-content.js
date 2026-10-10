@@ -17,9 +17,13 @@ export function meaningfulArticleText(value, title) {
   if(/^(?:read more|continue reading|click here|view article|read the full story|latest news)$/iu.test(text)) return '';
   return text;
 }
-export function storyExcerpt(item) {
+export function storyExcerpt(item,lang='en') {
   if(!item)return '';
   const headline=item.titleEn || item.title || '';
+  const translated=lang==='ku'?item.summaryKu:lang==='ar'?item.summaryAr:'';
+  const translatedHeadline=lang==='ku'?item.titleKu:lang==='ar'?item.titleAr:'';
+  const local=meaningfulArticleText(translated,translatedHeadline||headline);
+  if(local)return local;
   const summary=meaningfulArticleText(item.summaryEn || item.summary,headline);
   if(summary)return summary;
   return meaningfulArticleText(item.contentEn || item.content,headline);
