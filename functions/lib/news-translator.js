@@ -3,7 +3,7 @@ import {
   checkTranslatedText, isTargetLanguage
 } from '../../src/lib/translation-format.js';
 
-export const TRANSLATION_MODEL = '@cf/google/gemma-4-26b-a4b-it';
+export const TRANSLATION_MODEL = '@cf/openai/gpt-oss-120b';
 const CACHE_SECONDS = 7 * 24 * 60 * 60;
 const pending = new Map();
 
@@ -74,8 +74,8 @@ export async function translateNewsBatch(context, texts, language) {
             { role: 'user', content: JSON.stringify({ texts: sources.map((text, id) => ({ id, text })) }) }
           ],
           temperature: 0,
-          max_completion_tokens: Math.min(10000, 512 + Math.ceil(sources.reduce((sum, text) => sum + text.length, 0) * 1.6)),
-          chat_template_kwargs: { enable_thinking: false },
+          max_tokens: Math.min(10000, 512 + Math.ceil(sources.reduce((sum, text) => sum + text.length, 0) * 1.6)),
+          reasoning_effort: 'low',
           response_format: { type: 'json_object' }
           });
           return modelTranslations(output, sources.length);

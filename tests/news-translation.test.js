@@ -32,14 +32,15 @@ test('feed entities are decoded before translation and numeric checks', () => {
   assert.equal(cleanTranslationText('&#999999999;'), '&#999999999;');
 });
 
-test('server runs a Google model with an AI binding, without keys or external fetches', async () => {
+test('server runs the translation model through its AI binding without keys or external fetches', async () => {
   const restoreCache = replaceGlobal('caches', { default: new MemoryCache() });
   const restoreFetch = replaceGlobal('fetch', () => { throw new Error('Unexpected external fetch'); });
   let calls = 0;
   const env = { AI: { async run(model, input) {
     calls++;
-    assert.equal(model, '@cf/google/gemma-4-26b-a4b-it');
+    assert.equal(model, '@cf/openai/gpt-oss-120b');
     assert.match(input.messages[0].content, /Central Kurdish/);
+    assert.ok(input.max_tokens > 256);
     assert.deepEqual(JSON.parse(input.messages[1].content).texts, [{ id: 0, text: source }]);
     return responseModel([{ id: 0, text: sorani }]);
   } } };
