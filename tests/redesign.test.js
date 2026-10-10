@@ -51,7 +51,7 @@ test('mobile design matches navy-blue screenshot while supporting narrow and RTL
   assert.match(css,/@media\(max-width:370px\)/);
   assert.match(css,/\.pulse-card strong\{[^}]*overflow:hidden/);
   assert.match(css,/\[data-theme="light"\]/);
-  assert.match(sw,/v29-news-feed/);
+  assert.match(sw,/v30-original-news/);
 });
 
 test('the actual homepage renders more than four news cards and mobile grid stays readable',()=>{
@@ -63,11 +63,10 @@ test('the actual homepage renders more than four news cards and mobile grid stay
   assert.match(css,/grid-template-columns:minmax\(0,1fr\)!important/);
 });
 
-test('news reader never publishes a mixed Kurdish/English or truncated machine translation',()=>{
-  assert.match(main,/if\(parts\.every\(part=>part\.valid\)\)/);
-  assert.match(main,/setBody\(parts\.map\(part=>part\.text\)\.join/);
-  assert.match(main,/setBody\(selected\.original\)/);
-  assert.match(main,/setBodyTranslationFailed\(true\)/);
-  assert.match(main,/return chunks\.length <= 10 \? chunks : \[\]/);
-  assert.doesNotMatch(main,/return review\.valid \? review\.text : chunks\[i\]/);
+test('news reader never translates or edits original publisher headlines, summaries or bodies',()=>{
+  assert.doesNotMatch(main,/useClientTranslator|TranslationNotice|api\\/translate|articleChunks|translationQuality/);
+  assert.doesNotMatch(main,/translatedNews|translating\?copy\.translating/);
+  assert.match(main,/const displayNews = news;/);
+  assert.match(main,/selectedText\.original/);
+  assert.match(main,/dir="auto"/);
 });
