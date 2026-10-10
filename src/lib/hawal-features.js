@@ -20,7 +20,7 @@ export function marketStoryMatches(item, symbol) {
   if (!topicTerms[symbol] || !safeUrl(item?.link) || item?.isFallback) return false;
   const published = Date.parse(item.publishedAt || '');
   if (!Number.isFinite(published) || published > Date.now() + 600000 || Date.now() - published > 4 * DAY) return false;
-  const text = [item.title, item.titleEn, item.titleKu, item.titleAr, item.summary, item.summaryEn, item.summaryKu, item.summaryAr].filter(Boolean).join(' ');
+  const text = [item.title, item.titleEn, item.summary, item.summaryEn].filter(Boolean).join(' ');
   return topicTerms[symbol].test(text);
 }
 
@@ -46,7 +46,7 @@ export function findRelatedReports(claim, news = []) {
   if (words.length < 2) return [];
   return news.map(item => {
     if (!safeUrl(item?.link) || item.isFallback || !Number.isFinite(Date.parse(item.publishedAt))) return null;
-    const searchable = new Set(claimWords([item.title, item.titleEn, item.titleKu, item.titleAr, item.summary, item.summaryEn, item.summaryKu, item.summaryAr].join(' ')));
+    const searchable = new Set(claimWords([item.title, item.titleEn, item.summary, item.summaryEn].join(' ')));
     const matched = words.filter(word => searchable.has(word));
     return matched.length >= 2 && matched.length / words.length >= 0.25 ? { item, matched: matched.length } : null;
   }).filter(Boolean).sort((a, b) => b.matched - a.matched || Date.parse(b.item.publishedAt) - Date.parse(a.item.publishedAt)).slice(0, 5).map(result => result.item);
