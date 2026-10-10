@@ -119,3 +119,37 @@ test('client never links out to Tradukka and real server translator is wired int
   assert.match(main,/translatedNews/);
   assert.match(main,/translation-inline-status/);
 });
+
+test('short real Sorani headlines are accepted and missing financial numbers are rejected',()=>{
+  assert.equal(validateTranslation('Gold','زێڕ','ku').ok,true);
+  assert.equal(validateTranslation('Gold rises in Iraq','نرخی زێڕ لە عێراق بەرز دەبێتەوە','ku').ok,true);
+  const missing=validateTranslation('Dollar rises to 151,000 dinars in Iraq','نرخی دۆلار لە عێراق بەرز دەبێتەوە','ku');
+  assert.equal(missing.reason,'changed-number');
+});
+
+test('article chunks are atomic: invalid second chunk keeps the complete original',async()=>{
+  const text='Gold and dollar markets in Iraq remained active today. '.repeat(42).trim();
+  const chunks=articleChunks(text);
+  assert.ok(chunks.length>=2);
+  const good='ڕاپۆرتی بازاڕی عێراق باس لە پەیوەندی نێوان نرخەکانی زێڕ و دۆلار دەکات، لە کاتێکدا چاودێرانی ئابووری گۆڕانکارییەکانی بازرگانی و مامەڵەکان بە وردی دەخوێننەوە.';
+  assert.equal(validateTranslation(chunks[0],good,'ku').ok,true);
+  const result=await translateArticleBody(text,'ku',{fetcher:async(_url,options)=>{
+    const batch=JSON.parse(options.body).texts;
+    return Response.json({
+      ok:true,
+      translated:batch.map((_,i)=>i===0?good:''),
+      translatedFlags:batch.map(()=>true)
+    });
+  }});
+  assert.equal(result.translated,false);
+  assert.equal(result.text,text);
+  assert.doesNotMatch(fs.readFileSync('src/lib/article-translation.js','utf8'),/\bsourceChunk\b/);
+});
+
+test('Vite development routes share the actual Pages translator contract',()=>{
+  const vite=fs.readFileSync('vite.config.js','utf8');
+  assert.match(vite,/onRequest as translateRequest/);
+  assert.match(vite,/onRequest as translationStatusRequest/);
+  assert.match(vite,/serveProductionHandler/);
+  assert.doesNotMatch(vite,/fallbackTranslate|FALLBACKS/);
+});
