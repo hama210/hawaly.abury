@@ -61,7 +61,7 @@ async function callGoogle(text, target){
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort('translation timeout'), TRANSLATE_TIMEOUT_MS);
   try{
-    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=' + encodeURIComponent(target) + '&dt=t&q=' + encodeURIComponent(q);
+    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' + (/[^\x00-\x7F]/u.test(q) ? 'auto' : 'en') + '&tl=' + encodeURIComponent(target) + '&dt=t&q=' + encodeURIComponent(q);
     const res = await fetch(url, {
       signal: controller.signal,
       headers: {
@@ -101,19 +101,24 @@ async function callMyMemory(original, lang){
 
 // Reliable optional translation backend: add a Cloudflare Workers AI binding
 // named AI to the Pages project. Without it, external providers remain in use.
-async function callWorkersAI(text,lang,ai){
+async function callWorkersAI(text,lang,ai,context=''){
   if(!ai || typeof ai.run!=='function')return '';
   const target=lang==='ku'?'Central Kurdish (Sorani), using Kurdish Arabic-script spelling':'Modern Standard Arabic';
   const glossary = lang==='ku'
     ? 'You must write genuine Iraqi Central Kurdish (Sorani) in Kurdish Arabic script, not Arabic or Latin Kurmanji. Examples of terminology: Iraq=عێراق; Baghdad=بەغدا; Erbil=هەولێر; Iran=ئێران; Trump=ترامپ; dollar=دۆلار; dinar=دینار; exchange rate=نرخی ئاڵوگۆڕ; interest rates=نرخی سوود; central bank=بانکی ناوەندی; war=جەنگ; ceasefire=ئاگربەست; Saudi Arabia=عەرەبستانی سعوودی. Use natural Sorani journalism.'
     : 'Write idiomatic Modern Standard Arabic used by professional news agencies; never use Kurdish wording.';
-  const prompt='You are a professional financial news translator. Translate the exact English text into '+target+
-    '. '+glossary+
-    ' Preserve exact numerical values, currency pairs such as USD/IQD and XAU/USD, percentages, names, dates, places, and attribution. '+
-    'Never add explanations, invented facts, a generic summary, or a disclaimer. Output only the faithful translation. /no_think';
+  const prompt='You are an experienced Kurdish and Arabic news translator, not a summarizer. Translate the COMPLETE meaning of the source passage into '+target+'. '+
+    glossary+' Write smooth natural journalistic sentences. NEVER shorten, summarize, soften, exaggerate, invert, or omit any assertion. '+
+    'Preserve who did what to whom, exact attribution, hedging (reportedly, could, may), tense, negation, and uncertainty. '+
+    'Preserve each proper name, numerical value, currency pair like USD/IQD or XAU/USD, percentage and date exactly. '+
+    'Background context may help resolve ambiguity, but do not translate it or introduce facts from it. '+
+    'Output ONLY the faithful translated passage with no explanation or introduction. /no_think';
   try{
     const reply=await ai.run('@cf/qwen/qwen3-30b-a3b-fp8',{
-      messages:[{role:'system',content:prompt},{role:'user',content:text}],
+      messages:[{role:'system',content:prompt},{role:'user',content:
+        'SOURCE PASSAGE (translate in full):\n'+text+
+        (context?'\n\nBACKGROUND CONTEXT (for interpretation only, not to be translated):\n'+clean(context).slice(0,350):'')+
+        '\n\nReturn only the translation of SOURCE PASSAGE.'}],
       max_tokens:430,temperature:0,stream:false,enable_thinking:false
     });
     const raw=String(reply?.response||reply?.choices?.[0]?.message?.content||'');
@@ -129,9 +134,9 @@ async function digest(value){
   return [...new Uint8Array(hash)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function translationCacheKey(request, lang, text){
-  const hash = await digest(`${lang}\n${comparable(text)}`);
-  return new Request(`${new URL(request.url).origin}/__hawali_translation_cache/v3/${lang}/${hash}`, { method: 'GET' });
+async function translationCacheKey(request, lang, text, context=''){
+  const hash = await digest(`${lang}\n${comparable(text)}\n${comparable(context)}`);
+  return new Request(`${new URL(request.url).origin}/__hawali_translation_cache/v4/${lang}/${hash}`, { method: 'GET' });
 }
 
 async function readCachedTranslation(cache, key){
@@ -146,19 +151,19 @@ async function readCachedTranslation(cache, key){
   }
 }
 
-async function translateOne(text, targets, lang, request, cache, cacheWrites, ai){
+async function translateOne(text, targets, lang, request, cache, cacheWrites, ai, context=''){
   const original = clean(text);
   if(!original) return { translated: '', source: 'empty' };
   if(lang === 'en') return { translated: original, source: 'original' };
 
-  const cacheKey = cache ? await translationCacheKey(request, lang, original) : null;
+  const cacheKey = cache ? await translationCacheKey(request, lang, original, context) : null;
   const cached = cacheKey ? await readCachedTranslation(cache, cacheKey) : '';
   if(cached){
     const quality=translationQuality(original,cached,lang);
     if(quality.valid) return { translated: quality.text, source: 'cache' };
   }
 
-  const generated=await callWorkersAI(original,lang,ai);
+  const generated=await callWorkersAI(original,lang,ai,context);
   const aiQuality=translationQuality(original,generated,lang);
   if(aiQuality.valid){
     if(cache && cacheKey) cacheWrites.push(cache.put(cacheKey,Response.json({translated:aiQuality.text},{
@@ -232,10 +237,16 @@ export async function onRequest(context){
     if(body.texts.length > MAX_TEXTS){
       return Response.json({ ok: false, error: `A maximum of ${MAX_TEXTS} texts is allowed per request`, translated: [] }, { status: 413, headers });
     }
+    // Optional per-text context is used only to disambiguate news translation
+    // for AI; it must never be inserted into the translated output.
+    if(body.contexts !== undefined && (!Array.isArray(body.contexts) || body.contexts.length !== body.texts.length || body.contexts.some(value=>typeof value!=='string'))){
+      return Response.json({ok:false,error:'contexts must match texts',translated:[]},{status:400,headers});
+    }
     const texts = body.texts.map(clean);
+    const contexts = texts.map((_,i)=>clean(body.contexts?.[i]||'').slice(0,350));
     const cache = globalThis.caches?.default;
     const cacheWrites = [];
-    const results = await mapWithConcurrency(texts, TRANSLATE_CONCURRENCY, text => translateOne(text, TARGETS[lang], lang, request, cache, cacheWrites, context.env?.AI));
+    const results = await mapWithConcurrency(texts, TRANSLATE_CONCURRENCY, (text,i) => translateOne(text, TARGETS[lang], lang, request, cache, cacheWrites, context.env?.AI, contexts[i]));
     if(cacheWrites.length){
       const write = Promise.all(cacheWrites).catch(error => {
         console.warn(JSON.stringify({ event: 'translation_cache_write_failed', error: errorMessage(error) }));
