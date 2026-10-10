@@ -20,7 +20,7 @@ export function meaningfulArticleText(value, title) {
 export function storyExcerpt(item,lang='en') {
   if(!item)return '';
   const headline=item.titleEn || item.title || '';
-  const translated=lang==='ku'?item.summaryKu:lang==='ar'?item.summaryAr:'';
+  const translated=item._hawalInlineVerified===true?(lang==='ku'?item.summaryKu:lang==='ar'?item.summaryAr:''):'';
   const translatedHeadline=lang==='ku'?item.titleKu:lang==='ar'?item.titleAr:'';
   const local=meaningfulArticleText(translated,translatedHeadline||headline);
   if(local)return local;
