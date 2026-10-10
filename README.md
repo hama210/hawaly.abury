@@ -36,18 +36,43 @@ Currency conversions use USD-per-currency, with explicit city/side, CBI or manua
 
 `npm run check` runs tests and the production build. Source failure must preserve a labelled last-known quote or show unavailable; it must never generate a substitute quote. The service worker uses network-first navigation and a clearly labelled offline page, never a cached document presented as current rates.
 
-## News images and original-language articles (October 2026)
+## Inline news translation (October 2026)
 
-Hawal displays news headlines, RSS summaries and source-supplied article text
-**in the original publisher's language**. There is no automatic translation
-in the website, including Kurdish and Arabic interface routes. The language
-switcher still localizes navigation labels, dates and market tools.
+Hawal translates RSS headlines, summaries and available article text directly
+**inside its own website**. The interface remains Kurdish, Arabic and English.
+The translator uses Central Kurdish (Sorani) and Arabic targets:
 
-The former machine-translation API, Workers AI translator, fallback translator,
-client translation queue, translated sample headlines and their test pages have
-been removed. Translation storage from previous versions is cleared when visitors
-load the updated site. Old server translation-cache entries may expire naturally
-but are not read or served.
+1. If `MICROSOFT_TRANSLATOR_KEY` is configured on Cloudflare Pages, use the
+   official Azure Translator API with target `ku`. A regional Microsoft
+   resource may also require `MICROSOFT_TRANSLATOR_REGION`.
+2. If `GOOGLE_TRANSLATE_API_KEY` is configured, use the official Cloud
+   Translation API with target `ckb` for Sorani.
+3. Without either key, try Google's public web translation endpoint as a
+   **best-effort fallback**. This is not a documented production API: it
+   may stop working, rate-limit or return inaccurate translations.
 
-Hawal keeps publisher thumbnails when available and retrieves trusted OpenGraph
-photos as a best-effort fallback. It never invents missing article images or text.
+To configure the reliable supported provider: open Cloudflare Dashboard →
+Workers & Pages → Hawal Pages project → Settings → Variables and Secrets.
+Add the Microsoft or Google key as an encrypted **secret**, not as a GitHub file
+or browser variable. With Microsoft regional resources, also set the region.
+Save and redeploy. Translation API credentials are never returned to clients.
+Cloud translation products may have usage costs. Verify entitlements with
+your cloud account before enabling.
+
+Check `/api/translation-status` for the deployment revision and whether either
+official API is configured. Only a successful real news translation can confirm
+that the provider is working.
+
+Every translation is screened for repeated gibberish, foreign-script output,
+English leakage, broken numbers and altered currency pairs before use.
+The app keeps publisher original text when translation does not validate.
+Successful translations are cached, while historical machine translations
+from earlier builds are ignored. An article body only switches to translated
+text if all of its chunks complete and validate successfully; partial
+translations are never assembled together with original-language paragraphs.
+
+Tradukka was not integrated because a suitable official API could not be
+confirmed. There is no Tradukka link or redirect in the actual UI.
+
+Publisher images use approved media and verified OpenGraph photos when possible.
+Missing photos remain clearly labelled illustrations, not invented images.
