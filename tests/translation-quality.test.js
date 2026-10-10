@@ -53,3 +53,9 @@ test('denials cannot become affirmative headlines in Sorani or Arabic',()=>{
     'missing-negation'
   );
 });
+
+test('partial translations of long, detailed headlines are not presented as complete news',()=>{
+  const headline='The central bank announced new dollar trading restrictions at commercial banks amid concerns over inflation and increased import costs';
+  const tiny='بانکی ناوەندی بڕیارێکی نوێی ڕاگەیاند';
+  assert.equal(translationQuality(headline,tiny,'ku').reason,'implausible-length');
+});
