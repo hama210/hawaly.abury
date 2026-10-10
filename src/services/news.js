@@ -1,6 +1,6 @@
 import { analyzeArticle } from '../utils/intelligence.js';
 
-const NEWS_CACHE_KEY = 'hawali-aburi-news-v13-news-images';
+const NEWS_CACHE_KEY = 'hawali-aburi-news-v14-publisher-originals';
 // Keep the last verified live response visible while a fresh background request
 // is running. Individual stories are still removed after NEWS_DISPLAY_MAX_AGE.
 const NEWS_CACHE_MAX_AGE = 12 * 60 * 60 * 1000;
@@ -8,6 +8,19 @@ const NEWS_DISPLAY_MAX_AGE = 3 * 24 * 60 * 60 * 1000;
 const NEWS_MAX_FUTURE_AGE = 10 * 60 * 1000;
 const NEWS_LIMIT = 120;
 const TIER_WEIGHT = { official:36, major:32, local:28, specialist:22, curated:17 };
+
+// Discard legacy client news caches that may contain machine-translated fields.
+function clearLegacyNewsCache(){
+  if(typeof localStorage==='undefined')return;
+  try{
+    for(let i=localStorage.length-1;i>=0;i--){
+      const key=localStorage.key(i);
+      if(key && key.startsWith('hawali-aburi-news-') && key!==NEWS_CACHE_KEY)
+        localStorage.removeItem(key);
+    }
+  }catch{}
+}
+clearLegacyNewsCache();
 
 function withIntelligence(items, prefix = 'news') {
   return items.map((item, index) => ({
