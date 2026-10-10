@@ -31,6 +31,7 @@ import { analyzeArticle } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
 import { articleText, matchesCategory } from './utils/categories.js';
 import { articleSelection, storyExcerpt, readerCopy } from './lib/article-content.js';
+import { tradukkaHeadlineUrl, tradukkaLinkCopy } from './lib/tradukka.js';
 import { imageForNews, coverForCategory } from './lib/news-images.js';
 
 const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
@@ -341,11 +342,14 @@ function Hero({ item, lang, dict, onOpen }) {
 
 function NewsCard({ item, lang, onOpen }) {
   const intel = focusedIntelligence(item);
+  const tradukkaUrl = tradukkaHeadlineUrl(item);
+  const tradukka = tradukkaLinkCopy(lang);
   return <article className="story-card">
     <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={sourceTitle(item)}><img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={imageFallback} /></button>
     <div className="story-copy">
       <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}<time dateTime={item.publishedAt}>{timestamp(item.publishedAt,lang)}</time></span></div>
-      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" type="button" onClick={() => onOpen(item)}>{sourceTitle(item)}</button>
+      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noopener noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" type="button" onClick={() => onOpen(item)}>{sourceTitle(item)}</button>
+      {tradukkaUrl && <a className="tradukka-headline-link" href={tradukkaUrl} target="_blank" rel="noopener noreferrer" title={tradukka.notice}>{tradukka.label}</a>}
       {storyExcerpt(item,lang) && <p dir="auto" className="story-excerpt">{storyExcerpt(item,lang)}</p>}
       <div className="card-effects">{intel.effects?.slice(0, 3).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
     </div>
@@ -356,6 +360,8 @@ function ArticleModal({ item, lang, dict, onClose }) {
   const reader = readerCopy[lang] || readerCopy.ku;
   const selectedText = articleSelection(item);
   const sourceLink = safeUrl(item?.link);
+  const tradukkaUrl = tradukkaHeadlineUrl(item);
+  const tradukka = tradukkaLinkCopy(lang);
   useEffect(() => {
     if (!item) return undefined;
     const handleKey = event => { if (event.key === 'Escape') onClose(); };
@@ -378,6 +384,7 @@ function ArticleModal({ item, lang, dict, onClose }) {
           <p className="reader-note">{reader.notice}</p></> :
           <p className="article-body article-missing">{reader.missing}</p>}
         {sourceLink && <a className="reader-source-link" href={sourceLink} target="_blank" rel="noopener noreferrer">{reader.original} ↗</a>}
+        {tradukkaUrl && <div className="tradukka-reader-action"><a href={tradukkaUrl} target="_blank" rel="noopener noreferrer">{tradukka.label}</a><small>{tradukka.notice}</small></div>}
       </section>
       <h3>{copy.effects}</h3>
       <div className="effect-grid">{intel.effects?.map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} detailed />)}</div>
