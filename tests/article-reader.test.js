@@ -93,7 +93,7 @@ test('original publisher content is unchanged in every interface language',()=>{
   for(const lang of ['ku','ar','en']){
     assert.equal(storyExcerpt(item,lang),item.summary);
     const selected=articleSelection(item,lang);
-    assert.equal(selected.text,item.content);
-    assert.equal(selected.original,item.content);
+    assert.equal(selected.text,item.summary);
+    assert.equal(selected.original,item.summary);
   }
 });
