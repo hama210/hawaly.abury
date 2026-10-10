@@ -9,7 +9,13 @@ export const MAX_TRANSLATION_BATCH = 8;
 export const MAX_TRANSLATION_CHARS = 5000;
 
 export function cleanTranslationText(value) {
-  return String(value ?? '').normalize('NFC').replace(/\r\n?/g, '\n')
+  const entities = { amp: '&', quot: '"', apos: "'", lt: '<', gt: '>', nbsp: ' ', ndash: '–', mdash: '—', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', hellip: '…' };
+  const decoded = String(value ?? '').replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (entity, key) => {
+    if (!key.startsWith('#')) return entities[key.toLowerCase()] ?? entity;
+    const code = key[1].toLowerCase() === 'x' ? parseInt(key.slice(2), 16) : Number(key.slice(1));
+    return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : entity;
+  });
+  return decoded.normalize('NFC').replace(/\r\n?/g, '\n')
     .replace(/[\t ]+/g, ' ').replace(/ *\n */g, '\n').trim();
 }
 
@@ -54,6 +60,11 @@ export function checkTranslatedText(source, candidate, language) {
     if (arabic / letters.length < 0.4) return { ok: false, error: 'wrong-language' };
     if (language === 'ku' && letters.length > 12 && !/[ەێۆڕڵ]/u.test(text)) {
       return { ok: false, error: 'wrong-language' };
+    }
+    const words = text.match(/\p{L}+/gu) || [];
+    if (words.some(word => /\p{Script=Arabic}/u.test(word) && /[A-Za-z]/.test(word))
+        || /\b(?:the|and|but|because|nothing|during|without|would|could|should|despite|between|through)\b/.test(text)) {
+      return { ok: false, error: 'mixed-language' };
     }
   }
   if (language === 'en' && letters.length

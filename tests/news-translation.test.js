@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createNewsTranslator, translateNewsFeed } from '../src/lib/news-translation.js';
-import { TRANSLATION_VERSION, checkTranslatedText, translationChunks } from '../src/lib/translation-format.js';
+import { TRANSLATION_VERSION, checkTranslatedText, translationChunks, cleanTranslationText } from '../src/lib/translation-format.js';
 import { getTitle, getSummary } from '../src/utils/news.js';
 import { storyExcerpt } from '../src/lib/article-content.js';
 import { onRequest } from '../functions/api/translate.js';
@@ -25,6 +25,12 @@ function apiResponse(options, translate = () => sorani) {
     results: body.texts.map(text => ({ source: text, text: translate(text, body.language), state: 'translated' })) });
 }
 const responseModel = translations => ({ choices: [{ message: { content: JSON.stringify({ translations }) } }] });
+
+test('feed entities are decoded before translation and numeric checks', () => {
+  assert.equal(cleanTranslationText('Iraq&rsquo;s gold &amp; dollar&nbsp;markets'), 'Iraq’s gold & dollar markets');
+  assert.equal(cleanTranslationText('&#x0632;&#1742;&#1685;'), 'زێڕ');
+  assert.equal(cleanTranslationText('&#999999999;'), '&#999999999;');
+});
 
 test('server runs a Google model with an AI binding, without keys or external fetches', async () => {
   const restoreCache = replaceGlobal('caches', { default: new MemoryCache() });
@@ -106,6 +112,20 @@ test('changed figures, missing currency pairs, wrong scripts, and corrupt output
   assert.equal(checkTranslatedText('Gold rises', 'Gold rises', 'ar').ok, false);
   assert.equal(checkTranslatedText('Gold rises', '<script>oops</script>', 'ku').ok, false);
   assert.equal(checkTranslatedText('Gold rises', 'نەوت نەوت نەوت نەوت نەوت', 'ku').ok, false);
+  assert.equal(checkTranslatedText('Gold rises', 'نرخی زێڕ لە بازاڕەکانی عێراقدا nothing بەرز دەبێتەوە', 'ku').error, 'mixed-language');
+  assert.equal(checkTranslatedText('Gold rises', 'نرخی زێڕ لە بازاڕەکانی عێراقدا nistەکان بەرز دەبێتەوە', 'ku').error, 'mixed-language');
+});
+
+test('a rejected mixed translation gets one focused retry before publication', async () => {
+  let calls = 0;
+  const env = { AI: { async run(_model, input) {
+    calls++;
+    if (calls === 1) return responseModel([{ id: 0, text: 'نرخی زێڕ لە بازاڕەکانی عێراقدا nothing بەرز دەبێتەوە' }]);
+    assert.match(input.messages[1].content, /Translate carefully/);
+    return responseModel([{ id: 0, text: 'نرخی زێڕ لە عێراق بەرز دەبێتەوە' }]);
+  } } };
+  const out = await (await onRequest(post(['Gold rises in Iraq'], 'ku', env).context)).json();
+  assert.equal(out.results[0].state, 'translated'); assert.equal(calls, 2);
 });
 
 test('the client batches, deduplicates readers, and caches by both source and language', async () => {

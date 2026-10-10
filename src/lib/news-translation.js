@@ -82,7 +82,11 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
           : failed(job.text, checked.error);
       });
     } catch (error) {
-      rows = group.map(job => failed(job.text, error.name === 'AbortError' ? 'request-timeout' : error.message || 'request-failed'));
+      const reason = error.name === 'AbortError' ? 'request-timeout' : error.message || 'request-failed';
+      if (group.some(job => job.subscribers.size)) {
+        pausedUntil = now() + 15000; pauseError = reason;
+      }
+      rows = group.map(job => failed(job.text, reason));
     } finally {
       clearTimeout(timeout);
       group.forEach((job, index) => finish(job, rows[index]));
