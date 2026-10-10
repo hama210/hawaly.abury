@@ -90,6 +90,7 @@ test('provider failure or broken text never replaces the original headline',asyn
     assert.equal(response.translated[0],text);
     assert.equal(response.translatedFlags[0],false);
     assert.equal(response.sources[0],'original');
+    assert.equal(response.failureReasons[0],'google-public:http-429');
   }finally{restoreFetch();restoreCache();}
 });
 test('inline translation does not trust old malformed translation fields',()=>{
