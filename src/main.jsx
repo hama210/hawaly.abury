@@ -14,6 +14,7 @@ try { bootstrap = JSON.parse(document.getElementById('hawall-bootstrap')?.textCo
 import { fetchNews, getInitialNews } from './services/news.js';
 import { fetchMarkets } from './services/markets.js';
 import { useClientTranslator } from './hooks/useClientTranslator.js';
+import { translationQuality } from './lib/translation-quality.js';
 import { LANGS, t } from './utils/i18n.js';
 import { analyzeArticle, localizeSummary } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
@@ -393,14 +394,19 @@ function ArticleModal({ item, lang, dict, onClose }) {
     fetch('/api/translate', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({lang,texts:chunks}),
+      body:JSON.stringify({lang,texts:chunks,contexts:chunks.map((_,i)=>[item.titleEn||item.title, chunks[i-1]||''].filter(Boolean).join(' ').slice(0,350))}),
       signal:controller.signal
     }).then(response => response.ok ? response.json() : Promise.reject())
       .then(data => {
         if (controller.signal.aborted) return;
         if(data?.ok===false || !Array.isArray(data?.translated) || data.translated.length!==chunks.length) return;
-        const parts=data.translated.map(s=>String(s||'').trim());
-        if(parts.every((s,i)=>s && s!==chunks[i])) setBody(parts.join('\n\n'));
+        // Never replace article content with a translation that lost a number,
+        // names, or original meaning. Keep unmatched chunks in source language.
+        const parts=data.translated.map((text,i)=>{
+          const review=translationQuality(chunks[i],text,lang);
+          return review.valid ? review.text : chunks[i];
+        });
+        if(parts.some((text,i)=>text!==chunks[i])) setBody(parts.join('\n\n'));
       }).catch(()=>{}).finally(()=>{if(!controller.signal.aborted)setLoadingBody(false);});
     return () => controller.abort();
   }, [item,lang]);
