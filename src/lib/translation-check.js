@@ -165,7 +165,10 @@ export function validateTranslation(original,candidate,target){
     const arabicCount=
       (text.match(arabicScript)||[]).length;
 
-    if(arabicCount<10){
+    // Short headlines (e.g. "Gold" -> "زێڕ") must be translatable too.
+    // Longer financial news still needs sufficient target-script text.
+    const minimum=Math.min(10,Math.max(2,Math.ceil(src.length*0.2)));
+    if(arabicCount<minimum){
       return {
         ok:false,
         reason:'not-sorani',
@@ -191,17 +194,9 @@ export function validateTranslation(original,candidate,target){
   const a=values(src);
   const b=values(text);
 
-  if(a.length && b.length){
-
-    const overlap=
-      a.filter(v=>b.includes(v));
-
-    const required=Math.max(
-      1,
-      Math.floor(a.length*0.5)
-    );
-
-    if(overlap.length<required){
+  // All quoted numbers must survive translation; omitting a figure or
+  // changing a price is especially dangerous in financial news.
+  if(a.length && (a.length!==b.length || a.some((value,index)=>value!==b[index]))){
       return {
         ok:false,
         reason:'changed-number',
