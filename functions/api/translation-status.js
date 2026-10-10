@@ -1,17 +1,11 @@
-export async function onRequest(context){
-  if(context.request.method!=='GET')return new Response('GET only',{status:405});
-  const microsoft=Boolean(context.env?.MICROSOFT_TRANSLATOR_KEY);
-  const googleCloud=Boolean(context.env?.GOOGLE_TRANSLATE_API_KEY);
+import { TRANSLATION_VERSION, TRANSLATION_LANGUAGES } from '../../src/lib/translation-format.js';
+import { TRANSLATION_MODELS } from '../lib/news-translator.js';
+export function onRequest(context) {
   return Response.json({
-    revision:'hawal-inline-v12',
-    inlineTranslation:true,
-    languages:{ku:'Central Kurdish (Sorani)',ar:'Arabic'},
-    microsoftConfigured:microsoft,
-    googleCloudConfigured:googleCloud,
-    preferredProvider:microsoft?'microsoft':googleCloud?'google-cloud':'google-public-best-effort',
-    liveProviderCheck:'not performed',
-    note: microsoft||googleCloud
-      ? 'A credential is configured. This status does not guarantee individual translation requests will succeed.'
-      : 'Only an unauthenticated best-effort Google endpoint is configured. Connect a Microsoft Translator or Google Cloud Translation key for supported production use.'
-  },{headers:{'Cache-Control':'no-store'}});
+    version: TRANSLATION_VERSION,
+    languages: Object.keys(TRANSLATION_LANGUAGES),
+    provider: 'cloudflare-workers-ai', models: TRANSLATION_MODELS,
+    apiKeyRequired: false, configured: typeof context.env?.AI?.run === 'function',
+    coverage: ['all-headlines', 'all-summaries', 'article-text-on-open']
+  }, { headers: { 'Cache-Control': 'no-store' } });
 }

@@ -146,7 +146,7 @@ export function MarketAlerts({ markets = [], news = [], lang = 'ku' }) {
             for (const notice of newItems.slice(0,3)) {
               try {
                 const title = notice.type==='rate' ? c.alertRate : notice.type==='gold' ? c.alertGold : c.alertNews;
-                const detail = notice.type==='rate' ? labels[lang][notice.city] + ': '+fmt(notice.price) : notice.type==='gold' ? fmt(notice.price)+' USD' : notice.title;
+                const detail = notice.type==='rate' ? labels[lang][notice.city] + ': '+fmt(notice.price) : notice.type==='gold' ? fmt(notice.price)+' USD' : getTitle(news.find(story=>story.link===notice.link) || { title:notice.title },lang);
                 new Notification('Hawal · '+title,{body:detail,tag:'hawall-'+notice.id});
               } catch { /* In-app notices remain available if system notification fails. */ }
             }
@@ -180,7 +180,7 @@ export function MarketAlerts({ markets = [], news = [], lang = 'ku' }) {
     <button className="feature-permission" type="button" onClick={askPermission}>{c.notifyOpt} ↗</button>
     {permissionText && <small role="status" className="feature-description">{permissionText}</small>}
     <h3>{c.notice}</h3>
-    <div className="alert-feed" role="status" aria-live="polite">{messages.length ? messages.map(alert=><article key={alert.id} className="alert-entry"><b>{alert.type === 'rate' ? c.alertRate : alert.type === 'gold' ? c.alertGold : c.alertNews}</b><p>{alert.type === 'rate' ? labels[lang][alert.city]+': '+fmt(alert.price)+' IQD / $100 ('+(alert.diff > 0 ? '+' : '')+fmt(alert.diff)+')' : alert.type === 'gold' ? fmt(alert.price)+' USD ('+(alert.pct > 0 ? '+' : '')+fmt(alert.pct)+'%)' : alert.title}</p>{safeUrl(alert.url || alert.link) && <a href={safeUrl(alert.url || alert.link)} target="_blank" rel="noopener noreferrer">{c.alertSource} ↗</a>}</article>) : <p>{c.noAlerts}</p>}</div>
+    <div className="alert-feed" role="status" aria-live="polite">{messages.length ? messages.map(alert=><article key={alert.id} className="alert-entry"><b>{alert.type === 'rate' ? c.alertRate : alert.type === 'gold' ? c.alertGold : c.alertNews}</b><p>{alert.type === 'rate' ? labels[lang][alert.city]+': '+fmt(alert.price)+' IQD / $100 ('+(alert.diff > 0 ? '+' : '')+fmt(alert.diff)+')' : alert.type === 'gold' ? fmt(alert.price)+' USD ('+(alert.pct > 0 ? '+' : '')+fmt(alert.pct)+'%)' : getTitle(news.find(story=>story.link===alert.link) || { title:alert.title },lang)}</p>{safeUrl(alert.url || alert.link) && <a href={safeUrl(alert.url || alert.link)} target="_blank" rel="noopener noreferrer">{c.alertSource} ↗</a>}</article>) : <p>{c.noAlerts}</p>}</div>
     <p className="feature-disclaimer">{c.onlyOn}</p>
   </section>;
 }

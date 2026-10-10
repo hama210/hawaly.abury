@@ -1,15 +1,10 @@
 import { imageForNews, coverForCategory } from '../lib/news-images.js';
-// Show validated inline translations where available. The original
-// publisher wording is always the fallback when providers fail.
+import { localizedNewsField } from '../lib/translation-format.js';
 export function getTitle(item,lang='en'){
-  const original=item?.titleEn || item?.title || '';
-  return item?._hawalInlineVerified===true && lang==='ku' ? item?.titleKu || original
-    : item?._hawalInlineVerified===true && lang==='ar' ? item?.titleAr || original : original;
+  return localizedNewsField(item, 'title', lang);
 }
 export function getSummary(item,lang='en'){
-  const original=item?.summaryEn || item?.summary || '';
-  return item?._hawalInlineVerified===true && lang==='ku' ? item?.summaryKu || original
-    : item?._hawalInlineVerified===true && lang==='ar' ? item?.summaryAr || original : original;
+  return localizedNewsField(item, 'summary', lang);
 }
 export function getWhy(item){
   return item?.whyEn || '';

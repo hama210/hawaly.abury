@@ -8,19 +8,6 @@ import { MarketIntelligence, VerificationDesk, DollarHistory, MarketAlerts } fro
 import { Navigation, NavIcon, HomeMarkets, FeatureShortcuts, ScreenIntro, navigationCopy } from './components/HawalDashboard.jsx';
 import { dashboardCopy } from './lib/dashboard-copy.js';
 import { pageRoute, pagePath, timestamp, quoteState, safeUrl } from './lib/market-tools.js';
-// One-time cleanup: remove previous erroneous machine translations from this
-// browser without touching market-rate notes or other unrelated user settings.
-try {
-  for(let i=sessionStorage.length-1;i>=0;i--){
-    const key=sessionStorage.key(i);
-    if(key?.startsWith('hawali_translate_')) sessionStorage.removeItem(key);
-  }
-  for(let i=localStorage.length-1;i>=0;i--){
-    const key=localStorage.key(i);
-    if(key?.startsWith('hawali_translate_')) localStorage.removeItem(key);
-  }
-}catch{}
-
 const route = pageRoute(location.pathname);
 let bootstrap = {};
 try { bootstrap = JSON.parse(document.getElementById('hawall-bootstrap')?.textContent || '{}'); } catch {};
@@ -31,8 +18,8 @@ import { analyzeArticle } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
 import { articleText, matchesCategory } from './utils/categories.js';
 import { articleSelection, storyExcerpt, readerCopy } from './lib/article-content.js';
-import { useClientTranslator } from './hooks/useClientTranslator.js';
-import { translateArticleBody } from './lib/article-translation.js';
+import { useNewsTranslation } from './hooks/useNewsTranslation.js';
+import { newsTranslator } from './lib/news-translation.js';
 import { imageForNews, coverForCategory } from './lib/news-images.js';
 
 const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
@@ -347,11 +334,21 @@ function NewsCard({ item, lang, onOpen }) {
     <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={sourceTitle(item,lang)}><img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={imageFallback} /></button>
     <div className="story-copy">
       <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}<time dateTime={item.publishedAt}>{timestamp(item.publishedAt,lang)}</time></span></div>
-      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noopener noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" type="button" onClick={() => onOpen(item)}>{sourceTitle(item,lang)}</button>
+      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noopener noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" data-translation-error={item.translation?.errors?.title} type="button" onClick={() => onOpen(item)}>{sourceTitle(item,lang)}</button>
       {storyExcerpt(item,lang) && <p dir="auto" className="story-excerpt">{storyExcerpt(item,lang)}</p>}
       <div className="card-effects">{intel.effects?.slice(0, 3).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
     </div>
   </article>;
+}
+
+function translationFailureText(error,lang) {
+  if(error === 'daily-limit') return lang==='ku'
+    ? 'سنووری ڕۆژانەی وەرگێڕان گەیشتووەتە کۆتایی؛ دەقی سەرچاوە پیشان دەدرێت. دواتر دووبارە هەوڵ بدەوە.'
+    : lang==='ar'?'تم بلوغ الحد اليومي للترجمة؛ يظهر النص الأصلي. حاول مرة أخرى لاحقًا.'
+      :'The daily translation limit has been reached; showing the source text. Try again later.';
+  return lang==='ku'?'وەرگێڕانی هەندێک هەواڵ سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.'
+    :lang==='ar'?'تعذرت ترجمة بعض الأخبار؛ يظهر النص الأصلي.'
+      :'Some news could not be translated; showing the source text.';
 }
 
 function ArticleModal({ item, lang, dict, onClose }) {
@@ -361,24 +358,28 @@ function ArticleModal({ item, lang, dict, onClose }) {
   const [articleBody,setArticleBody]=useState(selectedText.original);
   const [articleTranslating,setArticleTranslating]=useState(false);
   const [articleTranslated,setArticleTranslated]=useState(false);
+  const [articleError,setArticleError]=useState('');
+  const [articleRetry,setArticleRetry]=useState(0);
   useEffect(()=>{
     const controller=new AbortController();
     setArticleBody(selectedText.original);
     setArticleTranslated(false);
-    if(!item||!selectedText.isAvailable||lang==='en'){
+    setArticleError('');
+    if(!item||!selectedText.isAvailable){
       setArticleTranslating(false);
       return ()=>controller.abort();
     }
     setArticleTranslating(true);
-    translateArticleBody(selectedText.original,lang,{signal:controller.signal})
+    newsTranslator.translate(selectedText.original,lang,{signal:controller.signal,priority:0})
       .then(result=>{
         if(controller.signal.aborted)return;
         setArticleBody(result.text);
-        setArticleTranslated(result.translated);
-      }).catch(()=>{})
+        setArticleTranslated(result.state === 'translated');
+        setArticleError(result.state === 'failed' ? result.error || 'translation-failed' : '');
+      }).catch(()=>{if(!controller.signal.aborted)setArticleError('translation-failed');})
       .finally(()=>{if(!controller.signal.aborted)setArticleTranslating(false);});
     return ()=>controller.abort();
-  },[item,lang]);
+  },[item?.id,selectedText.original,lang,articleRetry]);
   useEffect(() => {
     if (!item) return undefined;
     const handleKey = event => { if (event.key === 'Escape') onClose(); };
@@ -399,8 +400,10 @@ function ArticleModal({ item, lang, dict, onClose }) {
         {selectedText.isAvailable ? <>
           <p className="article-body" dir={articleTranslated?(lang==='en'?'auto':'rtl'):'auto'}>{articleBody || selectedText.original}</p>
           {articleTranslating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی ناوەڕۆک...':lang==='ar'?'جارٍ ترجمة محتوى الخبر...':'Translating article...'}</p>}
-          {!articleTranslating && lang!=='en' && !articleTranslated &&
-            <small className="translation-inline-note">{lang==='ku'?'وەرگێڕانی دڵنیا بەردەست نییە؛ دەقی ڕەسەنی سەرچاوە پیشان دەدرێت.':'لا توجد ترجمة موثوقة؛ يُعرض نص المصدر الأصلي.'}</small>}
+          {!articleTranslating && articleError && <div className="translation-inline-status translation-retry" role="status">
+            <span>{translationFailureText(articleError,lang)}</span>
+            <button type="button" onClick={()=>{newsTranslator.retry();setArticleRetry(value=>value+1);}}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button>
+          </div>}
           <p className="reader-note">{reader.notice}</p></> :
           <p className="article-body article-missing">{reader.missing}</p>}
         {sourceLink && <a className="reader-source-link" href={sourceLink} target="_blank" rel="noopener noreferrer">{reader.original} ↗</a>}
@@ -478,7 +481,7 @@ function App() {
   const dict = t[lang] || t.ku;
   const copy = uiCopy[lang] || uiCopy.ku;
   // Source wording remains the fallback whenever translation is unavailable.
-  const {translatedNews,translating,translationIssue,retryTranslations}=useClientTranslator(news,lang,activeView==='news'?newsVisibleCount:homeVisibleCount+1);
+  const {translatedNews,translating,translationIssue,retryTranslations,progress}=useNewsTranslation(news,lang);
   const displayNews=translatedNews;
   const designCopy = navigationCopy[lang] || navigationCopy.ku;
   const navigate = view => {
@@ -556,8 +559,8 @@ function App() {
           </div>
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
-        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':''}</p>}
-        {translationIssue && !translating && lang!=='en' && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.': 'تعذرت الترجمة؛ يظهر النص الأصلي.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':'إعادة المحاولة'}</button></div>}
+        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating news...'} ({progress.completed}/{progress.total})</p>}
+        {translationIssue && !translating && <div className="translation-inline-status translation-retry" data-translation-error={translationIssue} data-failed-count={progress.failed} role="status"><span>{translationFailureText(translationIssue,lang)}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
           {rest.length ? <><div className="news-grid">{rest.slice(0, homeVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
@@ -582,8 +585,8 @@ function App() {
         {activeView==='news' && <VerificationDesk news={displayNews} lang={lang}/>}
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
-        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':''}</p>}
-        {translationIssue && !translating && lang!=='en' && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.': 'تعذرت الترجمة؛ يظهر النص الأصلي.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':'إعادة المحاولة'}</button></div>}
+        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating news...'} ({progress.completed}/{progress.total})</p>}
+        {translationIssue && !translating && <div className="translation-inline-status translation-retry" data-translation-error={translationIssue} data-failed-count={progress.failed} role="status"><span>{translationFailureText(translationIssue,lang)}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
         <div className="topic-shortcuts" aria-label="News topics">
           {[
             ['Trump','Trump','ترامپ','ترامب'],
@@ -616,7 +619,7 @@ function App() {
     </div>
     {route.page==='home' && <Navigation mobile active={activeView} onNavigate={navigate} lang={lang}/>}
     <SourcesDisclosure lang={lang} news={displayNews} sourceHealth={sourceHealth}/>
-    <ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/>
+    <ArticleModal item={selected ? (displayNews.find(item=>item.id===selected.id) || selected) : null} lang={lang} dict={dict} onClose={()=>setSelected(null)}/>
   </div>;
 }
 

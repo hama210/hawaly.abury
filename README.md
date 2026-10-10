@@ -36,49 +36,16 @@ Currency conversions use USD-per-currency, with explicit city/side, CBI or manua
 
 `npm run check` runs tests and the production build. Source failure must preserve a labelled last-known quote or show unavailable; it must never generate a substitute quote. The service worker uses network-first navigation and a clearly labelled offline page, never a cached document presented as current rates.
 
-## Inline news translation (October 2026)
+## News translation
 
-Hawal translates RSS headlines, summaries and available article text directly
-**inside its own website**. The interface remains Kurdish, Arabic and English.
-The translator uses Central Kurdish (Sorani) and Arabic targets:
+The translator is rebuilt around the Cloudflare Workers AI binding `AI`, using `@cf/qwen/qwen3.8-27b` for Sorani and Google's `@cf/google/gemma-4-26b-a4b-it` for Arabic and English. The deployment configuration is in `wrangler.jsonc`; neither the browser nor the server needs a translation API key. The previous public Google endpoint, browser fallback, and legacy translated fields are removed.
 
-1. If `MICROSOFT_TRANSLATOR_KEY` is configured on Cloudflare Pages, use the
-   official Azure Translator API with target `ku`. A regional Microsoft
-   resource may also require `MICROSOFT_TRANSLATOR_REGION`.
-2. If `GOOGLE_TRANSLATE_API_KEY` is configured, use the official Cloud
-   Translation API with target `ckb` for Sorani.
-3. Without either key, try Google's public web translation endpoint as a
-   **best-effort fallback**. This is not a documented production API: it
-   may stop working, rate-limit or return inaccurate translations.
+Selecting Sorani (`ckb`), Arabic (`ar`), or English (`en`) queues every headline and summary in the loaded feed. Headlines have priority. Opening any story translates its publisher-provided article text at the front of the queue; longer bodies are loaded on demand to conserve the account's daily allocation. Long text is split without truncation, and displayed only after every chunk succeeds. Native text needs no translation. The publisher's original stays available when a request fails.
 
-To configure the reliable supported provider: open Cloudflare Dashboard →
-Workers & Pages → Hawal Pages project → Settings → Variables and Secrets.
-Add the Microsoft or Google key as an encrypted **secret**, not as a GitHub file
-or browser variable. With Microsoft regional resources, also set the region.
-Save and redeploy. Translation API credentials are never returned to clients.
-Cloud translation products may have usage costs. Verify entitlements with
-your cloud account before enabling.
+Temporary failures receive one automatic retry with a cooldown; quota and missing-binding errors are not repeatedly retried. Smaller body batches keep longer articles within the inference window. Successful results use a shared browser cache for 24 hours and an edge cache for seven days, keyed by the original text, language, and translator version. Language changes cancel that view's pending work without cancelling another reader's request. Output checks reject missing figures, altered currency pairs, malformed results, or unexpected scripts; these checks do not certify translation quality.
 
-Check `/api/translation-status` for the deployment revision and whether a
-provider key is configured. Use `/api/translation-health` to run a cached
-fixed-text English-to-Sorani translation on the deployed site. The health
-endpoint returns a non-secret provider label and safe failure codes (for
-example `microsoft:http-401`), not API keys, headers or private feed text.
-An Azure key configured in Cloudflare is NOT proof that real translations
-work: verify `ok:true` and `provider:"microsoft"` in translation-health.
-The Kurdish/Arabic news screens also offer a Retry button if translation
-fails; they never present an unverified translation as publisher text.
+Cloudflare Workers AI includes a daily free allocation. The existing account's plan and usage limits apply; this configuration does not enable or upgrade a paid plan. Exhausted quota or unavailable inference leaves originals visible with a Retry action.
 
-Every translation is screened for repeated gibberish, foreign-script output,
-English leakage, broken numbers and altered currency pairs before use.
-The app keeps publisher original text when translation does not validate.
-Successful translations are cached, while historical machine translations
-from earlier builds are ignored. An article body only switches to translated
-text if all of its chunks complete and validate successfully; partial
-translations are never assembled together with original-language paragraphs.
+Check `/api/translation-status` for the deployed binding and `/api/translation-health` for a real Sorani inference. Verify Kurdish and Arabic headlines, summaries, and the reader in a preview before merging. For local inference use Cloudflare Pages development with the `AI` binding; Vite alone reports that inference is not configured.
 
-Tradukka was not integrated because a suitable official API could not be
-confirmed. There is no Tradukka link or redirect in the actual UI.
-
-Publisher images use approved media and verified OpenGraph photos when possible.
-Missing photos remain clearly labelled illustrations, not invented images.
+Publisher images use approved media and verified OpenGraph photos when possible. Missing photos remain clearly labelled illustrations, not invented images.
