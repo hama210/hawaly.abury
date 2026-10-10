@@ -1,11 +1,15 @@
 import { imageForNews, coverForCategory } from '../lib/news-images.js';
-// Hawal displays each publisher's original text. Language preferences affect
-// the interface only; news is never automatically translated.
-export function getTitle(item){
-  return item?.titleEn || item?.title || '';
+// Show validated inline translations where available. The original
+// publisher wording is always the fallback when providers fail.
+export function getTitle(item,lang='en'){
+  const original=item?.titleEn || item?.title || '';
+  return lang==='ku' ? item?.titleKu || original
+    : lang==='ar' ? item?.titleAr || original : original;
 }
-export function getSummary(item){
-  return item?.summaryEn || item?.summary || '';
+export function getSummary(item,lang='en'){
+  const original=item?.summaryEn || item?.summary || '';
+  return lang==='ku' ? item?.summaryKu || original
+    : lang==='ar' ? item?.summaryAr || original : original;
 }
 export function getWhy(item){
   return item?.whyEn || '';
