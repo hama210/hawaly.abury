@@ -4,7 +4,9 @@ import {googleTargets,requestGoogleTranslation,translationFailure,translationVer
 const TRANSLATION_VERSION=translationVersion;
 const TTL=24*60*60;
 const REQUEST_LIMIT=10;
-const MAX_TEXT_CHARS=950;
+// The news feed retains summaries of up to 1,000 characters. Accept the
+// entire summary so one long item cannot reject an otherwise valid batch.
+const MAX_TEXT_CHARS=1000;
 const MAX_BODY_BYTES=16000;
 const targetCodes=googleTargets;
 
@@ -88,7 +90,7 @@ export async function onRequest(context){
   if(!targetCodes[lang])return respond({ok:false,error:'Only Sorani and Arabic targets are supported'},400);
   if(!Array.isArray(body?.texts)||body.texts.length<1||body.texts.length>REQUEST_LIMIT||
     body.texts.some(value=>typeof value!=='string'||value.length>MAX_TEXT_CHARS))
-      return respond({ok:false,error:'Expected 1-10 text passages of up to 950 characters'},413);
+      return respond({ok:false,error:'Expected 1-10 text passages of up to 1000 characters'},413);
   const originals=body.texts.map(clean);
   const state={failure:''};
   const result=await mapBounded(originals,1,txt=>translateOne(txt,lang,request,context,state));

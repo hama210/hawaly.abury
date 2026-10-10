@@ -118,3 +118,16 @@ test('Pages stops uncached requests after a provider rate limit but can still se
     assert.deepEqual(result.translatedFlags,[false,false,false]);
   }finally{restoreFetch();restoreCache();}
 });
+
+test('a full 1000-character feed summary cannot reject the other headlines in its batch',async()=>{
+  const restoreFetch=replaceGlobal('fetch',async()=>new Response('limited',{status:429}));
+  try{
+    const call=requestContext('https://hawal.example/api/translate',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({lang:'ku',texts:[source,'A'.repeat(1000)]})
+    });
+    const response=await onRequest(call.context);
+    assert.equal(response.status,200);
+    assert.equal((await response.json()).translated.length,2);
+  }finally{restoreFetch();}
+});

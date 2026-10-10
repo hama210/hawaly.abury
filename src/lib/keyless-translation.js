@@ -75,6 +75,7 @@ export function createKeylessTranslator({fetcher=fetch,now=Date.now,storage=()=>
           signal:AbortSignal.any([...(signal?[signal]:[]),AbortSignal.timeout(15_000)])
         });
         const body=response.ok?await response.json():null;
+        if(!response.ok)for(const {index} of failed)result[index].reason+=';server-http-'+response.status;
         signal?.throwIfAborted();
         let recovered=false;
         for(let j=0;j<failed.length;j++){
