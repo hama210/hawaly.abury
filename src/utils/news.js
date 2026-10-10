@@ -1,15 +1,14 @@
 import { imageForNews, coverForCategory } from '../lib/news-images.js';
-export function getTitle(item, lang){
-  const en = item.titleEn || item.title || ''
-  return lang === 'ku' ? (item.titleKu || en) : lang === 'ar' ? (item.titleAr || en) : en
+// Hawal displays each publisher's original text. Language preferences affect
+// the interface only; news is never automatically translated.
+export function getTitle(item){
+  return item?.titleEn || item?.title || '';
 }
-export function getSummary(item, lang){
-  const en = item.summaryEn || item.summary || ''
-  return lang === 'ku' ? (item.summaryKu || en) : lang === 'ar' ? (item.summaryAr || en) : en
+export function getSummary(item){
+  return item?.summaryEn || item?.summary || '';
 }
-export function getWhy(item, lang){
-  const en = item.whyEn || ''
-  return lang === 'ku' ? (item.whyKu || en) : lang === 'ar' ? (item.whyAr || en) : en
+export function getWhy(item){
+  return item?.whyEn || '';
 }
 export function timeAgo(date, lang='en'){
   const d = new Date(date)
