@@ -64,7 +64,7 @@ test('the actual homepage renders more than four news cards and mobile grid stay
 });
 
 test('news reader never translates or edits original publisher headlines, summaries or bodies',()=>{
-  assert.doesNotMatch(main,/useClientTranslator|TranslationNotice|api\\/translate|articleChunks|translationQuality/);
+  assert.doesNotMatch(main,/useClientTranslator|TranslationNotice|api\/translate|articleChunks|translationQuality/);
   assert.doesNotMatch(main,/translatedNews|translating\?copy\.translating/);
   assert.match(main,/const displayNews = news;/);
   assert.match(main,/selectedText\.original/);
