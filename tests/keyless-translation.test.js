@@ -95,7 +95,7 @@ test('article and headline requests use Arabic and Sorani independently',async()
 });
 
 test('Google segment parsing decodes entities, omits cookies and refuses redirect challenges',async()=>{
-  const result=await requestGoogleTranslation(source,'ku',{fetcher:async(url,options)=>{
+  const result=await requestGoogleTranslation(source,'ku',{browser:true,fetcher:async(url,options)=>{
     assert.equal(options.credentials,'omit');
     assert.equal(options.redirect,'error');
     assert.equal(new URL(url).searchParams.get('q'),source);

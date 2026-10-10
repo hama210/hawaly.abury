@@ -12,7 +12,7 @@ export function decodeGoogleText(value){
   }).replace(/\s+/gu,' ').trim();
 }
 
-export async function requestGoogleTranslation(text,lang,{fetcher=fetch,signal,timeout=7000}={}){
+export async function requestGoogleTranslation(text,lang,{fetcher=fetch,signal,timeout=7000,browser=false}={}){
   const target=googleTargets[lang];
   if(!target)throw new Error('Unsupported translation language');
   signal?.throwIfAborted();
@@ -23,8 +23,9 @@ export async function requestGoogleTranslation(text,lang,{fetcher=fetch,signal,t
   try{
     const url='https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl='+target+'&dt=t&q='+encodeURIComponent(text);
     const response=await fetcher(url,{
-      signal:controller.signal,redirect:'error',credentials:'omit',
-      referrerPolicy:'no-referrer',headers:{Accept:'application/json'}
+      signal:controller.signal,redirect:'error',
+      ...(browser?{credentials:'omit',referrerPolicy:'no-referrer'}:{}),
+      headers:{Accept:'application/json'}
     });
     if(!response.ok)throw new Error('translator status '+response.status);
     const result=await response.json();
@@ -37,6 +38,9 @@ export async function requestGoogleTranslation(text,lang,{fetcher=fetch,signal,t
 }
 
 export function translationFailure(error){
-  const status=/translator status (\d+)/.exec(String(error?.message||''))?.[1];
+  const message=String(error?.message||'');
+  const status=/translator status (\d+)/.exec(message)?.[1];
+  if(/redirect/i.test(message))return 'redirect-blocked';
+  if(/not implemented|unsupported.*(?:field|option)/i.test(message))return 'request-option-unavailable';
   return status?'http-'+status:error?.name==='AbortError'||error?.name==='TimeoutError'?'timeout':'network-error';
 }

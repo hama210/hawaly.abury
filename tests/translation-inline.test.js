@@ -52,7 +52,7 @@ test('existing API secrets are ignored and every translation uses the keyless Go
     assert.match(String(url),/translate.googleapis.com\/translate_a\/single/);
     assert.match(String(url),/tl=ckb/);
     assert.doesNotMatch(String(url),/secret|[?&]key=/);
-    assert.equal(options.credentials,'omit');
+    assert.equal(options.credentials,undefined);
     return Response.json([[['دۆلار بۆ ١٥١,٠٠٠ دینار لە عێراق بەرز دەبێتەوە']]]);
   });
   try{

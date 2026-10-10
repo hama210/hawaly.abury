@@ -48,7 +48,7 @@ export function createKeylessTranslator({fetcher=fetch,now=Date.now,storage=()=>
       if(now()<browserUnavailableUntil)
         return {text,translated:false,provider:'original',reason:'google-browser:cooldown'};
       try{
-        const output=await requestGoogleTranslation(text,lang,{fetcher,signal});
+        const output=await requestGoogleTranslation(text,lang,{fetcher,signal,browser:true});
         signal?.throwIfAborted();
         const checked=validateTranslation(text,output,lang);
         if(!checked.ok)return {text,translated:false,provider:'original',reason:'google-browser:'+checked.reason};
