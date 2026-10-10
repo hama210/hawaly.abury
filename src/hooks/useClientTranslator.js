@@ -112,7 +112,11 @@ export function useClientTranslator(news,lang,visibleLimit=28){
             if(changed&&!work.closed)work.setTick(old=>old+1);
           }).catch(error=>{
             if(work.closed||error?.name==='AbortError')return;
-            group.forEach(job=>skipped.set(job.key,Date.now()+2*60*1000));
+            group.forEach(job=>skipped.set(
+ job.key,
+ Date.now()+15*1000
+));
+
           }).finally(()=>{
             group.forEach(job=>work.seen.delete(job.key));
             work.running--;
