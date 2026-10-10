@@ -334,7 +334,7 @@ function NewsCard({ item, lang, onOpen }) {
     <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={sourceTitle(item,lang)}><img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={imageFallback} /></button>
     <div className="story-copy">
       <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}<time dateTime={item.publishedAt}>{timestamp(item.publishedAt,lang)}</time></span></div>
-      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noopener noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" type="button" onClick={() => onOpen(item)}>{sourceTitle(item,lang)}</button>
+      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noopener noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" data-translation-error={item.translation?.errors?.title} type="button" onClick={() => onOpen(item)}>{sourceTitle(item,lang)}</button>
       {storyExcerpt(item,lang) && <p dir="auto" className="story-excerpt">{storyExcerpt(item,lang)}</p>}
       <div className="card-effects">{intel.effects?.slice(0, 3).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
     </div>
@@ -550,7 +550,7 @@ function App() {
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating news...'} ({progress.completed}/{progress.total})</p>}
-        {translationIssue && !translating && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕانی هەندێک هەواڵ سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.':lang==='ar'?'تعذرت ترجمة بعض الأخبار؛ يظهر النص الأصلي.':'Some news could not be translated; showing the source text.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
+        {translationIssue && !translating && <div className="translation-inline-status translation-retry" data-translation-error={translationIssue} data-failed-count={progress.failed} role="status"><span>{lang==='ku'?'وەرگێڕانی هەندێک هەواڵ سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.':lang==='ar'?'تعذرت ترجمة بعض الأخبار؛ يظهر النص الأصلي.':'Some news could not be translated; showing the source text.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
           {rest.length ? <><div className="news-grid">{rest.slice(0, homeVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
@@ -576,7 +576,7 @@ function App() {
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
         {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating news...'} ({progress.completed}/{progress.total})</p>}
-        {translationIssue && !translating && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕانی هەندێک هەواڵ سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.':lang==='ar'?'تعذرت ترجمة بعض الأخبار؛ يظهر النص الأصلي.':'Some news could not be translated; showing the source text.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
+        {translationIssue && !translating && <div className="translation-inline-status translation-retry" data-translation-error={translationIssue} data-failed-count={progress.failed} role="status"><span>{lang==='ku'?'وەرگێڕانی هەندێک هەواڵ سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.':lang==='ar'?'تعذرت ترجمة بعض الأخبار؛ يظهر النص الأصلي.':'Some news could not be translated; showing the source text.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
         <div className="topic-shortcuts" aria-label="News topics">
           {[
             ['Trump','Trump','ترامپ','ترامب'],

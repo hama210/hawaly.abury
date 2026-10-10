@@ -53,6 +53,8 @@ export function useNewsTranslation(news, language) {
     ...item,
     translation: {
       version: TRANSLATION_VERSION, language,
+      errors: Object.fromEntries(['title', 'summary', 'content'].map(field => [field,
+        task.current?.language === language ? task.current.results.get(originalNewsField(item, field))?.error : undefined])),
       ...Object.fromEntries(['title', 'summary', 'content'].map(field =>
         [field, newsTranslator.peek(originalNewsField(item, field), language)?.text || '']))
     }
