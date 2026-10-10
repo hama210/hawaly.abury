@@ -341,7 +341,7 @@ function NewsCard({ item, lang, onOpen }) {
   </article>;
 }
 
-function articleChunks(value, maxLength=580) {
+function articleChunks(value, maxLength=300) {
   const text=String(value||'').trim();
   if(!text) return [];
   const words=text.split(/\s+/u);
@@ -363,6 +363,8 @@ function articleChunks(value, maxLength=580) {
 function ArticleModal({ item, lang, dict, onClose }) {
   const [body, setBody] = useState('');
   const [loadingBody, setLoadingBody] = useState(false);
+  const [bodyTranslationFailed, setBodyTranslationFailed] = useState(false);
+  const [bodyTranslated, setBodyTranslated] = useState(false);
   const reader = readerCopy[lang] || readerCopy.ku;
   const selectedText = articleSelection(item,lang);
   const sourceLink = safeUrl(item?.link);
@@ -381,6 +383,8 @@ function ArticleModal({ item, lang, dict, onClose }) {
     }
     const selected=articleSelection(item,lang);
     setBody(selected.text);
+    setBodyTranslationFailed(false);
+    setBodyTranslated(lang==='en' || (lang!=='en' && !selected.isExtended && selected.text !== selected.original));
     if (!selected.isExtended || lang==='en' || !selected.original) {
       setLoadingBody(false);
       return () => controller.abort();
@@ -396,18 +400,29 @@ function ArticleModal({ item, lang, dict, onClose }) {
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({lang,texts:chunks,contexts:chunks.map((_,i)=>[item.titleEn||item.title, chunks[i-1]||''].filter(Boolean).join(' ').slice(0,350))}),
       signal:controller.signal
-    }).then(response => response.ok ? response.json() : Promise.reject())
+    }).then(response => response.ok ? response.json() : Promise.reject(new Error('translate API unavailable')))
       .then(data => {
-        if (controller.signal.aborted) return;
-        if(data?.ok===false || !Array.isArray(data?.translated) || data.translated.length!==chunks.length) return;
-        // Never replace article content with a translation that lost a number,
-        // names, or original meaning. Keep unmatched chunks in source language.
-        const parts=data.translated.map((text,i)=>{
-          const review=translationQuality(chunks[i],text,lang);
-          return review.valid ? review.text : chunks[i];
-        });
-        if(parts.some((text,i)=>text!==chunks[i])) setBody(parts.join('\n\n'));
-      }).catch(()=>{}).finally(()=>{if(!controller.signal.aborted)setLoadingBody(false);});
+        if(controller.signal.aborted)return;
+        if(data?.ok===false || !Array.isArray(data?.translated) || data.translated.length!==chunks.length){
+          setBodyTranslationFailed(true);
+          return;
+        }
+        const parts=data.translated.map((text,i)=>translationQuality(chunks[i],text,lang));
+        // All-or-nothing: never mix English original chunks with seemingly
+        // translated Kurdish paragraphs. The old version was doing exactly that.
+        if(parts.every(part=>part.valid)){
+          setBody(parts.map(part=>part.text).join('\n\n'));
+          setBodyTranslated(true);
+        }else{
+          setBodyTranslationFailed(true);
+          setBody(selected.original);
+        }
+      }).catch(()=>{
+        if(!controller.signal.aborted){
+          setBody(selected.original);
+          setBodyTranslationFailed(true);
+        }
+      }).finally(()=>{if(!controller.signal.aborted)setLoadingBody(false);});
     return () => controller.abort();
   }, [item,lang]);
   if (!item) return null;
@@ -421,7 +436,15 @@ function ArticleModal({ item, lang, dict, onClose }) {
       <h2 id="modal-title">{translatedTitle(item, lang)}</h2>
       <section className="article-reader" aria-label={copy.content}>
         <div className="article-reader-heading"><h3>{selectedText.isAvailable ? (selectedText.isExtended ? reader.extended : reader.excerpt) : copy.content}</h3><span className={'article-availability '+(selectedText.isAvailable?'has-text':'title-only')}>{selectedText.isAvailable?'RSS':'—'}</span></div>
-        {selectedText.isAvailable ? <><p className="article-body">{body || selectedText.text}</p>{loadingBody && <p className="article-translation-status" role="status">{reader.translating}</p>}<p className="reader-note">{reader.notice}</p></> :
+        {selectedText.isAvailable ? <>
+          {lang!=='en' && selectedText.isExtended && !bodyTranslated && <p className="article-translation-status" role="status">{loadingBody
+            ? (lang==='ku'?'دەقی ڕەسەن تا تەواوبوونی وەرگێڕان پیشان دەدرێت.':'يُعرض النص الأصلي إلى أن تكتمل الترجمة.')
+            : bodyTranslationFailed
+              ? (lang==='ku'?'وەرگێڕانی ئەم دەقە سەرنەکەوت. بۆ ڕێگریکردن لە هەواڵی هەڵە، دەقی ڕەسەن پیشان دەدرێت.':'تعذرت الترجمة الدقيقة؛ نعرض النص الأصلي لتجنب تغيير معنى الخبر.')
+              : ''}</p>}
+          <p className="article-body" dir={lang!=='en' && selectedText.isExtended && !bodyTranslated ? 'ltr' : undefined}>{body || selectedText.text}</p>
+          {loadingBody && <p className="article-translation-status" role="status">{reader.translating}</p>}
+          <p className="reader-note">{reader.notice}</p></> :
           <p className="article-body article-missing">{reader.missing}</p>}
         {sourceLink && <a className="reader-source-link" href={sourceLink} target="_blank" rel="noopener noreferrer">{reader.original} ↗</a>}
       </section>
