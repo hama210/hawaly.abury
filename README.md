@@ -59,9 +59,15 @@ Save and redeploy. Translation API credentials are never returned to clients.
 Cloud translation products may have usage costs. Verify entitlements with
 your cloud account before enabling.
 
-Check `/api/translation-status` for the deployment revision and whether either
-official API is configured. Only a successful real news translation can confirm
-that the provider is working.
+Check `/api/translation-status` for the deployment revision and whether a
+provider key is configured. Use `/api/translation-health` to run a cached
+fixed-text English-to-Sorani translation on the deployed site. The health
+endpoint returns a non-secret provider label and safe failure codes (for
+example `microsoft:http-401`), not API keys, headers or private feed text.
+An Azure key configured in Cloudflare is NOT proof that real translations
+work: verify `ok:true` and `provider:"microsoft"` in translation-health.
+The Kurdish/Arabic news screens also offer a Retry button if translation
+fails; they never present an unverified translation as publisher text.
 
 Every translation is screened for repeated gibberish, foreign-script output,
 English leakage, broken numbers and altered currency pairs before use.
