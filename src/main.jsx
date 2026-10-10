@@ -358,7 +358,8 @@ function articleChunks(value, maxLength=300) {
     } else line+=(line?' ':'')+word;
   }
   if(line)chunks.push(line);
-  return chunks.slice(0,8);
+  // Never silently discard the final paragraphs when an RSS excerpt is long.
+  return chunks.length <= 10 ? chunks : [];
 }
 function ArticleModal({ item, lang, dict, onClose }) {
   const [body, setBody] = useState('');
@@ -382,7 +383,8 @@ function ArticleModal({ item, lang, dict, onClose }) {
       return () => controller.abort();
     }
     const selected=articleSelection(item,lang);
-    setBody(selected.text);
+    // Display the original complete RSS text while the full translation is checked.
+    setBody(lang!=='en' && selected.isExtended ? selected.original : selected.text);
     setBodyTranslationFailed(false);
     setBodyTranslated(lang==='en' || (lang!=='en' && !selected.isExtended && selected.text !== selected.original));
     if (!selected.isExtended || lang==='en' || !selected.original) {
@@ -391,6 +393,7 @@ function ArticleModal({ item, lang, dict, onClose }) {
     }
     const chunks=articleChunks(selected.original);
     if (!chunks.length) {
+      setBodyTranslationFailed(true);
       setLoadingBody(false);
       return () => controller.abort();
     }
