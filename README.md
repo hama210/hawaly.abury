@@ -42,7 +42,7 @@ The translator is rebuilt around the Cloudflare Workers AI binding `AI`, using G
 
 Selecting Sorani (`ckb`), Arabic (`ar`), or English (`en`) queues every headline, summary, and publisher-provided article body in the loaded feed. Headlines have priority, and opening a story raises its article text to the front of the queue. Long text is split without truncation, and displayed only after every chunk succeeds. Native text needs no translation. The publisher's original stays available when a request fails.
 
-Successful results use a shared browser cache for 24 hours and an edge cache for seven days, keyed by the original text, language, and translator version. Language changes cancel that view's pending work without cancelling another reader's request. Output checks reject missing figures, altered currency pairs, malformed results, or unexpected scripts; these checks do not certify translation quality.
+Temporary failures receive one automatic retry with a cooldown; quota and missing-binding errors are not repeatedly retried. Smaller body batches keep longer articles within the inference window. Successful results use a shared browser cache for 24 hours and an edge cache for seven days, keyed by the original text, language, and translator version. Language changes cancel that view's pending work without cancelling another reader's request. Output checks reject missing figures, altered currency pairs, malformed results, or unexpected scripts; these checks do not certify translation quality.
 
 Cloudflare Workers AI includes a daily free allocation. The existing account's plan and usage limits apply; this configuration does not enable or upgrade a paid plan. Exhausted quota or unavailable inference leaves originals visible with a Retry action.
 

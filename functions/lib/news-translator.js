@@ -97,6 +97,7 @@ export async function translateNewsBatch(context, texts, language) {
       }
     })();
     pending.set(identity, operation);
+    context.waitUntil?.(operation);
     operation.finally(() => pending.delete(identity));
   }
   const outcome = await operation;

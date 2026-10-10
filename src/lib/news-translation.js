@@ -8,7 +8,7 @@ const TTL = 24 * 60 * 60 * 1000;
 const abortError = () => new DOMException('Translation cancelled', 'AbortError');
 const failed = (text, error) => ({ source: text, text, state: 'failed', error });
 
-export function createNewsTranslator({ fetcher = (...args) => fetch(...args), now = Date.now, storage = () => globalThis.sessionStorage } = {}) {
+export function createNewsTranslator({ fetcher = (...args) => fetch(...args), now = Date.now, storage = () => globalThis.sessionStorage, retryDelay = 2000 } = {}) {
   const cache = new Map();
   const jobs = new Map();
   let active = 0, sequence = 0, pausedUntil = 0, pauseError = '';
@@ -50,7 +50,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
   async function run(group) {
     active++;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
+    const timeout = setTimeout(() => controller.abort(), 65000);
     for (const job of group) {
       job.running = true;
       job.cancelGroup = () => {
@@ -108,7 +108,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
       let chars = 0;
       for (const job of ready) {
         if (job.language !== language || group.length >= MAX_TRANSLATION_BATCH
-            || chars + job.text.length > MAX_TRANSLATION_CHARS) continue;
+            || chars + job.text.length > Math.min(2400, MAX_TRANSLATION_CHARS)) continue;
         group.push(job); chars += job.text.length;
       }
       void run(group);
@@ -140,7 +140,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
     });
   }
 
-  async function translate(value, language, options = {}) {
+  async function attempt(value, language, options = {}) {
     if (!Object.hasOwn(TRANSLATION_LANGUAGES, language)) throw new Error('Unsupported language');
     if (options.signal?.aborted) throw abortError();
     const text = cleanTranslationText(value), saved = peek(text, language);
@@ -157,6 +157,22 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
     const result = { source: text, text: checked.text, state: 'translated' };
     remember(text, language, result);
     return result;
+  }
+
+  async function translate(value, language, options = {}) {
+    const first = await attempt(value, language, options);
+    if (first.state !== 'failed' || options.retry === false
+        || ['daily-limit', 'translation-not-configured'].includes(first.error)) return first;
+    const delay = Math.max(retryDelay, pausedUntil - now() + 100);
+    await new Promise((resolve, reject) => {
+      if (options.signal?.aborted) { reject(abortError()); return; }
+      const abort = () => { clearTimeout(timer); reject(abortError()); };
+      const timer = setTimeout(() => {
+        options.signal?.removeEventListener('abort', abort); resolve();
+      }, delay);
+      options.signal?.addEventListener('abort', abort, { once: true });
+    });
+    return attempt(value, language, options);
   }
 
   return { translate, peek, retry() { pausedUntil = 0; pauseError = ''; } };

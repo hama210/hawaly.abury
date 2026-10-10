@@ -154,16 +154,17 @@ test('translation covers every story past the former visible limit, including ar
 
 test('long articles retain all chunks and show the complete original if a chunk fails', async () => {
   const text = 'Gold and dollar markets remained active today. '.repeat(120).trim();
-  assert.equal(translationChunks(text).join(' '), text);
+  const chunks = translationChunks(text);
+  assert.equal(chunks.join(' '), text);
   let calls = 0;
   const client = createNewsTranslator({ storage: () => null, fetcher: async (_url, options) => {
     calls++;
     const body = JSON.parse(options.body);
     assert.ok(body.texts.every(chunk => chunk.length <= 1500));
     return Response.json({ version: TRANSLATION_VERSION, language: body.language,
-      results: body.texts.map((chunk, index) => ({ source: chunk, text: index ? chunk : 'زێڕ و دۆلار لە بازاڕەکانی عێراقدا چالاک بوون', state: index ? 'failed' : 'translated', error: 'service-busy' })) });
+      results: body.texts.map(chunk => ({ source: chunk, text: chunk === chunks.at(-1) ? chunk : 'زێڕ و دۆلار لە بازاڕەکانی عێراقدا چالاک بوون', state: chunk === chunks.at(-1) ? 'failed' : 'translated', error: 'service-busy' })) });
   } });
-  const result = await client.translate(text, 'ku');
+  const result = await client.translate(text, 'ku', { retry:false });
   assert.equal(result.state, 'failed'); assert.equal(result.text, text);
   assert.ok(calls >= 1); assert.equal(client.peek(text, 'ku'), null);
 });
@@ -178,6 +179,27 @@ test('one cancelled reader cannot cancel another subscriber to the same translat
   controller.abort(); release();
   await assert.rejects(first, { name: 'AbortError' });
   assert.equal((await second).text, sorani);
+});
+
+test('temporary failures recover automatically and cancellation interrupts retry waits', async () => {
+  let calls = 0;
+  const client = createNewsTranslator({ storage: () => null, retryDelay: 0, fetcher: async (_url, options) => {
+    calls++;
+    if (calls > 1) return apiResponse(options);
+    const body = JSON.parse(options.body);
+    return Response.json({ version:TRANSLATION_VERSION, language:body.language,
+      results:body.texts.map(text=>({source:text,text,state:'failed',error:'invalid-output'})) });
+  } });
+  assert.equal((await client.translate(source,'ku')).text, sorani);
+  assert.equal(calls,2);
+  const controller = new AbortController();
+  const cancelled = createNewsTranslator({ storage:()=>null, retryDelay:10000, fetcher:async (_url,options)=>{
+    const body=JSON.parse(options.body);
+    setTimeout(()=>controller.abort(),2);
+    return Response.json({ version:TRANSLATION_VERSION, language:body.language,
+      results:body.texts.map(text=>({source:text,text,state:'failed',error:'invalid-output'})) });
+  } });
+  await assert.rejects(cancelled.translate(source,'ku',{signal:controller.signal}),{name:'AbortError'});
 });
 
 test('replacing a cancelled feed starts fresh work and cannot lose the new subscriber', async () => {
