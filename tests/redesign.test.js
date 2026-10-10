@@ -63,10 +63,12 @@ test('the actual homepage renders more than four news cards and mobile grid stay
   assert.match(css,/grid-template-columns:minmax\(0,1fr\)!important/);
 });
 
-test('news reader never translates or edits original publisher headlines, summaries or bodies',()=>{
-  assert.doesNotMatch(main,/useClientTranslator|TranslationNotice|api\/translate|articleChunks|translationQuality/);
-  assert.doesNotMatch(main,/translatedNews|translating\?copy\.translating/);
-  assert.match(main,/const displayNews = news;/);
+test('Sorani and Arabic machine translation happens within Hawal with original fallback',()=>{
+  assert.match(main,/useClientTranslator/);
+  assert.match(main,/translateArticleBody/);
+  assert.match(main,/const displayNews=translatedNews/);
   assert.match(main,/selectedText\.original/);
+  assert.match(main,/translation-inline-status/);
   assert.match(main,/dir="auto"/);
+  assert.doesNotMatch(main,/tradukka|window\.open\(/i);
 });
