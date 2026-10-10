@@ -102,7 +102,7 @@ function save(lang, originalText, candidate) {
   return true;
 }
 
-function createWorker(lang, setTick, setBusy) {
+function createWorker(lang, setTick, setBusy, setIssue) {
 
   return {
     lang,
@@ -113,6 +113,7 @@ function createWorker(lang, setTick, setBusy) {
     closed: false,
     setTick,
     setBusy,
+    setIssue,
     pump: null
   };
 }
@@ -129,6 +130,8 @@ export function useClientTranslator(
 
   const [version, setVersion] = useState(0);
   const [translating, setTranslating] = useState(false);
+  const [translationIssue, setTranslationIssue] = useState('');
+  const [retryTick, setRetryTick] = useState(0);
 
   const task = useRef(null);
 
@@ -183,8 +186,10 @@ export function useClientTranslator(
       work = createWorker(
         lang,
         setVersion,
-        setTranslating
+        setTranslating,
+        setTranslationIssue
       );
+      setTranslationIssue('');
 
       task.current = work;
     }
@@ -328,10 +333,11 @@ export function useClientTranslator(
                     );
 
                   if (approved) {
-
                     changed = true;
-
+                    work.setIssue('');
                   } else {
+                    const reason = String(result.failureReasons?.[index] || 'translation-unavailable');
+                    work.setIssue(reason.slice(0,180));
 
                     skipped.set(
                       job.key,
@@ -361,6 +367,7 @@ export function useClientTranslator(
                 return;
               }
 
+              work.setIssue('request-failed');
               group.forEach(job => {
 
                 skipped.set(
@@ -398,7 +405,8 @@ export function useClientTranslator(
   }, [
     source,
     lang,
-    visibleLimit
+    visibleLimit,
+    retryTick
   ]);
 
   useEffect(() => {
@@ -414,8 +422,21 @@ export function useClientTranslator(
     };
   }, []);
 
+  const retryTranslations = () => {
+    skipped.clear();
+    if (task.current) {
+      task.current.closed = true;
+      task.current.controller.abort();
+      task.current = null;
+    }
+    setTranslationIssue('');
+    setRetryTick(value => value + 1);
+  };
+
   return {
     translatedNews,
-    translating
+    translating,
+    translationIssue,
+    retryTranslations
   };
 }
