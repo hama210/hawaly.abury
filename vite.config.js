@@ -1,69 +1,20 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { FEEDS } from './functions/api/news.js';
+import { onRequest as translateRequest } from './functions/api/translate.js';
+import { onRequest as translationStatusRequest } from './functions/api/translation-status.js';
 
-const TARGETS = {
-  ku: ['ckb', 'ku'],
-  ar: ['ar'],
-  en: ['en']
+// Use the SAME production translation handlers in Vite development.
+// The previous dev-only handler sent generic hard-coded topic sentences and
+// omitted translatedFlags, so the UI discarded its apparent translations.
+const jsonHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Cache-Control': 'no-store',
+  'Content-Type': 'application/json; charset=utf-8'
 };
-
-function clean(value = '') {
-  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 700);
-}
-
-function comparable(value = '') {
-  return clean(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-}
-
-function isUsefulTranslation(original, translated) {
-  const output = clean(translated);
-  return Boolean(output) && comparable(output) !== comparable(original);
-}
-
-const FALLBACKS = {
-  ku: [
-    { test: /central[- ]?bank messaging|major currency pairs/i, text: 'نامەکانی بانکی ناوەندی دەتوانن کاریگەری لەسەر دۆلار، زێڕ و هاوتاکانی دراو دروست بکەن.' },
-    { test: /depends heavily on oil revenue|export or price changes/i, text: 'چونکە عێراق زۆر پشت بە داهاتی نەوت دەبەستێت، گۆڕانی هەناردە یان نرخ کاریگەریی ئابووری هەیە.' },
-    { test: /market[- ]?moving update|trusted sources/i, text: 'نوێکارییەکی کاریگەر لە بازاڕەکان لە سەرچاوە باوەڕپێکراوەکان.' },
-    { test: /federal reserve|interest rates?|central bank|fed\b|inflation|cpi/i, text: 'فیدڕاڵ ڕیزێرڤ نیشانەی ڕێبازێکی بەئاگاداری لەسەر نرخی سوود دەدات.' },
-    { test: /kurdistan region|erbil|sulaimani|duhok/i, text: 'هەواڵەکانی هەرێمی کوردستان لە هەولێر، سلێمانی و دهۆک چاودێری دەکرێن.' },
-    { test: /iraq|baghdad|dinar|cbi|budget|banking|iraqi/i, text: 'ئابووری عێراق سەرنجی لەسەر بودجە، بانکداری، دینار و داهاتی نەوتە.' },
-    { test: /oil|opec|brent|wti|crude|energy|pipeline/i, text: 'نرخی نەوت چاودێری مەترسییەکانی ڕۆژهەڵاتی ناوەڕاست و نیشانەکانی دابینکردنی ئۆپێک دەکات.' },
-    { test: /bitcoin|crypto|etf|coindesk/i, text: 'بازرگانانی بیتکۆین چاودێری هەستی ڕیسک و ڕەوتی ETF دەکەن.' },
-    { test: /trump|tariff|white house|geopolitic/i, text: 'سیاسەت و باجە بازرگانییەکانی ئەمریکا کاریگەری لەسەر بازاڕە جیهانییەکان دەهێڵن.' }
-  ],
-  ar: [
-    { test: /central[- ]?bank messaging|major currency pairs/i, text: 'قد تؤثر رسائل البنوك المركزية مباشرة في الدولار والذهب وأزواج العملات الرئيسية.' },
-    { test: /depends heavily on oil revenue|export or price changes/i, text: 'لأن العراق يعتمد كثيراً على إيرادات النفط، فإن تغير الصادرات أو الأسعار مهم اقتصادياً.' },
-    { test: /market[- ]?moving update|trusted sources/i, text: 'تحديث مؤثر في الأسواق من مصادر موثوقة.' },
-    { test: /federal reserve|interest rates?|central bank|fed\b|inflation|cpi/i, text: 'يشير الاحتياطي الفيدرالي إلى نهج حذر بشأن أسعار الفائدة.' },
-    { test: /kurdistan region|erbil|sulaimani|duhok/i, text: 'تتم متابعة أخبار إقليم كردستان من أربيل والسليمانية ودهوك.' },
-    { test: /iraq|baghdad|dinar|cbi|budget|banking|iraqi/i, text: 'يتجه تركيز اقتصاد العراق إلى الموازنة والمصارف والدينار وإيرادات النفط.' },
-    { test: /oil|opec|brent|wti|crude|energy|pipeline/i, text: 'تراقب أسعار النفط مخاطر الشرق الأوسط وإشارات إمدادات أوبك.' },
-    { test: /bitcoin|crypto|etf|coindesk/i, text: 'يراقب متداولو بيتكوين معنويات المخاطر وتدفقات صناديق ETF.' },
-    { test: /trump|tariff|white house|geopolitic/i, text: 'تؤثر السياسة والرسوم التجارية الأميركية في الأسواق العالمية.' }
-  ]
-};
-
-function fallbackTranslate(text, lang) {
-  const original = clean(text);
-  const options = FALLBACKS[lang] || [];
-  return options.find(item => item.test.test(original))?.text || original;
-}
-
-function jsonHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Cache-Control': 'no-store',
-    'Content-Type': 'application/json; charset=utf-8'
-  };
-}
 
 function sendJson(res, status, payload) {
-  res.writeHead(status, jsonHeaders());
+  res.writeHead(status, jsonHeaders);
   res.end(JSON.stringify(payload));
 }
 
@@ -73,112 +24,56 @@ function readRequestBody(req) {
     req.setEncoding('utf8');
     req.on('data', chunk => {
       body += chunk;
-      if (body.length > 64_000) reject(new Error('Request too large'));
+      if (Buffer.byteLength(body, 'utf8') > 16000) {
+        reject(Object.assign(new Error('Request too large'), { status: 413 }));
+        req.pause();
+      }
     });
     req.on('end', () => resolve(body));
     req.on('error', reject);
   });
 }
 
-async function readTranslateBody(req) {
-  const body = await readRequestBody(req);
-  return body ? JSON.parse(body) : {};
-}
-
-async function callGoogle(text, target) {
-  const q = clean(text);
-  if (!q || target === 'en') return q;
-
-  const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl='
-    + encodeURIComponent(target) + '&dt=t&q=' + encodeURIComponent(q);
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort('translation timeout'), 5000);
+async function serveProductionHandler(req, res, handler, path, env) {
   try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'user-agent': 'Mozilla/5.0 HawaliAburiTranslate',
-        'accept': 'application/json,text/plain,*/*'
-      }
-    });
-    if (!res.ok) throw new Error(String(res.status));
-    const data = await res.json();
-    const out = Array.isArray(data?.[0]) ? data[0].map(part => part?.[0] || '').join('').trim() : '';
-    return out || q;
-  } finally {
-    clearTimeout(timeoutId);
+    const method = req.method || 'GET';
+    const body = method === 'GET' || method === 'HEAD' ? undefined : await readRequestBody(req);
+    const origin = (req.socket?.encrypted ? 'https://' : 'http://') + (req.headers.host || 'localhost:5173');
+    const headers = new Headers();
+    if (req.headers.origin) headers.set('Origin', req.headers.origin);
+    if (req.headers['content-type']) headers.set('Content-Type', req.headers['content-type']);
+    const request = new Request(origin + path, { method, headers, ...(body === undefined ? {} : { body }) });
+    const response = await handler({ request, env, waitUntil: promise => { Promise.resolve(promise).catch(() => {}); } });
+    res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+    res.end(await response.text());
+  } catch (error) {
+    sendJson(res, error?.status || 500, { ok:false, error:error?.status === 413 ? 'Request too large' : 'Translation API failed' });
   }
-}
-
-async function translateOne(text, targets, lang) {
-  const original = clean(text);
-  if (!original) return '';
-
-  for (const target of targets) {
-    try {
-      const translated = await callGoogle(original, target);
-      if (isUsefulTranslation(original, translated)) return translated;
-    } catch {}
-  }
-
-  return fallbackTranslate(original, lang);
-}
-
-async function translateMany(texts, targets, lang) {
-  const translated = new Array(texts.length);
-  let cursor = 0;
-  async function run() {
-    while (cursor < texts.length) {
-      const index = cursor++;
-      translated[index] = await translateOne(texts[index], targets, lang);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(6, texts.length) }, run));
-  return translated;
 }
 
 function devTranslateApi() {
   return {
     name: 'hawali-dev-translate-api',
     configureServer(server) {
+      // Keys stay on the dev server. Only VITE_-prefixed variables are exposed
+      // by Vite to client code; the official translator keys are never copied.
+      const env = { ...loadEnv(server.config.mode, server.config.root, ''), ...process.env };
+
       server.middlewares.use('/api/sources', (req, res) => {
-        if (req.method === 'OPTIONS') {
-          res.writeHead(204, jsonHeaders());
-          res.end();
-          return;
-        }
         if (req.method !== 'GET') {
-          sendJson(res, 405, { ok: false, error: 'GET only', sources: [] });
+          sendJson(res, 405, { ok:false, error:'GET only', sources:[] });
           return;
         }
-
         const sources = [...new Set(FEEDS.map(feed => feed.source).filter(Boolean))];
-        sendJson(res, 200, { sources, count: sources.length });
+        sendJson(res, 200, { sources, count:sources.length });
       });
 
-      server.middlewares.use('/api/translate', async (req, res) => {
-        if (req.method === 'OPTIONS') {
-          res.writeHead(204, jsonHeaders());
-          res.end();
-          return;
-        }
-        if (req.method !== 'POST') {
-          sendJson(res, 405, { ok: false, error: 'POST only', translated: [] });
-          return;
-        }
-
-        try {
-          const body = await readTranslateBody(req);
-          const lang = body.lang || 'ku';
-          const targets = TARGETS[lang] || [lang];
-          const texts = Array.isArray(body.texts) ? body.texts.slice(0, 30).map(clean) : [];
-          const translated = await translateMany(texts, targets, lang);
-
-          sendJson(res, 200, { ok: true, lang, targets, translated });
-        } catch (error) {
-          sendJson(res, 200, { ok: false, error: error.message || 'Translate failed', translated: [] });
-        }
-      });
+      server.middlewares.use('/api/translation-status', (req, res) =>
+        serveProductionHandler(req, res, translationStatusRequest, '/api/translation-status', env)
+      );
+      server.middlewares.use('/api/translate', (req, res) =>
+        serveProductionHandler(req, res, translateRequest, '/api/translate', env)
+      );
     }
   };
 }
