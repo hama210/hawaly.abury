@@ -38,3 +38,18 @@ test('critical names cannot disappear from a translated Iraq or Trump headline',
     true
   );
 });
+
+test('denials cannot become affirmative headlines in Sorani or Arabic',()=>{
+  assert.equal(
+    translationQuality('Trump did not announce sanctions on Iraq','ترامپ سزای نوێی بەسەر عێراقدا ڕاگەیاند','ku').reason,
+    'missing-negation'
+  );
+  assert.equal(
+    translationQuality('Trump did not announce sanctions on Iraq','ترامپ هیچ سزایەکی نوێی بەسەر عێراقدا ڕانەگەیاند','ku').valid,
+    true
+  );
+  assert.equal(
+    translationQuality('Iran denies reports of an attack','تؤكد إيران التقارير عن هجوم','ar').reason,
+    'missing-negation'
+  );
+});
