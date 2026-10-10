@@ -23,14 +23,14 @@ test('genuine publisher excerpts and richer syndicated text show up on article c
     summaryKu:'بانکەکانی عێراق نوێکارییەکیان لەسەر سیاسەتی دراو بڵاوکردەوە.',
     content:'Banks in Iraq published an update about foreign currency policy. Officials described implementation steps, noted the effects of compliance rules, and set out the dates that financial institutions should consider in their operations.'
   };
-  assert.equal(storyExcerpt(item,'ku'),item.summaryKu);
+  assert.equal(storyExcerpt(item,'ku'),item.summary);
   assert.equal(storyExcerpt(item,'en'),item.summary);
   const en=articleSelection(item,'en');
   assert.equal(en.isAvailable,true);
   assert.equal(en.isExtended,true);
   assert.equal(en.original,item.content);
   const ku=articleSelection(item,'ku');
-  assert.equal(ku.text,item.summaryKu);
+  assert.equal(ku.text,item.content);
   assert.equal(ku.original,item.content);
   assert.match(readerCopy.ku.missing,/سەردێڕ/);
 });
@@ -71,14 +71,29 @@ test('news API distinguishes title-only RSS from source excerpts instead of dupl
 test('redesigned modal offers a source link and a helpful empty state',()=>{
   const main=fs.readFileSync('src/main.jsx','utf8');
   const css=fs.readFileSync('src/redesign.css','utf8');
-  assert.match(main,/articleSelection\(item,lang\)/);
+  assert.match(main,/articleSelection\(item\)/);
   assert.match(main,/storyExcerpt\(item,lang\)/);
   assert.match(main,/reader\.missing/);
   assert.match(main,/reader\.notice/);
   assert.match(main,/reader\.original/);
   assert.match(main,/const sourceLink = safeUrl\(item\?\.link\)/);
-  assert.match(main,/function articleChunks\(/);
+  assert.doesNotMatch(main,/function articleChunks\(/);
+  assert.doesNotMatch(main,/api\/translate/);
+  assert.match(main,/dir="auto">\{selectedText\.original\}/);
   assert.match(css,/\.article-reader/);
   assert.match(css,/\.story-excerpt/);
   assert.doesNotMatch(main,/body \|\| translatedSummary\(item, lang\)/);
+});
+
+test('original publisher content is unchanged in every interface language',()=>{
+  const item={title:'Dollar policy update',titleKu:'هەواڵێکی هەڵە',
+    summary:'Central bank keeps its dollar policy unchanged.',
+    summaryKu:'وەرگێڕانێکی هەڵەی کۆن',
+    content:'Officials say no change is planned for foreign exchange operations.'};
+  for(const lang of ['ku','ar','en']){
+    assert.equal(storyExcerpt(item,lang),item.summary);
+    const selected=articleSelection(item,lang);
+    assert.equal(selected.text,item.content);
+    assert.equal(selected.original,item.content);
+  }
 });
