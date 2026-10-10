@@ -52,7 +52,7 @@ export function useClientTranslator(news,lang,visibleLimit=28){
   const task=useRef(null);
   const translatedNews=useMemo(()=>source.map(item=>{
     // Old legacy translations from a previous backend must never be reused.
-    const clean={...item,titleKu:'',titleAr:'',summaryKu:'',summaryAr:''};
+    const clean={...item,titleKu:'',titleAr:'',summaryKu:'',summaryAr:'',_hawalInlineVerified:true};
     if(lang==='en')return clean;
     const title=original(item,'title'),summary=original(item,'summary');
     const fields=lang==='ku'?['titleKu','summaryKu']:['titleAr','summaryAr'];
