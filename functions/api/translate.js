@@ -98,7 +98,7 @@ async function translateOne(text,target,request,context){
     }catch(error){
       // Keep provider errors observable in Cloudflare logs without logging
       // article text, request headers or secret API keys.
-      const status=/translator status (\\d+)/.exec(String(error?.message||''))?.[1];
+      const status=/translator status (\d+)/.exec(String(error?.message||''))?.[1];
       const kind=status?'http-'+status:error?.name==='AbortError'?'timeout':'network-error';
       failureReason=name+':'+kind;
       console.warn('[Hawal translator] '+failureReason);
