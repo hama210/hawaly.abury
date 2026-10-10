@@ -197,12 +197,11 @@ export function validateTranslation(original,candidate,target){
   // All quoted numbers must survive translation; omitting a figure or
   // changing a price is especially dangerous in financial news.
   if(a.length && (a.length!==b.length || a.some((value,index)=>value!==b[index]))){
-      return {
-        ok:false,
-        reason:'changed-number',
-        text:src
-      };
-    }
+    return {
+      ok:false,
+      reason:'changed-number',
+      text:src
+    };
   }
 
   // preserve market pairs
