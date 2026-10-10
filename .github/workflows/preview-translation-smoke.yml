@@ -28,6 +28,11 @@ jobs:
             }catch(e){last=String(e?.message||e);console.log('Preview not available:',last);}
             await new Promise(resolve=>setTimeout(resolve,8000));
           }
+          try{
+            const probeUrl='https://fix-google-only-translation.hawaly-aburyy.pages.dev/api/google-probe';
+            const response=await fetch(probeUrl,{signal:AbortSignal.timeout(20000)});
+            console.log('GOOGLE PROBE: '+await response.text());
+          }catch(e){console.log('GOOGLE PROBE error: '+String(e));}
           console.error('Live Google Sorani translation did not pass:',last);
           process.exit(1);
           NODE
