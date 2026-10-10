@@ -65,6 +65,14 @@ export function translationQuality(source, candidate, lang){
     return {valid:false,text:output,reason:'not-sorani'};
   if(lang==='ar' && !ARABIC_LETTERS.test(output))
     return {valid:false,text:output,reason:'not-arabic'};
+  // Omission of an explicit negation reverses the meaning of political news.
+  // Reject clear cases before they reach the persistent browser/edge caches.
+  const sourceNegated=/\b(?:not|never|no longer|without|denies|denied|deny|rejects|rejected|refuses|refused|rules out|ruled out)\b/i.test(original);
+  const targetNegated=lang==='ku'
+    ? /نە|ناکر|ناتوان|نییە|ڕەت|بێ|قبوڵ ناکات|ڕەزامەند نییە/u.test(output)
+    : /(?:^|\s)(?:لا|لم|لن|ليس|ليست|بدون|دون|غير|رفض|ينفي|نفت|نفى|نفى)(?=\s|$)|نفي|مرفوض/u.test(output);
+  if(sourceNegated&&!targetNegated)
+    return {valid:false,text:output,reason:'missing-negation'};
   if(!sameMeaningNumbers(original,output))
     return {valid:false,text:output,reason:'changed-numbers'};
   if(IMPORTANT_ENTITIES.some(entity=>entity.english.test(original)&&!entity.target.test(output)))
