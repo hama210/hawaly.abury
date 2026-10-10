@@ -141,3 +141,48 @@ test('invalid Sorani translations must not corrupt names, rates or the translati
     assert.equal(alternateCalls,1);
   }finally{restore();restoreCaches();}
 });
+
+test('context-aware Sorani translator uses publisher summary to disambiguate a headline without translating the summary',async()=>{
+  const restoreCaches=replaceGlobal('caches',{default:new MemoryCache()});
+  const restoreFetch=replaceGlobal('fetch',async()=>{throw Error('External providers should not run with AI available')});
+  let calls=0;
+  try{
+    const requestWithContext=contextText=>{
+      const request=requestContext('https://example.com/api/translate',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Origin':'https://example.com'},
+        body:JSON.stringify({
+          lang:'ku',
+          texts:['Trump says Iran talks may resume'],
+          contexts:[contextText]
+        })
+      });
+      request.context.env={AI:{run:async(model,args)=>{
+        calls++;
+        assert.match(model,/qwen3/);
+        assert.match(args.messages[0].content,/COMPLETE meaning/);
+        assert.match(args.messages[1].content,/SOURCE PASSAGE/);
+        assert.ok(args.messages[1].content.includes(contextText));
+        return {response:'ترامپ دەڵێت لەوانەیە دانوستانەکانی ئێران دەست پێبکەنەوە'};
+      }}};
+      return request;
+    };
+    const a=requestWithContext('Officials are discussing negotiations rather than military attacks.');
+    const first=await (await onRequest(a.context)).json();await a.settle();
+    assert.equal(first.sources[0],'workers-ai');
+    assert.equal(first.translated[0],'ترامپ دەڵێت لەوانەیە دانوستانەکانی ئێران دەست پێبکەنەوە');
+    const b=requestWithContext('Officials are discussing negotiations rather than military attacks.');
+    const second=await (await onRequest(b.context)).json();
+    assert.equal(second.sources[0],'cache');
+    const d=requestWithContext('Diplomats describe a new round of indirect dialogue.');
+    const third=await (await onRequest(d.context)).json();await d.settle();
+    assert.equal(third.sources[0],'workers-ai');
+    assert.equal(calls,2,'different story contexts must not share an unrelated cached result');
+    const invalid=requestContext('https://example.com/api/translate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Origin':'https://example.com'},
+      body:JSON.stringify({lang:'ku',texts:['a','b'],contexts:['only one context']})
+    });
+    assert.equal((await onRequest(invalid.context)).status,400);
+  }finally{restoreFetch();restoreCaches();}
+});
