@@ -1,10 +1,11 @@
-const CACHE_NAME = 'hawali-aburi-v31-inline-sorani';
+const CACHE_NAME = 'hawali-aburi-v32-keyless-google';
 // Never precache the HTML document. A cached index can keep pointing at an
 // old JavaScript bundle after a new Cloudflare Pages deployment.
 const APP_SHELL = ['/offline.html', '/manifest.webmanifest', '/hawali-logo-96.webp', '/hawali-logo-192.png'];
 
 function shouldBypass(request, url) {
   return request.method !== 'GET'
+    || url.origin !== self.location.origin
     || request.mode === 'navigate'
     || request.destination === 'document'
     || url.pathname.startsWith('/api/')

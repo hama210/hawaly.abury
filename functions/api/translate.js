@@ -1,51 +1,17 @@
 import {validateTranslation,alreadyInTargetLanguage} from '../../src/lib/translation-check.js';
+import {googleTargets,requestGoogleTranslation,translationFailure,translationVersion} from '../../src/lib/google-translate.js';
 
-const TRANSLATION_VERSION='hawal-google-v1';
+const TRANSLATION_VERSION=translationVersion;
 const TTL=24*60*60;
 const REQUEST_LIMIT=10;
 const MAX_TEXT_CHARS=950;
 const MAX_BODY_BYTES=16000;
-const TIMEOUT_MS=7000;
-const targetCodes={ku:'ckb',ar:'ar'};
+const targetCodes=googleTargets;
 
 function headers(){return {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};}
 function clean(value){return String(value||'').replace(/\s+/gu,' ').trim();}
-function htmlDecode(value){
-  return String(value||'').replace(/&(#x[0-9a-f]+|#[0-9]+|amp|lt|gt|quot|apos|#39);/gi,(_,code)=>{
-    const name=code.toLowerCase();
-    if(name==='amp')return '&';
-    if(name==='lt')return '<';
-    if(name==='gt')return '>';
-    if(name==='quot')return '"';
-    if(name==='apos'||name==='#39')return "'";
-    const number=name.startsWith('#x')?parseInt(name.slice(2),16):parseInt(name.slice(1),10);
-    return Number.isSafeInteger(number)&&number>0&&number<0x110000?String.fromCodePoint(number):'';
-  });
-}
-async function fetchJson(url,options={}){
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort('translator timed out'),TIMEOUT_MS);
-  try{
-    const response=await fetch(url,{...options,signal:controller.signal,redirect:'error'});
-    if(!response.ok)throw new Error('translator status '+response.status);
-    return await response.json();
-  }finally{clearTimeout(timer);}
-}
-async function googleCloud(text,target,env){
-  const key=env?.GOOGLE_TRANSLATE_API_KEY;
-  if(!key)return '';
-  const result=await fetchJson('https://translation.googleapis.com/language/translate/v2?key='+encodeURIComponent(key),{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({q:[text],target:targetCodes[target],format:'text'})
-  });
-  return htmlDecode(clean(result?.data?.translations?.[0]?.translatedText));
-}
 async function googlePublic(text,target){
-  // Unauthenticated Google web endpoint: best effort only, not a guaranteed API.
-  // Prefer the supported Google Cloud Translation API when configured.
-  const url='https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl='+targetCodes[target]+'&dt=t&q='+encodeURIComponent(text);
-  const result=await fetchJson(url,{headers:{'Accept':'application/json'}});
-  return htmlDecode(clean((result?.[0]||[]).map(segment=>Array.isArray(segment)?segment[0]:'').join('')));
+  return requestGoogleTranslation(text,target);
 }
 async function cacheKey(request,text,target){
   const payload=new TextEncoder().encode(TRANSLATION_VERSION+'\n'+target+'\n'+text);
@@ -53,7 +19,7 @@ async function cacheKey(request,text,target){
   const hex=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
   return new Request(new URL(request.url).origin+'/__translation_cache/'+TRANSLATION_VERSION+'/'+target+'/'+hex);
 }
-async function translateOne(text,target,request,context){
+async function translateOne(text,target,request,context,state){
   if(!text)return {text,translated:false,provider:'original'};
   if(alreadyInTargetLanguage(text,target))return {text,translated:false,provider:'original-language'};
   const cache=globalThis.caches?.default;
@@ -66,9 +32,8 @@ async function translateOne(text,target,request,context){
       if(checked.ok)return {text:checked.text,translated:true,provider:'cache'};
     }
   }
-  const providers=[];
-  if(context.env?.GOOGLE_TRANSLATE_API_KEY)providers.push(['google-cloud',()=>googleCloud(text,target,context.env)]);
-  providers.push(['google-public',()=>googlePublic(text,target)]);
+  if(state.failure)return {text,translated:false,provider:'original',reason:state.failure};
+  const providers=[['google-public',()=>googlePublic(text,target)]];
   const failures=[];
   for(const [name,provider] of providers){
     try{
@@ -86,9 +51,9 @@ async function translateOne(text,target,request,context){
     }catch(error){
       // Keep provider errors observable in Cloudflare logs without logging
       // article text, request headers or secret API keys.
-      const status=/translator status (\d+)/.exec(String(error?.message||''))?.[1];
-      const kind=status?'http-'+status:error?.name==='AbortError'?'timeout':'network-error';
+      const kind=translationFailure(error);
       failures.push(name+':'+kind);
+      state.failure=failures.join(',');
       console.warn('[Hawal translator] '+name+':'+kind);
     }
   }
@@ -125,7 +90,8 @@ export async function onRequest(context){
     body.texts.some(value=>typeof value!=='string'||value.length>MAX_TEXT_CHARS))
       return respond({ok:false,error:'Expected 1-10 text passages of up to 950 characters'},413);
   const originals=body.texts.map(clean);
-  const result=await mapBounded(originals,3,txt=>translateOne(txt,lang,request,context));
+  const state={failure:''};
+  const result=await mapBounded(originals,1,txt=>translateOne(txt,lang,request,context,state));
   return respond({
     ok:true,
     lang,

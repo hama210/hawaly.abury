@@ -40,13 +40,11 @@ Currency conversions use USD-per-currency, with explicit city/side, CBI or manua
 
 Hawal translates news titles, summaries and available article text **inside the website** using **Google Translate only**, with Central Kurdish (Sorani, code `ckb`) and Arabic (`ar`). No Microsoft Translator code is used.
 
-1. When the `GOOGLE_TRANSLATE_API_KEY` encrypted secret is configured in Cloudflare Pages, translation uses the officially supported Google Cloud Translation API.
-2. Otherwise (or when the Cloud API temporarily fails), the server attempts Google's public web translation endpoint. This endpoint is **unofficial and best-effort**: it can be rate-limited, blocked or changed without notice. It should not be considered guaranteed in production.
-3. Never put translation keys in the browser, repo or a `VITE_` variable. Google Cloud Translation might incur charges.
+No API key, billing account or secret is required. The browser first requests the public Google Translate endpoint with cookies omitted. Headlines, summaries and article chunks share a serial queue and a 24-hour session cache. No proxy service is used.
 
-Cloudflare Dashboard → Workers & Pages → Hawal project → Settings → Variables and Secrets → add `GOOGLE_TRANSLATE_API_KEY` if using Google Cloud. Previous Microsoft secrets may be manually deleted from Cloudflare; even if left in place, the app ignores them.
+If the browser route fails, the app tries the same keyless Google service through Pages. A failed route cools down for one minute instead of repeatedly sending the feed into a rate limit. Google’s public endpoint is unofficial and may still be unavailable. Existing Google and Microsoft secrets are ignored.
 
-After deployment, open `/api/translation-status` for the active configuration and `/api/translation-health` to run a fixed sample translation through the same backend. A successful build cannot guarantee Google's live service: confirm the health endpoint reports `ok: true` and a Google provider.
+After deployment, open `/api/translation-status` for the active version and `/api/translation-health` to check the server fallback. The health response labels its route; server failure does not describe the browser route. Verify Kurdish and Arabic headlines, summaries and the article reader in the actual preview before merging.
 
 Every translation is checked for suspicious output, numeric alterations and changed currency pairs. If the Google service is unavailable or a translation fails checks, the original news text remains visible; a Retry button is provided. For longer articles, all chunks must pass before any translated version is shown.
 

@@ -1,4 +1,5 @@
 import {alreadyInTargetLanguage,validateTranslation} from './translation-check.js';
+import {translatePassages} from './keyless-translation.js';
 
 // Split publisher-provided RSS body without dropping a single word. The
 // translated article is displayed only if every segment passes validation.
@@ -21,7 +22,7 @@ export function articleChunks(body,max=700){
   if(current)chunks.push(current);
   return chunks;
 }
-export async function translateArticleBody(text,lang,{signal,fetcher=fetch}={}){
+export async function translateArticleBody(text,lang,{signal,fetcher,translator=translatePassages}={}){
   const original=String(text||'').trim();
   if(!original||lang==='en'||alreadyInTargetLanguage(original,lang))
     return {translated:false,text:original};
@@ -32,15 +33,24 @@ export async function translateArticleBody(text,lang,{signal,fetcher=fetch}={}){
   try{
     for(let i=0;i<chunks.length;i+=8){
       const batch=chunks.slice(i,i+8);
-      const response=await fetcher('/api/translate',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({lang,texts:batch}),signal
-      });
-      if(!response.ok) return {translated:false,text:original};
-      const data=await response.json();
+      // An injected fetcher is retained for callers that supply the existing
+      // server contract; the browser uses the shared keyless translation queue.
+      let data;
+      if(fetcher){
+        const response=await fetcher('/api/translate',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({lang,texts:batch}),signal
+        });
+        if(!response.ok)return {translated:false,text:original};
+        data=await response.json();
+      }else data=await translator(batch,lang,{signal});
       if(!data.ok||!Array.isArray(data.translated)||data.translated.length!==batch.length)
         return {translated:false,text:original};
       for(let j=0;j<batch.length;j++){
+        if(alreadyInTargetLanguage(batch[j],lang)){
+          translated.push(batch[j]);
+          continue;
+        }
         if(!data.translatedFlags?.[j])return {translated:false,text:original};
         const checked=validateTranslation(batch[j],data.translated[j],lang);
         // Never mix untranslated source chunks into a translated article.

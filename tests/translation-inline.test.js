@@ -46,21 +46,21 @@ test('Google-only translator ignores old Microsoft secrets and caches Google res
     assert.equal(count,1);
   }finally{restoreFetch();restoreCache();}
 });
-test('Google Cloud Translation uses Sorani ckb and handles encoded translation',async()=>{
+test('existing API secrets are ignored and every translation uses the keyless Google route',async()=>{
   const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});
   const restoreFetch=replaceGlobal('fetch',async(url,options)=>{
-    assert.match(String(url),/translation.googleapis.com\/language\/translate\/v2\?key=google-secret/);
-    const body=JSON.parse(options.body);
-    assert.equal(body.target,'ckb');
-    assert.equal(body.format,'text');
-    return Response.json({data:{translations:[{translatedText:'دۆلار بۆ ١٥١,٠٠٠ دینار لە عێراق بەرز دەبێتەوە'}]}});
+    assert.match(String(url),/translate.googleapis.com\/translate_a\/single/);
+    assert.match(String(url),/tl=ckb/);
+    assert.doesNotMatch(String(url),/secret|[?&]key=/);
+    assert.equal(options.credentials,'omit');
+    return Response.json([[['دۆلار بۆ ١٥١,٠٠٠ دینار لە عێراق بەرز دەبێتەوە']]]);
   });
   try{
     const call=post(['Dollar rises to 151,000 dinars in Iraq']);
     call.context.env={GOOGLE_TRANSLATE_API_KEY:'google-secret'};
     const result=await (await onRequest(call.context)).json();
     await call.settle();
-    assert.equal(result.sources[0],'google-cloud');
+    assert.equal(result.sources[0],'google-public');
     assert.equal(result.translatedFlags[0],true);
   }finally{restoreFetch();restoreCache();}
 });
@@ -207,7 +207,8 @@ test('status advertises only Google providers and Arabic requests use Google tar
   const status=requestContext('https://hawal.example/api/translation-status');
   status.context.env={MICROSOFT_TRANSLATOR_KEY:'legacy-secret'};
   const snapshot=await (await translationStatus(status.context)).json();
-  assert.equal(snapshot.preferredProvider,'google-public-best-effort');
+  assert.equal(snapshot.preferredProvider,'google-browser');
+  assert.equal(snapshot.apiKeyRequired,false);
   assert.equal(snapshot.microsoftConfigured,undefined);
   assert.doesNotMatch(JSON.stringify(snapshot),/microsoft/i);
   const restoreFetch=replaceGlobal('fetch',async url=>{
@@ -224,9 +225,8 @@ test('status advertises only Google providers and Arabic requests use Google tar
   }finally{restoreFetch();}
 });
 
-test('Google Cloud service failures fall back to Google web translation',async()=>{
+test('Google API credentials cannot select a billed or Microsoft endpoint',async()=>{
   const restoreFetch=replaceGlobal('fetch',async url=>{
-    if(String(url).includes('translation.googleapis.com'))return new Response('unavailable',{status:503});
     assert.match(String(url),/translate.googleapis.com/);
     return Response.json([[['نرخی زێڕ لە عێراق بەرز دەبێتەوە','Gold rises in Iraq']]]);
   });

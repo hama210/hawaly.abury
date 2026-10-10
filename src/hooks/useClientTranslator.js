@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import {translatePassages} from '../lib/keyless-translation.js';
 import {
   alreadyInTargetLanguage,
   validateTranslation
 } from '../lib/translation-check.js';
 
-const PREFIX = 'hawal-google-only-translation-v1:';
+const PREFIX = 'hawal-google-keyless-v2:';
 const TTL = 24 * 60 * 60 * 1000;
 
-const BATCH = 8;
-const CONCURRENCY = 2;
+const BATCH = 4;
+const CONCURRENCY = 1;
 
 const entries = new Map();
 const skipped = new Map();
@@ -176,7 +177,7 @@ export function useClientTranslator(
 
     let work = task.current;
 
-    if (!work || work.lang !== lang) {
+    if (!work || work.closed || work.lang !== lang) {
 
       if (work) {
         work.closed = true;
@@ -279,29 +280,13 @@ export function useClientTranslator(
 
           work.running++;
 
-          fetch('/api/translate', {
-            method: 'POST',
-            headers: {
-              'Content-Type':
-                'application/json'
-            },
-            body: JSON.stringify({
-              lang: work.lang,
-              texts: group.map(
-                item => item.text
-              )
-            }),
+          translatePassages(group.map(item=>item.text),work.lang,{
             signal: work.controller.signal
           })
-            .then(async response => {
-
-              const result =
-                await response
-                  .json()
-                  .catch(() => null);
+            .then(result => {
+              if(work.closed)return;
 
               if (
-                !response.ok ||
                 !result?.ok ||
                 !Array.isArray(
                   result.translated
