@@ -99,7 +99,7 @@ export function validateTranslation(original,candidate,target){
 
   // relaxed sizing
 
-  if(text.length < Math.max(5,src.length*0.15)){
+  if(text.length < (src.length<=12 ? 2 : Math.max(5,src.length*0.15))){
     return {
       ok:false,
       reason:'too-short',
