@@ -17,7 +17,7 @@ jobs:
           node --input-type=module <<'NODE'
           const url='https://fix-google-only-translation.hawaly-aburyy.pages.dev/api/translation-health';
           let last='';
-          for(let attempt=0;attempt<9;attempt++){
+          for(let attempt=0;attempt<2;attempt++){
             try{
               const response=await fetch(url,{signal:AbortSignal.timeout(15000),headers:{'Cache-Control':'no-cache'}});
               const raw=await response.text();
