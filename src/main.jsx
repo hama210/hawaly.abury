@@ -13,10 +13,8 @@ let bootstrap = {};
 try { bootstrap = JSON.parse(document.getElementById('hawall-bootstrap')?.textContent || '{}'); } catch {};
 import { fetchNews, getInitialNews } from './services/news.js';
 import { fetchMarkets } from './services/markets.js';
-import { useClientTranslator } from './hooks/useClientTranslator.js';
-import { translationQuality } from './lib/translation-quality.js';
 import { LANGS, t } from './utils/i18n.js';
-import { analyzeArticle, localizeSummary } from './utils/intelligence.js';
+import { analyzeArticle } from './utils/intelligence.js';
 import { getSummary, getTitle } from './utils/news.js';
 import { articleText, matchesCategory } from './utils/categories.js';
 import { articleSelection, storyExcerpt, readerCopy } from './lib/article-content.js';
@@ -104,12 +102,12 @@ function isNewStory(item) {
   return Number.isFinite(publishedAt) && Date.now() - publishedAt <= 90 * 60 * 1000;
 }
 
-function translatedTitle(item, lang) {
-  return getTitle(item || {}, lang) || item?.title || '';
+function sourceTitle(item) {
+  return getTitle(item || {}) || item?.title || '';
 }
 
-function translatedSummary(item, lang) {
-  return getSummary(item || {}, lang) || localizeSummary(item || {}, lang);
+function sourceSummary(item) {
+  return getSummary(item || {});
 }
 
 function formatPrice(value) {
@@ -192,7 +190,7 @@ function TrustBar({ lang }) {
 }
 
 function clientConflictRegion(item, lang) {
-  const rawText = `${item?.titleEn || item?.title || ''} ${item?.summaryEn || item?.summary || ''} ${translatedTitle(item, lang)} ${translatedSummary(item, lang)}`;
+  const rawText = `${item?.titleEn || item?.title || ''} ${item?.summaryEn || item?.summary || ''} ${sourceTitle(item)} ${sourceSummary(item)}`;
   const text = rawText.toLowerCase();
   const iran = /\b(iran|iranian|tehran|irgc)\b|strait of hormuz|\bhormuz\b/i.test(rawText);
   const usa = /(?:^|[^A-Za-z])(?:US|USA|U\.S\.?)(?=[^A-Za-z]|$)/.test(rawText) || /\b(united states|american|pentagon|centcom|white house|trump|rubio)\b/i.test(rawText);
@@ -231,7 +229,7 @@ function MiddleEastBrief({ items, lang, onOpen }) {
   return <section className="middle-east-brief" aria-labelledby="middle-east-title">
     <div className="brief-heading"><div><span className="brief-live"><i />{copy.live}</span><h2 id="middle-east-title">{copy.title}</h2><p>{copy.description}</p></div><div className="brief-count"><strong>{todayCount}</strong><span>{copy.today}</span></div></div>
     <div className="brief-filters" role="tablist" aria-label={copy.title}>{filters.map(key => <button key={key} type="button" className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{copy[key]}</button>)}</div>
-    {shown.length ? <div className="brief-list">{shown.map(({ item, region }) => <article className="brief-item" key={item.id}><div className="brief-time"><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><i /></div><button type="button" className="brief-copy" onClick={() => onOpen(item)}><span className="brief-region">{copy[region]}</span><h3>{translatedTitle(item, lang)}</h3><p>{shorten(translatedSummary(item, lang))}</p><small>{item.source} · {copy.source}</small></button></article>)}</div> : <div className="brief-empty">{copy.empty}</div>}
+    {shown.length ? <div className="brief-list">{shown.map(({ item, region }) => <article className="brief-item" key={item.id}><div className="brief-time"><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><i /></div><button type="button" className="brief-copy" onClick={() => onOpen(item)}><span className="brief-region">{copy[region]}</span><h3 dir="auto">{sourceTitle(item)}</h3><p>{shorten(sourceSummary(item))}</p><small>{item.source} · {copy.source}</small></button></article>)}</div> : <div className="brief-empty">{copy.empty}</div>}
     <p className="brief-note">{copy.note}</p>
   </section>;
 }
@@ -301,7 +299,7 @@ function BreakingBar({ items, lang, dict }) {
   const stories = (highImpact.length ? highImpact : items).slice(0, 2);
   return <section className="breaking-bar" aria-label={dict.breaking}>
     <strong className="breaking-label"><span className="live-dot" />{dict.breaking}</strong>
-    <div className="breaking-copy">{stories.map((item, index) => <span key={item.id || index}>{translatedTitle(item, lang)}</span>)}</div>
+    <div className="breaking-copy">{stories.map((item, index) => <span key={item.id || index} dir="auto">{sourceTitle(item)}</span>)}</div>
   </section>;
 }
 
@@ -320,8 +318,8 @@ function Hero({ item, lang, dict, onOpen }) {
     <div className="lead-overlay" />
     <div className="lead-copy">
       <span className="lead-label">{uiCopy[lang]?.lead || uiCopy.ku.lead}</span>
-      <h2>{translatedTitle(item, lang)}</h2>
-      {storyExcerpt(item, lang) && <p>{storyExcerpt(item, lang)}</p>}
+      <h2 dir="auto">{sourceTitle(item)}</h2>
+      {storyExcerpt(item, lang) && <p dir="auto">{storyExcerpt(item, lang)}</p>}
       <div className="hero-effects">{intel.effects?.slice(0, 4).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
       <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span>{isNewStory(item) && <span className="fresh-pill">{uiCopy[lang]?.fresh}</span>}<span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
     </div>
@@ -331,43 +329,19 @@ function Hero({ item, lang, dict, onOpen }) {
 function NewsCard({ item, lang, onOpen }) {
   const intel = focusedIntelligence(item);
   return <article className="story-card">
-    <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={translatedTitle(item, lang)}><img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={imageFallback} /></button>
+    <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={sourceTitle(item)}><img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={imageFallback} /></button>
     <div className="story-copy">
       <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}<time dateTime={item.publishedAt}>{timestamp(item.publishedAt,lang)}</time></span></div>
-      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noreferrer">{dashboardCopy[lang].original} ↗</a><button className="story-title" type="button" onClick={() => onOpen(item)}>{translatedTitle(item, lang)}</button>
-      {storyExcerpt(item,lang) && <p className="story-excerpt">{storyExcerpt(item,lang)}</p>}
+      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" type="button" onClick={() => onOpen(item)}>{sourceTitle(item)}</button>
+      {storyExcerpt(item,lang) && <p dir="auto" className="story-excerpt">{storyExcerpt(item,lang)}</p>}
       <div className="card-effects">{intel.effects?.slice(0, 3).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
     </div>
   </article>;
 }
 
-function articleChunks(value, maxLength=300) {
-  const text=String(value||'').trim();
-  if(!text) return [];
-  const words=text.split(/\s+/u);
-  const chunks=[];
-  let line='';
-  for(const word of words) {
-    if (line && (line.length+word.length+1 > maxLength)) {
-      chunks.push(line);
-      line='';
-    }
-    if(word.length>maxLength) {
-      if(line) {chunks.push(line);line='';}
-      for(let i=0;i<word.length;i+=maxLength) chunks.push(word.slice(i,i+maxLength));
-    } else line+=(line?' ':'')+word;
-  }
-  if(line)chunks.push(line);
-  // Never silently discard the final paragraphs when an RSS excerpt is long.
-  return chunks.length <= 10 ? chunks : [];
-}
 function ArticleModal({ item, lang, dict, onClose }) {
-  const [body, setBody] = useState('');
-  const [loadingBody, setLoadingBody] = useState(false);
-  const [bodyTranslationFailed, setBodyTranslationFailed] = useState(false);
-  const [bodyTranslated, setBodyTranslated] = useState(false);
   const reader = readerCopy[lang] || readerCopy.ku;
-  const selectedText = articleSelection(item,lang);
+  const selectedText = articleSelection(item);
   const sourceLink = safeUrl(item?.link);
   useEffect(() => {
     if (!item) return undefined;
@@ -375,59 +349,6 @@ function ArticleModal({ item, lang, dict, onClose }) {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [item, onClose]);
-  useEffect(() => {
-    const controller = new AbortController();
-    if (!item) {
-      setBody('');
-      setLoadingBody(false);
-      return () => controller.abort();
-    }
-    const selected=articleSelection(item,lang);
-    // Display the original complete RSS text while the full translation is checked.
-    setBody(lang!=='en' && selected.isExtended ? selected.original : selected.text);
-    setBodyTranslationFailed(false);
-    setBodyTranslated(lang==='en' || (lang!=='en' && !selected.isExtended && selected.text !== selected.original));
-    if (!selected.isExtended || lang==='en' || !selected.original) {
-      setLoadingBody(false);
-      return () => controller.abort();
-    }
-    const chunks=articleChunks(selected.original);
-    if (!chunks.length) {
-      setBodyTranslationFailed(true);
-      setLoadingBody(false);
-      return () => controller.abort();
-    }
-    setLoadingBody(true);
-    fetch('/api/translate', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({lang,texts:chunks,contexts:chunks.map((_,i)=>[item.titleEn||item.title, chunks[i-1]||''].filter(Boolean).join(' ').slice(0,350))}),
-      signal:controller.signal
-    }).then(response => response.ok ? response.json() : Promise.reject(new Error('translate API unavailable')))
-      .then(data => {
-        if(controller.signal.aborted)return;
-        if(data?.ok===false || !Array.isArray(data?.translated) || data.translated.length!==chunks.length){
-          setBodyTranslationFailed(true);
-          return;
-        }
-        const parts=data.translated.map((text,i)=>translationQuality(chunks[i],text,lang));
-        // All-or-nothing: never mix English original chunks with seemingly
-        // translated Kurdish paragraphs. The old version was doing exactly that.
-        if(parts.every(part=>part.valid)){
-          setBody(parts.map(part=>part.text).join('\n\n'));
-          setBodyTranslated(true);
-        }else{
-          setBodyTranslationFailed(true);
-          setBody(selected.original);
-        }
-      }).catch(()=>{
-        if(!controller.signal.aborted){
-          setBody(selected.original);
-          setBodyTranslationFailed(true);
-        }
-      }).finally(()=>{if(!controller.signal.aborted)setLoadingBody(false);});
-    return () => controller.abort();
-  }, [item,lang]);
   if (!item) return null;
   const intel = focusedIntelligence(item);
   const copy = uiCopy[lang] || uiCopy.ku;
@@ -436,17 +357,11 @@ function ArticleModal({ item, lang, dict, onClose }) {
     <div className="modal-content">
       <button className="modal-close" type="button" onClick={onClose} aria-label={uiCopy[lang]?.close}>×</button>
       <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>
-      <h2 id="modal-title">{translatedTitle(item, lang)}</h2>
+      <h2 id="modal-title" dir="auto">{sourceTitle(item)}</h2>
       <section className="article-reader" aria-label={copy.content}>
         <div className="article-reader-heading"><h3>{selectedText.isAvailable ? (selectedText.isExtended ? reader.extended : reader.excerpt) : copy.content}</h3><span className={'article-availability '+(selectedText.isAvailable?'has-text':'title-only')}>{selectedText.isAvailable?'RSS':'—'}</span></div>
         {selectedText.isAvailable ? <>
-          {lang!=='en' && selectedText.isExtended && !bodyTranslated && <p className="article-translation-status" role="status">{loadingBody
-            ? (lang==='ku'?'دەقی ڕەسەن تا تەواوبوونی وەرگێڕان پیشان دەدرێت.':'يُعرض النص الأصلي إلى أن تكتمل الترجمة.')
-            : bodyTranslationFailed
-              ? (lang==='ku'?'وەرگێڕانی ئەم دەقە سەرنەکەوت. بۆ ڕێگریکردن لە هەواڵی هەڵە، دەقی ڕەسەن پیشان دەدرێت.':'تعذرت الترجمة الدقيقة؛ نعرض النص الأصلي لتجنب تغيير معنى الخبر.')
-              : ''}</p>}
-          <p className="article-body" dir={lang!=='en' && selectedText.isExtended && !bodyTranslated ? 'ltr' : undefined}>{body || selectedText.text}</p>
-          {loadingBody && <p className="article-translation-status" role="status">{reader.translating}</p>}
+          <p className="article-body" dir="auto">{selectedText.original}</p>
           <p className="reader-note">{reader.notice}</p></> :
           <p className="article-body article-missing">{reader.missing}</p>}
         {sourceLink && <a className="reader-source-link" href={sourceLink} target="_blank" rel="noopener noreferrer">{reader.original} ↗</a>}
@@ -493,19 +408,6 @@ function SourcesDisclosure({ lang, news, sourceHealth = {} }) {
   </aside>;
 }
 
-function TranslationNotice({ lang, items, translating }) {
-  if(lang === 'en' || !items.length) return null;
-  const field=lang === 'ku' ? 'titleKu' : 'titleAr';
-  const translated=items.filter(item => Boolean(item[field])).length;
-  if(translated === items.length) return null;
-  const message=lang === 'ku'
-    ? (translating ? `وەرگێڕانی سەردێڕەکان: ${translated}/${items.length} — هەواڵەکان بەردەوام نوێ دەبنەوە.`
-      : `وەرگێڕان: ${translated}/${items.length}. ئەو سەردێڕانەی وەرنەگێڕدراون بە زمانی ڕەسەن پیشان دەدرێن.`)
-    : (translating ? `ترجمة العناوين: ${translated}/${items.length} — تستمر الأخبار في التحديث.`
-      : `الترجمة: ${translated}/${items.length}. العناوين التي لم تُترجم تظهر بلغتها الأصلية.`);
-  return <p className="translation-notice" role="status">{message}</p>;
-}
-
 function SiteFooter({ lang }) {
   const copy = developerCopy[lang] || developerCopy.en;
   return <footer className="site-footer"><nav>{['home','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{dashboardCopy[lang][page]}</a>)}</nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong></div></footer>;
@@ -536,8 +438,8 @@ function App() {
   const [featureTarget, setFeatureTarget] = useState(null);
   const dict = t[lang] || t.ku;
   const copy = uiCopy[lang] || uiCopy.ku;
-  const { translatedNews, translating } = useClientTranslator(news, lang, activeView==='news' ? newsVisibleCount : homeVisibleCount+1);
-  const displayNews = translatedNews.length ? translatedNews : news;
+  // News text remains in the original publisher language on every UI locale.
+  const displayNews = news;
   const designCopy = navigationCopy[lang] || navigationCopy.ku;
   const navigate = view => {
     setActiveView(view);
@@ -614,7 +516,6 @@ function App() {
           </div>
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
-        <TranslationNotice lang={lang} items={displayNews.slice(0,activeView==='news'?newsVisibleCount:homeVisibleCount+1)} translating={translating}/>
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
           {rest.length ? <><div className="news-grid">{rest.slice(0, homeVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
@@ -639,7 +540,6 @@ function App() {
         {activeView==='news' && <VerificationDesk news={displayNews} lang={lang}/>}
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
-        <TranslationNotice lang={lang} items={displayNews.slice(0,activeView==='news'?newsVisibleCount:homeVisibleCount+1)} translating={translating}/>
         <div className="topic-shortcuts" aria-label="News topics">
           {[
             ['Trump','Trump','ترامپ','ترامب'],
@@ -649,7 +549,7 @@ function App() {
           ].map(([term,en,ku,ar]) => <button key={term} type="button" aria-pressed={query.toLowerCase() === term.toLowerCase()} onClick={() => {setActive('all'); setQuery(query.toLowerCase() === term.toLowerCase() ? '' : term);}}>{lang==='ku'?ku:lang==='ar'?ar:en}</button>)}
         </div>
         <section className="latest-section" id="latest">
-          <div className="section-heading"><h2>{copy.latest}</h2><span>{translating?copy.translating:active==='all'?copy.allSections:categoryMap[lang]?.[active]}</span></div>
+          <div className="section-heading"><h2>{copy.latest}</h2><span>{active==='all'?copy.allSections:categoryMap[lang]?.[active]}</span></div>
           {filtered.length ? <><div className="news-grid" aria-live="polite">{filtered.slice(0, newsVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
             {filtered.length > newsVisibleCount && <button className="news-load-more" onClick={() => setNewsVisibleCount(value => value + 36)}>{lang==='ku' ? 'هەواڵی زیاتر پیشان بدە' : lang==='ar' ? 'عرض المزيد من الأخبار' : 'Show more news'} ({filtered.length - newsVisibleCount})</button>}</> :
             <div className="empty-state">{loadingNews?copy.loadingNews:dict.noResults}</div>}
