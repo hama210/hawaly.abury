@@ -73,6 +73,20 @@ test('binding failure is an explicit error and retains originals', async () => {
   assert.equal(body.results[0].state, 'failed');
 });
 
+test('a daily allocation error is distinct from a temporary model failure', async () => {
+  for (const [message, error, statusCode] of [
+    ['3036: Daily free allocation exceeded', 'daily-limit', 429],
+    ['3040: Capacity temporarily exceeded', 'service-busy', 429],
+    ['10001: Internal error', 'service-unavailable', 503]
+  ]) {
+    const response = await onRequest(post([source], 'ku', { AI: { run() { throw new Error(message); } } }).context);
+    assert.equal(response.status, statusCode);
+    const body = await response.json();
+    assert.equal(body.error, error);
+    assert.equal(body.results[0].text, source);
+  }
+});
+
 test('native Sorani, Arabic, and English do not require inference', async () => {
   for (const [language, text] of [['ku', 'نرخی زێڕ لە عێراق بەرز بوو'], ['ar', 'ارتفعت أسعار الذهب في العراق'], ['en', 'Gold rises in Iraq']]) {
     const response = await onRequest(post([text], language).context);
@@ -141,16 +155,18 @@ test('the client batches, deduplicates readers, and caches by both source and la
   assert.match((await client.translate(source, 'ar')).text, /الدولار/); assert.equal(calls, 2);
 });
 
-test('translation covers every story past the former visible limit, including article content', async () => {
+test('translation covers every story past the former visible limit and defers longer bodies to the reader', async () => {
   const news = Array.from({ length: 75 }, (_, i) => ({ title: `Story ${i}`, summary: `Report ${i}`, content: `Details ${i}` }));
   const seen = new Set(); let last;
   const client = createNewsTranslator({ storage: () => null, fetcher: async (_url, options) => apiResponse(options, text => {
     seen.add(text); return `هەواڵی کوردی ${text.match(/\d+/)[0]}`;
   }) });
   await translateNewsFeed(news, 'ku', { client, onProgress: value => { last = value; } });
-  assert.equal(seen.size, 225);
-  assert.equal(last.completed, 225); assert.equal(last.failed, 0);
-  assert.equal(client.peek(news[74].content, 'ku').state, 'translated');
+  assert.equal(seen.size, 150);
+  assert.equal(last.completed, 150); assert.equal(last.failed, 0);
+  assert.equal(client.peek(news[74].content, 'ku'), null);
+  assert.equal((await client.translate(news[74].content,'ku',{priority:0})).state,'translated');
+  assert.equal(client.peek(news[74].content,'ku').state,'translated');
 });
 
 test('long articles retain all chunks and show the complete original if a chunk fails', async () => {

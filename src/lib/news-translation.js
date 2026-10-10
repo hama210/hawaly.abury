@@ -182,9 +182,9 @@ export const newsTranslator = createNewsTranslator();
 
 export function newsTranslationJobs(items) {
   const unique = new Map();
-  for (const [priority, field] of ['title', 'summary', 'content'].entries()) {
+  for (const [priority, field] of ['title', 'summary'].entries()) {
     for (const item of items || []) {
-      const text = originalNewsField(item, field);
+      const text = originalNewsField(item, field) || (field === 'summary' ? originalNewsField(item, 'content') : '');
       if (text && !unique.has(text)) unique.set(text, { text, priority: 10 + priority * 10 });
     }
   }

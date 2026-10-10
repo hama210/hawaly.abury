@@ -341,6 +341,16 @@ function NewsCard({ item, lang, onOpen }) {
   </article>;
 }
 
+function translationFailureText(error,lang) {
+  if(error === 'daily-limit') return lang==='ku'
+    ? 'سنووری ڕۆژانەی وەرگێڕان گەیشتووەتە کۆتایی؛ دەقی سەرچاوە پیشان دەدرێت. دواتر دووبارە هەوڵ بدەوە.'
+    : lang==='ar'?'تم بلوغ الحد اليومي للترجمة؛ يظهر النص الأصلي. حاول مرة أخرى لاحقًا.'
+      :'The daily translation limit has been reached; showing the source text. Try again later.';
+  return lang==='ku'?'وەرگێڕانی هەندێک هەواڵ سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.'
+    :lang==='ar'?'تعذرت ترجمة بعض الأخبار؛ يظهر النص الأصلي.'
+      :'Some news could not be translated; showing the source text.';
+}
+
 function ArticleModal({ item, lang, dict, onClose }) {
   const reader = readerCopy[lang] || readerCopy.ku;
   const selectedText = articleSelection(item);
@@ -348,13 +358,13 @@ function ArticleModal({ item, lang, dict, onClose }) {
   const [articleBody,setArticleBody]=useState(selectedText.original);
   const [articleTranslating,setArticleTranslating]=useState(false);
   const [articleTranslated,setArticleTranslated]=useState(false);
-  const [articleError,setArticleError]=useState(false);
+  const [articleError,setArticleError]=useState('');
   const [articleRetry,setArticleRetry]=useState(0);
   useEffect(()=>{
     const controller=new AbortController();
     setArticleBody(selectedText.original);
     setArticleTranslated(false);
-    setArticleError(false);
+    setArticleError('');
     if(!item||!selectedText.isAvailable){
       setArticleTranslating(false);
       return ()=>controller.abort();
@@ -365,8 +375,8 @@ function ArticleModal({ item, lang, dict, onClose }) {
         if(controller.signal.aborted)return;
         setArticleBody(result.text);
         setArticleTranslated(result.state === 'translated');
-        setArticleError(result.state === 'failed');
-      }).catch(()=>{if(!controller.signal.aborted)setArticleError(true);})
+        setArticleError(result.state === 'failed' ? result.error || 'translation-failed' : '');
+      }).catch(()=>{if(!controller.signal.aborted)setArticleError('translation-failed');})
       .finally(()=>{if(!controller.signal.aborted)setArticleTranslating(false);});
     return ()=>controller.abort();
   },[item?.id,selectedText.original,lang,articleRetry]);
@@ -391,7 +401,7 @@ function ArticleModal({ item, lang, dict, onClose }) {
           <p className="article-body" dir={articleTranslated?(lang==='en'?'auto':'rtl'):'auto'}>{articleBody || selectedText.original}</p>
           {articleTranslating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی ناوەڕۆک...':lang==='ar'?'جارٍ ترجمة محتوى الخبر...':'Translating article...'}</p>}
           {!articleTranslating && articleError && <div className="translation-inline-status translation-retry" role="status">
-            <span>{lang==='ku'?'وەرگێڕان بەردەست نییە؛ دەقی سەرچاوە پیشان دەدرێت.':lang==='ar'?'تعذرت الترجمة؛ يظهر النص الأصلي.':'Translation unavailable; showing the source text.'}</span>
+            <span>{translationFailureText(articleError,lang)}</span>
             <button type="button" onClick={()=>{newsTranslator.retry();setArticleRetry(value=>value+1);}}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button>
           </div>}
           <p className="reader-note">{reader.notice}</p></> :
@@ -550,7 +560,7 @@ function App() {
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating news...'} ({progress.completed}/{progress.total})</p>}
-        {translationIssue && !translating && <div className="translation-inline-status translation-retry" data-translation-error={translationIssue} data-failed-count={progress.failed} role="status"><span>{lang==='ku'?'وەرگێڕانی هەندێک هەواڵ سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.':lang==='ar'?'تعذرت ترجمة بعض الأخبار؛ يظهر النص الأصلي.':'Some news could not be translated; showing the source text.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
+        {translationIssue && !translating && <div className="translation-inline-status translation-retry" data-translation-error={translationIssue} data-failed-count={progress.failed} role="status"><span>{translationFailureText(translationIssue,lang)}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
           {rest.length ? <><div className="news-grid">{rest.slice(0, homeVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
@@ -576,7 +586,7 @@ function App() {
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
         {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating news...'} ({progress.completed}/{progress.total})</p>}
-        {translationIssue && !translating && <div className="translation-inline-status translation-retry" data-translation-error={translationIssue} data-failed-count={progress.failed} role="status"><span>{lang==='ku'?'وەرگێڕانی هەندێک هەواڵ سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.':lang==='ar'?'تعذرت ترجمة بعض الأخبار؛ يظهر النص الأصلي.':'Some news could not be translated; showing the source text.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
+        {translationIssue && !translating && <div className="translation-inline-status translation-retry" data-translation-error={translationIssue} data-failed-count={progress.failed} role="status"><span>{translationFailureText(translationIssue,lang)}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
         <div className="topic-shortcuts" aria-label="News topics">
           {[
             ['Trump','Trump','ترامپ','ترامب'],

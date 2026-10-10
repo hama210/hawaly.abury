@@ -33,7 +33,7 @@ function modelTranslations(output, count) {
 
 function serviceFailure(error) {
   const message = String(error?.message || '');
-  if (/quota|neuron|daily limit|10000|10001/i.test(message)) return 'daily-limit';
+  if (/quota|neuron|daily limit|\b3036\b/i.test(message)) return 'daily-limit';
   if (/429|rate limit|busy|capacity|3040/i.test(message)) return 'service-busy';
   return 'service-unavailable';
 }

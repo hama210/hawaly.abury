@@ -6,6 +6,6 @@ export function onRequest(context) {
     languages: Object.keys(TRANSLATION_LANGUAGES),
     provider: 'cloudflare-workers-ai', models: TRANSLATION_MODELS,
     apiKeyRequired: false, configured: typeof context.env?.AI?.run === 'function',
-    coverage: ['all-headlines', 'all-summaries', 'all-publisher-text']
+    coverage: ['all-headlines', 'all-summaries', 'article-text-on-open']
   }, { headers: { 'Cache-Control': 'no-store' } });
 }
