@@ -16,7 +16,6 @@ import SourceStrip from './components/SourceStrip.jsx'
 import Skeleton from './components/Skeleton.jsx'
 import { dictionary, LANGS } from './data/i18n.js'
 import { useFilteredNews, useNews } from './hooks/useNews.js'
-import { useClientTranslator } from './hooks/useClientTranslator.js'
 import { timeAgo } from './utils/news.js'
 import './styles.css'
 
@@ -34,8 +33,7 @@ export default function App(){
   const [selected, setSelected] = useState(null)
   const [bookmarks, setBookmarks] = useState(savedBookmarks)
   const { news, sources, loading, updatedAt, refresh } = useNews()
-  const { translatedNews, translating } = useClientTranslator(news, lang)
-  const displayNews = translatedNews.length ? translatedNews : news
+  const displayNews = news
   const filtered = useFilteredNews(displayNews, { query, category, impact, ...advanced })
   const high = filtered.filter(n => String(n.impact).toLowerCase() === 'high')
   const hero = filtered[0] || displayNews[0]
@@ -51,17 +49,17 @@ export default function App(){
     sources:[...new Set(displayNews.map(n=>n.source).filter(Boolean))].sort(),
     assets:[...new Set(displayNews.flatMap(n=>n.affected || []).filter(Boolean))].sort()
   }), [displayNews])
-  const openArticle = item => setSelected({ ...item, related: displayNews.filter(n => n.id !== item.id && (n.category === item.category || (n.affected||[]).some(a => (item.affected||[]).includes(a)))).slice(0,3).map(n => n.titleEn || n.titleKu || n.title) })
+  const openArticle = item => setSelected({ ...item, related: displayNews.filter(n => n.id !== item.id && (n.category === item.category || (n.affected||[]).some(a => (item.affected||[]).includes(a)))).slice(0,3).map(n => n.titleEn || n.title) })
   const saveArticle = item => setBookmarks(prev => prev.includes(item.id) ? prev.filter(id=>id!==item.id) : [...prev, item.id])
   const shareArticle = async item => {
     const link = item.link || location.href
     try{
-      if(navigator.share) await navigator.share({ title:item.titleEn || item.titleKu || item.title, url:link })
+      if(navigator.share) await navigator.share({ title:item.titleEn || item.title, url:link })
       else await navigator.clipboard.writeText(link)
     }catch{}
   }
   const selectAsset = asset => { setAdvanced(prev => ({ ...prev, asset })); window.scrollTo({ top: 0, behavior:'smooth' }) }
-  const statusText = translating ? t.translating : `${t.updated}: ${updatedLabel}`
+  const statusText = `${t.updated}: ${updatedLabel}`
 
   return <div className="app-shell">
     <Sidebar t={t} open={sidebarOpen} setOpen={setSidebarOpen} activeCategory={category} setActiveCategory={setCategory}/>
