@@ -62,3 +62,12 @@ test('the actual homepage renders more than four news cards and mobile grid stay
   assert.match(css,/\.home-news \.news-grid,\.news-screen \.news-grid/);
   assert.match(css,/grid-template-columns:minmax\(0,1fr\)!important/);
 });
+
+test('news reader never publishes a mixed Kurdish/English or truncated machine translation',()=>{
+  assert.match(main,/if\(parts\.every\(part=>part\.valid\)\)/);
+  assert.match(main,/setBody\(parts\.map\(part=>part\.text\)\.join/);
+  assert.match(main,/setBody\(selected\.original\)/);
+  assert.match(main,/setBodyTranslationFailed\(true\)/);
+  assert.match(main,/return chunks\.length <= 10 \? chunks : \[\]/);
+  assert.doesNotMatch(main,/return review\.valid \? review\.text : chunks\[i\]/);
+});
