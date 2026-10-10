@@ -49,6 +49,54 @@ export function normalizeTranslation(value=''){
     .replace(/^["“”«»']+|["“”«»']+$/g,'').trim();
 }
 
+// AI translation occasionally degenerates into the same Kurdish word or phrase
+// dozens of times. Detect it before storing, showing or caching the result.
+export function translationDegeneration(output){
+  const words=String(output||'').normalize('NFKC').toLowerCase()
+    .match(/[\p{L}\p{N}]+/gu)||[];
+  if(words.length<8)return false;
+  // A long, identical-word run is not a sentence.
+  let run=1;
+  for(let i=1;i<words.length;i++){
+    run=words[i]===words[i-1]?run+1:1;
+    if(run>=4 && words[i].length>=3)return true;
+  }
+  // Two or more repeated multi-word phrases, including nonadjacent loops.
+  for(const width of [2,3,4,5,6]){
+    if(words.length<width*3)continue;
+    const counts=new Map();
+    for(let i=0;i+width<=words.length;i++){
+      const gram=words.slice(i,i+width).join(' ');
+      const value=(counts.get(gram)||0)+1;
+      counts.set(gram,value);
+      if(value>=4 && width>=2)return true;
+      if(value>=3 && width>=3)return true;
+    }
+  }
+  // One long content word should not dominate a 30+ word paragraph.
+  if(words.length>=25){
+    const freq=new Map();
+    for(const word of words){
+      if(word.length<4)continue;
+      freq.set(word,(freq.get(word)||0)+1);
+    }
+    if([...freq.values()].some(count=>count>=7 && count/words.length>.21))return true;
+  }
+  return false;
+}
+
+export function excessiveEnglishInTranslation(output,lang){
+  if(!['ku','ar'].includes(lang))return false;
+  const body=String(output||'').replace(/\b(?:USD|IQD|EUR|GBP|XAU|XAG|BTC|ETH|ETF|GDP|CBI|OPEC|NASDAQ|Reuters|BBC|CNBC)\b/gi,'');
+  // Detect pasted English sentences, not a few Latin proper names.
+  const words=body.match(/[A-Za-z]{3,}/g)||[];
+  const streak=body.match(/\b[A-Za-z]{3,}(?:[\s,.:;'"()]+[A-Za-z]{3,}){5,}\b/g);
+  if(streak?.length)return true;
+  const scriptLetters=(body.match(/[\p{L}]/gu)||[]).length;
+  const englishLetters=(body.match(/[A-Za-z]/g)||[]).length;
+  return scriptLetters>=35 && englishLetters/scriptLetters>.28 && words.length>=6;
+}
+
 export function translationQuality(source, candidate, lang){
   const original=String(source||'').trim();
   const output=normalizeTranslation(candidate);
@@ -57,6 +105,10 @@ export function translationQuality(source, candidate, lang){
     return {valid:false,text:output,reason:'unchanged'};
   if(REFUSAL.test(output)||KURDISH_GENERIC.test(output))
     return {valid:false,text:output,reason:'generic-or-refusal'};
+  if(translationDegeneration(output))
+    return {valid:false,text:output,reason:'repetitive-output'};
+  if(excessiveEnglishInTranslation(output,lang))
+    return {valid:false,text:output,reason:'mixed-language-output'};
   if(output.length>Math.max(230,original.length*4) || output.length<Math.max(3,original.length*(original.length>55?.30:.20)))
     return {valid:false,text:output,reason:'implausible-length'};
   if(arabicScriptRatio(output)<0.50)
