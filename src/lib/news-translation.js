@@ -107,9 +107,10 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
         .sort((a, b) => a.priority - b.priority || a.sequence - b.sequence);
       if (!ready.length) return;
       const group = [], language = ready[0].language;
+      const batchLimit = language === 'ku' ? 1 : MAX_TRANSLATION_BATCH;
       let chars = 0;
       for (const job of ready) {
-        if (job.language !== language || group.length >= MAX_TRANSLATION_BATCH
+        if (job.language !== language || group.length >= batchLimit
             || chars + job.text.length > Math.min(2400, MAX_TRANSLATION_CHARS)) continue;
         group.push(job); chars += job.text.length;
       }

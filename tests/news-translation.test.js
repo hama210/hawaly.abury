@@ -40,7 +40,7 @@ test('server runs the translation model through its AI binding without keys or e
     calls++;
     assert.equal(model, '@cf/qwen/qwen3.8-27b');
     assert.match(input.messages[0].content, /Central Kurdish/);
-    assert.ok(input.max_tokens > 256);
+    assert.ok(input.max_completion_tokens > 256);
     assert.deepEqual(JSON.parse(input.messages[1].content).texts, [{ id: 0, text: source }]);
     return responseModel([{ id: 0, text: sorani }]);
   } } };
@@ -157,6 +157,21 @@ test('the client batches, deduplicates readers, and caches by both source and la
   assert.equal(a.text, sorani); assert.equal(b.text, sorani); assert.equal(calls, 1);
   await client.translate(source, 'ku'); assert.equal(calls, 1);
   assert.match((await client.translate(source, 'ar')).text, /الدولار/); assert.equal(calls, 2);
+});
+
+test('Sorani uses individual requests while Arabic news can share a batch', async () => {
+  const groups=[];
+  const client=createNewsTranslator({storage:()=>null,fetcher:async (_url,options)=>{
+    const body=JSON.parse(options.body);
+    groups.push(body);
+    return apiResponse(options, (_text,language)=>language==='ku'?'نرخی زێڕ بەرز بوو':'ارتفع سعر الذهب');
+  }});
+  await Promise.all(['Gold rises','Oil rises','Silver rises'].map(text=>client.translate(text,'ku')));
+  assert.ok(groups.every(group=>group.texts.length===1));
+  groups.length=0;
+  await Promise.all(['Gold rises','Oil rises','Silver rises'].map(text=>client.translate(text,'ar')));
+  assert.equal(groups.length,1);
+  assert.equal(groups[0].texts.length,3);
 });
 
 test('translation covers every story past the former visible limit and defers longer bodies to the reader', async () => {

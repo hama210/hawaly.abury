@@ -559,7 +559,7 @@ function App() {
           </div>
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
-        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating news...'} ({progress.completed}/{progress.total})</p>}
+        {translating && <p className="translation-inline-status" data-translation-error={translationIssue || undefined} data-provider-code={progress.providerCode} data-failed-count={progress.failed} role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating news...'} ({progress.completed}/{progress.total})</p>}
         {translationIssue && !translating && <div className="translation-inline-status translation-retry" data-translation-error={translationIssue} data-provider-code={progress.providerCode} data-failed-count={progress.failed} role="status"><span>{translationFailureText(translationIssue,lang)}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
@@ -585,7 +585,7 @@ function App() {
         {activeView==='news' && <VerificationDesk news={displayNews} lang={lang}/>}
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
-        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating news...'} ({progress.completed}/{progress.total})</p>}
+        {translating && <p className="translation-inline-status" data-translation-error={translationIssue || undefined} data-provider-code={progress.providerCode} data-failed-count={progress.failed} role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating news...'} ({progress.completed}/{progress.total})</p>}
         {translationIssue && !translating && <div className="translation-inline-status translation-retry" data-translation-error={translationIssue} data-provider-code={progress.providerCode} data-failed-count={progress.failed} role="status"><span>{translationFailureText(translationIssue,lang)}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':lang==='ar'?'إعادة المحاولة':'Retry'}</button></div>}
         <div className="topic-shortcuts" aria-label="News topics">
           {[

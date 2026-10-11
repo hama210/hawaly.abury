@@ -84,7 +84,9 @@ export async function translateNewsBatch(context, texts, language) {
             { role: 'user', content: JSON.stringify({ texts: sources.map((text, id) => ({ id, text })) }) }
           ],
           temperature: 0,
-          max_tokens: Math.min(10000, 512 + Math.ceil(sources.reduce((sum, text) => sum + text.length, 0) * 1.6)),
+          ...(language === 'ku'
+            ? { max_completion_tokens: Math.min(4096, 512 + Math.ceil(sources.reduce((sum, text) => sum + text.length, 0) * 1.6)) }
+            : { max_tokens: Math.min(10000, 512 + Math.ceil(sources.reduce((sum, text) => sum + text.length, 0) * 1.6)) }),
           reasoning_effort: 'low',
           chat_template_kwargs: { enable_thinking:false },
           response_format: { type: 'json_object' }
