@@ -77,13 +77,17 @@ test('a daily allocation error is distinct from a temporary model failure', asyn
   for (const [message, error, statusCode] of [
     ['3036: Daily free allocation exceeded', 'daily-limit', 429],
     ['3040: Capacity temporarily exceeded', 'service-busy', 429],
-    ['10001: Internal error', 'service-unavailable', 503]
+    ['10001: Internal error', 'service-unavailable', 503],
+    ['5007: No such model', 'model-unavailable', 503],
+    ['5035: This model requires a Workers Paid plan', 'paid-plan-required', 503],
+    ['5004: Invalid input', 'invalid-model-request', 503]
   ]) {
     const response = await onRequest(post([source], 'ku', { AI: { run() { throw new Error(message); } } }).context);
     assert.equal(response.status, statusCode);
     const body = await response.json();
     assert.equal(body.error, error);
     assert.equal(body.results[0].text, source);
+    assert.equal(body.results[0].providerCode, message.split(':')[0]);
   }
 });
 

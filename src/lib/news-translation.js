@@ -6,12 +6,13 @@ import {
 
 const TTL = 24 * 60 * 60 * 1000;
 const abortError = () => new DOMException('Translation cancelled', 'AbortError');
-const failed = (text, error) => ({ source: text, text, state: 'failed', error });
+const failed = (text, error, providerCode) => ({ source: text, text, state: 'failed', error,
+  ...(typeof providerCode === 'string' && /^\d{4,5}$/.test(providerCode) ? { providerCode } : {}) });
 
 export function createNewsTranslator({ fetcher = (...args) => fetch(...args), now = Date.now, storage = () => globalThis.sessionStorage, retryDelay = 2000 } = {}) {
   const cache = new Map();
   const jobs = new Map();
-  let active = 0, sequence = 0, pausedUntil = 0, pauseError = '';
+  let active = 0, sequence = 0, pausedUntil = 0, pauseError = '', pauseProviderCode;
   const keyFor = (text, language) => `${TRANSLATION_VERSION}:${language}:${text}`;
 
   function remember(text, language, result) {
@@ -68,6 +69,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
       if (response.status === 429 || response.status === 503) {
         pausedUntil = now() + (data.error === 'daily-limit' ? 5 * 60 * 1000 : 60 * 1000);
         pauseError = data.error || 'service-unavailable';
+        pauseProviderCode = data.results?.find(row => row.providerCode)?.providerCode;
       }
       if (data.version !== TRANSLATION_VERSION || data.language !== group[0].language
           || !Array.isArray(data.results) || data.results.length !== group.length) {
@@ -76,7 +78,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
       rows = group.map((job, index) => {
         const row = data.results[index];
         if (row?.source !== job.text) return failed(job.text, 'invalid-response');
-        if (row.state === 'failed') return failed(job.text, row.error || 'translation-failed');
+        if (row.state === 'failed') return failed(job.text, row.error || 'translation-failed', row.providerCode);
         const checked = checkTranslatedText(job.text, row.text, job.language);
         return checked.ok ? { source: job.text, text: checked.text, state: 'translated' }
           : failed(job.text, checked.error);
@@ -84,7 +86,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
     } catch (error) {
       const reason = error.name === 'AbortError' ? 'request-timeout' : error.message || 'request-failed';
       if (group.some(job => job.subscribers.size)) {
-        pausedUntil = now() + 15000; pauseError = reason;
+        pausedUntil = now() + 15000; pauseError = reason; pauseProviderCode = undefined;
       }
       rows = group.map(job => failed(job.text, reason));
     } finally {
@@ -97,7 +99,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
 
   function pump() {
     if (now() < pausedUntil) {
-      for (const job of [...jobs.values()]) if (!job.running) finish(job, failed(job.text, pauseError));
+      for (const job of [...jobs.values()]) if (!job.running) finish(job, failed(job.text, pauseError, pauseProviderCode));
       return;
     }
     while (active < 2) {
@@ -119,7 +121,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
     if (signal?.aborted) return Promise.reject(abortError());
     const saved = peek(text, language);
     if (saved) return Promise.resolve(saved);
-    if (now() < pausedUntil) return Promise.resolve(failed(text, pauseError));
+    if (now() < pausedUntil) return Promise.resolve(failed(text, pauseError, pauseProviderCode));
     const key = keyFor(text, language);
     let job = jobs.get(key);
     if (!job) {
@@ -150,7 +152,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
     const rows = await Promise.all(chunks.map(chunk => passage(chunk, language, options)));
     if (options.signal?.aborted) throw abortError();
     const unsuccessful = rows.find(row => row.state === 'failed');
-    if (unsuccessful) return failed(text, unsuccessful.error);
+    if (unsuccessful) return failed(text, unsuccessful.error, unsuccessful.providerCode);
     const joined = rows.map(row => row.text).join('\n\n');
     const checked = checkTranslatedText(text, joined, language);
     if (!checked.ok) return failed(text, checked.error);
@@ -162,7 +164,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
   async function translate(value, language, options = {}) {
     const first = await attempt(value, language, options);
     if (first.state !== 'failed' || options.retry === false
-        || ['daily-limit', 'translation-not-configured'].includes(first.error)) return first;
+        || ['daily-limit', 'translation-not-configured', 'model-unavailable', 'paid-plan-required', 'invalid-model-request'].includes(first.error)) return first;
     const delay = Math.max(retryDelay, pausedUntil - now() + 100);
     await new Promise((resolve, reject) => {
       if (options.signal?.aborted) { reject(abortError()); return; }
@@ -175,7 +177,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
     return attempt(value, language, options);
   }
 
-  return { translate, peek, retry() { pausedUntil = 0; pauseError = ''; } };
+  return { translate, peek, retry() { pausedUntil = 0; pauseError = ''; pauseProviderCode = undefined; } };
 }
 
 export const newsTranslator = createNewsTranslator();

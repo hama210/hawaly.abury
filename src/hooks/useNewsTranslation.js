@@ -19,7 +19,7 @@ export function useNewsTranslation(news, language) {
       if (work.closed) return;
       const results = work.plan.map(job => work.results.get(job.text)).filter(Boolean);
       const failures = results.filter(result => result.state === 'failed');
-      setProgress({ total: work.plan.length, completed: results.length, failed: failures.length, error: failures[0]?.error || '' });
+      setProgress({ total: work.plan.length, completed: results.length, failed: failures.length, error: failures[0]?.error || '', providerCode: failures[0]?.providerCode });
     };
     const publish = () => {
       if (!work.timer) work.timer = setTimeout(() => {

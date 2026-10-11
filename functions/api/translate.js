@@ -26,6 +26,6 @@ export async function onRequest(context) {
   const result = await translateNewsBatch(context, texts, language);
   const status = result.error === 'translation-not-configured' ? 503
     : ['daily-limit', 'service-busy'].includes(result.error) ? 429
-      : result.error === 'service-unavailable' ? 503 : 200;
+      : ['service-unavailable', 'model-unavailable', 'paid-plan-required', 'invalid-model-request'].includes(result.error) ? 503 : 200;
   return json({ version: TRANSLATION_VERSION, language, ...result }, status);
 }

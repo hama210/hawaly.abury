@@ -33,9 +33,15 @@ function modelTranslations(output, count) {
 
 function serviceFailure(error) {
   const message = String(error?.message || '');
-  if (/quota|neuron|daily limit|\b3036\b/i.test(message)) return 'daily-limit';
-  if (/429|rate limit|busy|capacity|3040/i.test(message)) return 'service-busy';
-  return 'service-unavailable';
+  const providerCode = String(error?.code || '').match(/^\d{4,5}$/)?.[0]
+    || message.match(/\b(?:30\d{2}|50\d{2}|1000[01])\b/)?.[0];
+  const reason = /quota|neuron|daily limit|\b3036\b/i.test(message) ? 'daily-limit'
+    : /429|rate limit|busy|capacity|3040/i.test(message) ? 'service-busy'
+      : /5007|3042|no such model|invalid model/i.test(message) ? 'model-unavailable'
+        : /5035|requires.+paid plan/i.test(message) ? 'paid-plan-required'
+          : /5004|3003|invalid input|invalid request/i.test(message) ? 'invalid-model-request'
+            : 'service-unavailable';
+  return { error: reason, ...(providerCode ? { providerCode } : {}) };
 }
 
 export async function translateNewsBatch(context, texts, language) {
@@ -98,7 +104,7 @@ export async function translateNewsBatch(context, texts, language) {
         }
         return { translated };
       } catch (error) {
-        return { error: serviceFailure(error) };
+        return serviceFailure(error);
       }
     })();
     pending.set(identity, operation);
@@ -117,7 +123,8 @@ export async function translateNewsBatch(context, texts, language) {
         })).catch(() => {}));
       }
     } else {
-      results[row.index] = { source: row.source, text: row.source, state: 'failed', error: outcome.error || checked.error };
+      results[row.index] = { source: row.source, text: row.source, state: 'failed', error: outcome.error || checked.error,
+        ...(outcome.providerCode ? { providerCode: outcome.providerCode } : {}) };
     }
   }
   return { results, ...(outcome.error ? { error: outcome.error } : {}) };
