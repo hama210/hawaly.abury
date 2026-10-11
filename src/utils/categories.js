@@ -1,6 +1,7 @@
+import { TRANSLATION_VERSION } from '../lib/translation-format.js';
 export function articleText(item = {}) {
-  const local=item._hawalInlineVerified===true
-    ? `${item.titleKu || ''} ${item.titleAr || ''} ${item.summaryKu || ''} ${item.summaryAr || ''}`
+  const local=item.translation?.version === TRANSLATION_VERSION
+    ? `${item.translation.title || ''} ${item.translation.summary || ''} ${item.translation.content || ''}`
     : '';
   return `${item.title || ''} ${item.titleEn || ''} ${item.summary || ''} ${item.summaryEn || ''} ${local} ${item.content || ''} ${item.source || ''} ${item.sourceGroup || ''} ${item.category || ''}`.toLowerCase();
 }
