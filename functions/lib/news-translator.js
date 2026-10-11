@@ -4,7 +4,7 @@ import {
 } from '../../src/lib/translation-format.js';
 
 export const TRANSLATION_MODELS = {
-  ku: '@cf/qwen/qwen3.8-9b',
+  ku: '@cf/qwen/qwen3.8-27b',
   ar: '@cf/google/gemma-4-26b-a4b-it',
   en: '@cf/google/gemma-4-26b-a4b-it'
 };
@@ -89,7 +89,7 @@ export async function translateNewsBatch(context, texts, language, { bypassCache
           ],
           temperature: 0,
           ...(language === 'ku'
-            ? { max_completion_tokens: Math.min(10000, 1024 + Math.ceil(sources.reduce((sum, text) => sum + text.length, 0) * 1.6)), reasoning_effort: 'low' }
+            ? { max_completion_tokens: Math.min(10000, 1024 + Math.ceil(sources.reduce((sum, text) => sum + text.length, 0) * 1.6)), reasoning_effort: 'low', chat_template_kwargs:{enable_thinking:false}, response_format:{type:'json_object'} }
             : { max_tokens: Math.min(10000, 1024 + Math.ceil(sources.reduce((sum, text) => sum + text.length, 0) * 1.6)), reasoning_effort:'low', chat_template_kwargs:{enable_thinking:false}, response_format:{type:'json_object'} })
           });
           return modelTranslations(output, sources.length);
