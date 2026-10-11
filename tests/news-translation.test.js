@@ -38,10 +38,14 @@ test('server runs the translation model through its AI binding without keys or e
   let calls = 0;
   const env = { AI: { async run(model, input) {
     calls++;
+    if (model === '@cf/google/gemma-4-26b-a4b-it') {
+      assert.deepEqual(JSON.parse(input.messages.at(-1).content).texts, [{ id: 0, text: source }]);
+      return responseModel([{ id: 0, text: 'ارتفع الدولار إلى 151,000 دينار في العراق' }]);
+    }
     assert.equal(model, '@cf/qwen/qwen3.8-27b');
     assert.match(input.messages[0].content, /Central Kurdish/);
     assert.ok(input.max_completion_tokens >= 1024);
-    assert.deepEqual(JSON.parse(input.messages[1].content).texts, [{ id: 0, text: source }]);
+    assert.deepEqual(JSON.parse(input.messages.at(-1).content).texts, [{ id: 0, text: 'ارتفع الدولار إلى 151,000 دينار في العراق' }]);
     return responseModel([{ id: 0, text: sorani }]);
   } } };
   try {
@@ -51,7 +55,7 @@ test('server runs the translation model through its AI binding without keys or e
     assert.equal(result.results[0].text, sorani);
     const second = post([source], 'ku', env);
     assert.equal((await (await onRequest(second.context)).json()).results[0].text, sorani);
-    assert.equal(calls, 1);
+    assert.equal(calls, 2);
   } finally { restoreFetch(); restoreCache(); }
 });
 
@@ -137,7 +141,8 @@ test('changed figures, missing currency pairs, wrong scripts, and corrupt output
 
 test('a rejected mixed translation gets one focused retry before publication', async () => {
   let calls = 0;
-  const env = { AI: { async run(_model, input) {
+  const env = { AI: { async run(model, input) {
+    if (model === '@cf/google/gemma-4-26b-a4b-it') return responseModel([{id:0,text:'ارتفع سعر الذهب في العراق'}]);
     calls++;
     if (calls === 1) return responseModel([{ id: 0, text: 'نرخی زێڕ لە بازاڕەکانی عێراقدا nothing بەرز دەبێتەوە' }]);
     assert.match(input.messages[1].content, /Translate carefully/);
@@ -145,6 +150,20 @@ test('a rejected mixed translation gets one focused retry before publication', a
   } } };
   const out = await (await onRequest(post(['Gold rises in Iraq'], 'ku', env).context)).json();
   assert.equal(out.results[0].state, 'translated'); assert.equal(calls, 2);
+});
+
+test('country corruption is rejected and a failed Arabic bridge retains the complete original', async () => {
+  assert.equal(checkTranslatedText('Saudi Arabia: Second strike hits Riyadh airport', 'عێراق: هێرشی دووەم فڕۆکەخانەی ڕیاضی ڕاوێژگرایانە', 'ku').error, 'changed-country');
+  assert.equal(checkTranslatedText('السعودية: ضربة ثانية تستهدف مطار الرياض', 'عەرەبستانی سعوودی: هێرشی دووەم لە فڕۆکەخانەی ڕیاد', 'ku').ok, true);
+  let calls = 0;
+  const call = post([source], 'ku', {AI:{async run(model) {
+    calls++;
+    assert.equal(model, '@cf/google/gemma-4-26b-a4b-it');
+    throw new Error('10001: Internal error');
+  }}});
+  const out = await (await onRequest(call.context)).json();
+  assert.equal(calls,1); assert.equal(out.results[0].text,source);
+  assert.equal(out.results[0].state,'failed');
 });
 
 test('the client batches, deduplicates readers, and caches by both source and language', async () => {
@@ -291,6 +310,7 @@ test('status and health inspect the actual binding without exposing environment 
   const call = requestContext('https://hawal.example/api/translation-health');
   call.context.env = { unusedSecret: 'must-not-leak', AI: { async run(_model,input) {
     const text=JSON.parse(input.messages.at(-1).content).texts[0].text;
+    if (text.includes('السعودية')) return responseModel([{id:0,text:'عەرەبستانی سعودی: هێرشی دووەم لە فڕۆکەخانەی ڕیاد'}]);
     return responseModel([{ id: 0, text: text.includes('2%')?'نرخی زێڕ ئەمڕۆ لە بەغدا بە 2% دابەزی.':'دوای هێرشەکەی فڕۆکەخانە، ترامپ بیر لە بەشداریکردن لە شەڕی دژی حوسییەکان دەکاتەوە' }]);
   } } };
   assert.equal((await (await status(call.context)).json()).configured, true);
@@ -305,7 +325,7 @@ test('health cannot report success from a cached translation when inference fail
   let calls=0;
   const env={AI:{async run(){
     calls++;
-    if(calls>1) throw new Error('10001: Internal error');
+    if(calls>2) throw new Error('10001: Internal error');
     return responseModel([{id:0,text:'نرخی زێڕ ئەمڕۆ لە بەغدا بە 2% دابەزی.'}]);
   }}};
   try {
@@ -315,7 +335,7 @@ test('health cannot report success from a cached translation when inference fail
     const probe=requestContext('https://hawal.example/api/translation-health');
     probe.context.env=env;
     const result=await (await health(probe.context)).json();
-    assert.equal(calls,4); assert.equal(result.ok,false);
+    assert.equal(calls,5); assert.equal(result.ok,false);
     assert.equal(result.freshInference,true); assert.equal(result.error,'service-unavailable');
   } finally { restoreCache(); }
 });

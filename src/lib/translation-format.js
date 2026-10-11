@@ -1,4 +1,4 @@
-export const TRANSLATION_VERSION = 'hawal-news-v5';
+export const TRANSLATION_VERSION = 'hawal-news-v6';
 export const TRANSLATION_LANGUAGES = {
   ku: { code: 'ckb', name: 'Central Kurdish (Sorani), written in the Kurdish Arabic alphabet' },
   ar: { code: 'ar', name: 'Modern Standard Arabic' },
@@ -78,6 +78,10 @@ export function checkTranslatedText(source, candidate, language) {
     if (!text.replace(/\s/g, '').includes(pair.replace(/\s/g, ''))) {
       return { ok: false, error: 'changed-currency-pair' };
     }
+  }
+  if (/(?:\bSaudi\b|السعود|سع[و]+د)/iu.test(source)
+      && !/(?:\bSaudi\b|سع[و]+د)/iu.test(text)) {
+    return { ok: false, error: 'changed-country' };
   }
   if (/(\p{L}{2,})(?:\s+\1){4,}/iu.test(text)) return { ok: false, error: 'repeated-output' };
   return { ok: true, text };

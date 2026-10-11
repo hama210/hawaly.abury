@@ -80,6 +80,14 @@ export async function translateNewsBatch(context, texts, language, { bypassCache
   if (!operation) {
     operation = (async () => {
       try {
+        const sources = missing.map(row => row.source);
+        let modelSources = sources;
+        if (language === 'ku') {
+          const bridge = await translateNewsBatch(context, sources, 'ar', { bypassCache });
+          const failure = bridge.results.find(row => row.state === 'failed');
+          if (failure) return { error: failure.error, ...(failure.providerCode ? { providerCode: failure.providerCode } : {}) };
+          modelSources = bridge.results.map(row => row.text);
+        }
         const infer = async (sources, focused = false) => {
           const output = await context.env.AI.run(TRANSLATION_MODELS[language], {
           messages: [
@@ -94,15 +102,14 @@ export async function translateNewsBatch(context, texts, language, { bypassCache
           });
           return modelTranslations(output, sources.length);
         };
-        const sources = missing.map(row => row.source);
-        let translated = await infer(sources);
+        let translated = await infer(modelSources);
         const retried = !translated;
-        if (retried) translated = await infer(sources, true);
+        if (retried) translated = await infer(modelSources, true);
         if (!translated) return { error: 'invalid-output' };
         const retry = sources.map((source, index) => ({ source, index }))
           .filter(row => !checkTranslatedText(row.source, translated[row.index], language).ok);
         if (retry.length && !retried) {
-          const corrected = await infer(retry.map(row => row.source), true);
+          const corrected = await infer(retry.map(row => modelSources[row.index]), true);
           if (corrected) retry.forEach((row, index) => { translated[row.index] = corrected[index]; });
         }
         return { translated };
