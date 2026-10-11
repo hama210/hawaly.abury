@@ -195,7 +195,8 @@ export function newsTranslationJobs(items) {
   for (const [priority, field] of ['title', 'summary'].entries()) {
     for (const [index, item] of (items || []).entries()) {
       const text = originalNewsField(item, field) || (field === 'summary' ? originalNewsField(item, 'content') : '');
-      if (text && !unique.has(text)) unique.set(text, { text, priority: 10 + priority * 10 + index / 10000 });
+      const order = 10 + index / 50 + priority / 100;
+      if (text && (!unique.has(text) || order < unique.get(text).priority)) unique.set(text, { text, priority: order });
     }
   }
   return [...unique.values()];

@@ -1,4 +1,4 @@
-export const TRANSLATION_VERSION = 'hawal-news-v6';
+export const TRANSLATION_VERSION = 'hawal-news-v7';
 export const TRANSLATION_LANGUAGES = {
   ku: { code: 'ckb', name: 'Central Kurdish (Sorani), written in the Kurdish Arabic alphabet' },
   ar: { code: 'ar', name: 'Modern Standard Arabic' },

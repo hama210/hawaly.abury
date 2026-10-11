@@ -8,6 +8,7 @@ import { onRequest } from '../functions/api/translate.js';
 import { onRequest as status } from '../functions/api/translation-status.js';
 import { onRequest as health } from '../functions/api/translation-health.js';
 import { MemoryCache, replaceGlobal, requestContext } from './helpers.js';
+import { protectSoraniCountries } from '../functions/lib/translation-entities.js';
 
 const source = 'Dollar rises to 151,000 dinars in Iraq';
 const sorani = 'دۆلار لە عێراق بۆ 151,000 دینار بەرز دەبێتەوە';
@@ -39,14 +40,14 @@ test('server runs the translation model through its AI binding without keys or e
   const env = { AI: { async run(model, input) {
     calls++;
     if (model === '@cf/google/gemma-4-26b-a4b-it') {
-      assert.deepEqual(JSON.parse(input.messages.at(-1).content).texts, [{ id: 0, text: source }]);
-      return responseModel([{ id: 0, text: 'ارتفع الدولار إلى 151,000 دينار في العراق' }]);
+      assert.deepEqual(JSON.parse(input.messages.at(-1).content).texts, [{ id: 0, text: 'Dollar rises to 151,000 dinars in [[HAWAL_COUNTRY_0]]' }]);
+      return responseModel([{ id: 0, text: 'ارتفع الدولار إلى 151,000 دينار في [[HAWAL_COUNTRY_0]]' }]);
     }
     assert.equal(model, '@cf/qwen/qwen3.8-27b');
     assert.match(input.messages[0].content, /Central Kurdish/);
     assert.ok(input.max_completion_tokens >= 1024);
-    assert.deepEqual(JSON.parse(input.messages.at(-1).content).texts, [{ id: 0, text: 'ارتفع الدولار إلى 151,000 دينار في العراق' }]);
-    return responseModel([{ id: 0, text: sorani }]);
+    assert.deepEqual(JSON.parse(input.messages.at(-1).content).texts, [{ id: 0, text: 'ارتفع الدولار إلى 151,000 دينار في [[HAWAL_COUNTRY_0]]' }]);
+    return responseModel([{ id: 0, text: 'دۆلار لە [[HAWAL_COUNTRY_0]] بۆ 151,000 دینار بەرز دەبێتەوە' }]);
   } } };
   try {
     const first = post([source], 'ku', env);
@@ -142,14 +143,27 @@ test('changed figures, missing currency pairs, wrong scripts, and corrupt output
 test('a rejected mixed translation gets one focused retry before publication', async () => {
   let calls = 0;
   const env = { AI: { async run(model, input) {
-    if (model === '@cf/google/gemma-4-26b-a4b-it') return responseModel([{id:0,text:'ارتفع سعر الذهب في العراق'}]);
+    if (model === '@cf/google/gemma-4-26b-a4b-it') return responseModel([{id:0,text:'ارتفع سعر الذهب في [[HAWAL_COUNTRY_0]]'}]);
     calls++;
-    if (calls === 1) return responseModel([{ id: 0, text: 'نرخی زێڕ لە بازاڕەکانی عێراقدا nothing بەرز دەبێتەوە' }]);
+    if (calls === 1) return responseModel([{ id: 0, text: 'نرخی زێڕ لە [[HAWAL_COUNTRY_0]] nothing بەرز دەبێتەوە' }]);
     assert.match(input.messages[1].content, /Translate carefully/);
-    return responseModel([{ id: 0, text: 'نرخی زێڕ لە عێراق بەرز دەبێتەوە' }]);
+    return responseModel([{ id: 0, text: 'نرخی زێڕ لە [[HAWAL_COUNTRY_0]] بەرز دەبێتەوە' }]);
   } } };
   const out = await (await onRequest(post(['Gold rises in Iraq'], 'ku', env).context)).json();
   assert.equal(out.results[0].state, 'translated'); assert.equal(calls, 2);
+});
+
+test('country names survive both inference steps, while missing or duplicated tokens fail closed', () => {
+  const names = protectSoraniCountries(['Saudi Arabia leads Kuwait and Oman with 36.708 million barrels.', 'Kuwait supplies Iraq.']);
+  assert.doesNotMatch(names.texts[0], /Saudi|Kuwait|Oman/);
+  assert.notEqual(names.texts[0].match(/\[\[.*?\]\]/g)[0], names.texts[1].match(/\[\[.*?\]\]/g)[0]);
+  const tokens = names.texts[0].match(/\[\[.*?\]\]/g);
+  const translated = names.restore(0, `${tokens[0]} لە ${tokens[1]} و ${tokens[2]} پێشەوەیە بە 36.708 ملیۆن بەرمیل`);
+  assert.match(translated, /عەرەبستانی سعودی/); assert.match(translated, /کوێت/); assert.match(translated, /عومان/);
+  assert.equal(names.restore(0, `${tokens[0]} ${tokens[1]}`), null);
+  assert.equal(names.restore(0, `${tokens[0]} ${tokens[0]} ${tokens[1]} ${tokens[2]}`), null);
+  const collision = protectSoraniCountries(['[[HAWAL_COUNTRY_0]] says Kuwait']);
+  assert.match(collision.texts[0], /\[\[HAWAL_COUNTRY__0\]\]/);
 });
 
 test('country corruption is rejected and a failed Arabic bridge retains the complete original', async () => {
@@ -191,6 +205,23 @@ test('Sorani uses individual requests while Arabic news can share a batch', asyn
   await Promise.all(['Gold rises','Oil rises','Silver rises'].map(text=>client.translate(text,'ar')));
   assert.equal(groups.length,1);
   assert.equal(groups[0].texts.length,3);
+});
+
+test('latest stories receive their summaries before later headlines, including shared field text', async () => {
+  const requested=[];
+  const client=createNewsTranslator({storage:()=>null,fetcher:async (_url,options)=>{
+    const body=JSON.parse(options.body);
+    requested.push(...body.texts);
+    return apiResponse(options,text=>`هەواڵی کوردی ${text.match(/\d+/)[0]}`);
+  }});
+  await translateNewsFeed([
+    {title:'Headline 0',summary:'Headline 2'},
+    {title:'Headline 1',summary:'Summary 1'},
+    {title:'Headline 2',summary:'Summary 2'}
+  ],'ku',{client});
+  assert.ok(requested.indexOf('Headline 2')<requested.indexOf('Headline 1'));
+  assert.ok(requested.indexOf('Summary 1')<requested.indexOf('Summary 2'));
+  assert.equal(requested.filter(text=>text==='Headline 2').length,1);
 });
 
 test('translation covers every story past the former visible limit and defers longer bodies to the reader', async () => {
@@ -310,7 +341,7 @@ test('status and health inspect the actual binding without exposing environment 
   const call = requestContext('https://hawal.example/api/translation-health');
   call.context.env = { unusedSecret: 'must-not-leak', AI: { async run(_model,input) {
     const text=JSON.parse(input.messages.at(-1).content).texts[0].text;
-    if (text.includes('السعودية')) return responseModel([{id:0,text:'عەرەبستانی سعودی: هێرشی دووەم لە فڕۆکەخانەی ڕیاد'}]);
+    if (text.includes('HAWAL_COUNTRY')) return responseModel([{id:0,text:'[[HAWAL_COUNTRY_0]]: هێرشی دووەم لە فڕۆکەخانەی ڕیاد'}]);
     return responseModel([{ id: 0, text: text.includes('2%')?'نرخی زێڕ ئەمڕۆ لە بەغدا بە 2% دابەزی.':'دوای هێرشەکەی فڕۆکەخانە، ترامپ بیر لە بەشداریکردن لە شەڕی دژی حوسییەکان دەکاتەوە' }]);
   } } };
   assert.equal((await (await status(call.context)).json()).configured, true);
