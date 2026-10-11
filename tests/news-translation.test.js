@@ -283,3 +283,24 @@ test('status and health inspect the actual binding without exposing environment 
   assert.equal(result.ok, true); assert.equal(result.apiKeyRequired, false);
   assert.doesNotMatch(JSON.stringify(result), /must-not-leak/);
 });
+
+test('health cannot report success from a cached translation when inference fails', async () => {
+  const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});
+  const text='Gold prices fell by 2% in Baghdad today.';
+  let calls=0;
+  const env={AI:{async run(){
+    calls++;
+    if(calls>1) throw new Error('10001: Internal error');
+    return responseModel([{id:0,text:'نرخی زێڕ ئەمڕۆ لە بەغدا بە 2% دابەزی.'}]);
+  }}};
+  try {
+    const warm=post([text],'ku',env);
+    assert.equal((await (await onRequest(warm.context)).json()).results[0].state,'translated');
+    await warm.settle();
+    const probe=requestContext('https://hawal.example/api/translation-health');
+    probe.context.env=env;
+    const result=await (await health(probe.context)).json();
+    assert.equal(calls,2); assert.equal(result.ok,false);
+    assert.equal(result.freshInference,true); assert.equal(result.error,'service-unavailable');
+  } finally { restoreCache(); }
+});

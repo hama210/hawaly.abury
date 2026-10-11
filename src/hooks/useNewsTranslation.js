@@ -11,10 +11,16 @@ export function useNewsTranslation(news, language) {
     let work = task.current;
     if (!work || work.closed || work.language !== language || work.retry !== retry) {
       if (work) { work.closed = true; work.controller.abort(); clearTimeout(work.timer); }
-      work = { language, retry, controller: new AbortController(), results: new Map(), queued: new Set(), closed: false };
+      work = { language, retry, controller: new AbortController(), results: new Map(), queued: new Set(), requests: new Map(), closed: false };
       task.current = work;
     }
     work.plan = newsTranslationJobs(news);
+    const currentSources = new Set(work.plan.map(job => job.text));
+    for (const text of work.queued) {
+      if (currentSources.has(text)) continue;
+      work.requests.get(text)?.abort();
+      work.requests.delete(text); work.queued.delete(text); work.results.delete(text);
+    }
     const report = () => {
       if (work.closed) return;
       const results = work.plan.map(job => work.results.get(job.text)).filter(Boolean);
@@ -32,14 +38,16 @@ export function useNewsTranslation(news, language) {
       work.queued.add(job.text);
       const saved = newsTranslator.peek(job.text, language);
       if (saved) { work.results.set(job.text, saved); continue; }
-      newsTranslator.translate(job.text, language, { signal: work.controller.signal, priority: job.priority })
+      const controller = new AbortController();
+      work.requests.set(job.text, controller);
+      newsTranslator.translate(job.text, language, { signal: AbortSignal.any([work.controller.signal, controller.signal]), priority: job.priority })
         .then(result => {
-          if (work.closed) return;
+          if (work.closed || controller.signal.aborted) return;
           work.results.set(job.text, result); report(); publish();
         }).catch(error => {
-          if (work.closed) return;
+          if (work.closed || error.name === 'AbortError') return;
           work.results.set(job.text, { state: 'failed', error: error.message }); report();
-        });
+        }).finally(() => { if (work.requests.get(job.text) === controller) work.requests.delete(job.text); });
     }
     report();
   }, [news, language, retry]);

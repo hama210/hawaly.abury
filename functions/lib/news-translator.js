@@ -44,7 +44,7 @@ function serviceFailure(error) {
   return { error: reason, ...(providerCode ? { providerCode } : {}) };
 }
 
-export async function translateNewsBatch(context, texts, language) {
+export async function translateNewsBatch(context, texts, language, { bypassCache = false } = {}) {
   const cache = globalThis.caches?.default;
   const origin = new URL(context.request.url).origin;
   const results = new Array(texts.length);
@@ -55,7 +55,7 @@ export async function translateNewsBatch(context, texts, language) {
       results[index] = { source, text: source, state: 'original' };
       continue;
     }
-    const key = cache && await cacheRequest(origin, language, source);
+    const key = !bypassCache && cache && await cacheRequest(origin, language, source);
     let saved;
     try { saved = key && await cache.match(key); saved = saved && await saved.json(); } catch { saved = null; }
     const checked = saved?.source === source && checkTranslatedText(source, saved.text, language);
@@ -106,7 +106,14 @@ export async function translateNewsBatch(context, texts, language) {
         }
         return { translated };
       } catch (error) {
-        return serviceFailure(error);
+        const diagnostic = new URL(origin).hostname === 'fix-google-only-translation.hawaly-aburyy.pages.dev'
+          ? `${String(error?.name || 'Error')}: ${String(error?.message || '')}`
+            .replace(/https?:\/\/\S+/gi, '[provider URL]')
+            .replace(/\bBearer\s+\S+/gi, 'Bearer [redacted]')
+            .replace(/((?:token|secret|password|api[-_ ]?key)\s*[=:]\s*)[^\s,;]+/gi, '$1[redacted]')
+            .replace(/[A-Za-z0-9+/_=-]{24,}/g, '[redacted]').slice(0,240)
+          : undefined;
+        return { ...serviceFailure(error), ...(diagnostic ? { diagnostic } : {}) };
       }
     })();
     pending.set(identity, operation);
@@ -129,5 +136,5 @@ export async function translateNewsBatch(context, texts, language) {
         ...(outcome.providerCode ? { providerCode: outcome.providerCode } : {}) };
     }
   }
-  return { results, ...(outcome.error ? { error: outcome.error } : {}) };
+  return { results, ...(outcome.error ? { error: outcome.error } : {}), ...(outcome.diagnostic ? { diagnostic: outcome.diagnostic } : {}) };
 }
