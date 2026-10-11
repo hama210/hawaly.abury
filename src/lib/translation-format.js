@@ -1,4 +1,4 @@
-export const TRANSLATION_VERSION = 'hawal-news-v4';
+export const TRANSLATION_VERSION = 'hawal-news-v5';
 export const TRANSLATION_LANGUAGES = {
   ku: { code: 'ckb', name: 'Central Kurdish (Sorani), written in the Kurdish Arabic alphabet' },
   ar: { code: 'ar', name: 'Modern Standard Arabic' },
@@ -21,7 +21,7 @@ export function cleanTranslationText(value) {
 
 // Avoid needless requests for native text. Uncertain text goes to the model.
 export function isTargetLanguage(text, language) {
-  const letters = text.match(/\p{L}/gu) || [];
+  const letters = text.replace(/\b[A-Z]{3}\/\s*[A-Z]{3}\b/g,'').match(/\p{L}/gu) || [];
   if (!letters.length) return true;
   const arabic = letters.filter(letter => /\p{Script=Arabic}/u.test(letter)).length;
   if (language === 'en') {

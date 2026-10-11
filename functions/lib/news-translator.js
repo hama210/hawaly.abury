@@ -4,7 +4,7 @@ import {
 } from '../../src/lib/translation-format.js';
 
 export const TRANSLATION_MODELS = {
-  ku: '@cf/qwen/qwen3-30b-a3b-fp8',
+  ku: '@cf/qwen/qwen3.8-9b',
   ar: '@cf/google/gemma-4-26b-a4b-it',
   en: '@cf/google/gemma-4-26b-a4b-it'
 };
@@ -88,8 +88,9 @@ export async function translateNewsBatch(context, texts, language, { bypassCache
             { role: 'user', content: JSON.stringify({ texts: sources.map((text, id) => ({ id, text })) }) }
           ],
           temperature: 0,
-          max_tokens: Math.min(10000, 1024 + Math.ceil(sources.reduce((sum, text) => sum + text.length, 0) * 1.6)),
-          ...(language === 'ku' ? {} : { reasoning_effort:'low', chat_template_kwargs:{enable_thinking:false}, response_format:{type:'json_object'} })
+          ...(language === 'ku'
+            ? { max_completion_tokens: Math.min(10000, 1024 + Math.ceil(sources.reduce((sum, text) => sum + text.length, 0) * 1.6)), reasoning_effort: 'low' }
+            : { max_tokens: Math.min(10000, 1024 + Math.ceil(sources.reduce((sum, text) => sum + text.length, 0) * 1.6)), reasoning_effort:'low', chat_template_kwargs:{enable_thinking:false}, response_format:{type:'json_object'} })
           });
           return modelTranslations(output, sources.length);
         };
@@ -106,14 +107,7 @@ export async function translateNewsBatch(context, texts, language, { bypassCache
         }
         return { translated };
       } catch (error) {
-        const diagnostic = new URL(origin).hostname === 'fix-google-only-translation.hawaly-aburyy.pages.dev'
-          ? `${String(error?.name || 'Error')}: ${String(error?.message || '')}`
-            .replace(/https?:\/\/\S+/gi, '[provider URL]')
-            .replace(/\bBearer\s+\S+/gi, 'Bearer [redacted]')
-            .replace(/((?:token|secret|password|api[-_ ]?key)\s*[=:]\s*)[^\s,;]+/gi, '$1[redacted]')
-            .replace(/[A-Za-z0-9+/_=-]{24,}/g, '[redacted]').slice(0,240)
-          : undefined;
-        return { ...serviceFailure(error), ...(diagnostic ? { diagnostic } : {}) };
+        return serviceFailure(error);
       }
     })();
     pending.set(identity, operation);
@@ -136,5 +130,5 @@ export async function translateNewsBatch(context, texts, language, { bypassCache
         ...(outcome.providerCode ? { providerCode: outcome.providerCode } : {}) };
     }
   }
-  return { results, ...(outcome.error ? { error: outcome.error } : {}), ...(outcome.diagnostic ? { diagnostic: outcome.diagnostic } : {}) };
+  return { results, ...(outcome.error ? { error: outcome.error } : {}) };
 }

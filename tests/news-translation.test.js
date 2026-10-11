@@ -38,9 +38,9 @@ test('server runs the translation model through its AI binding without keys or e
   let calls = 0;
   const env = { AI: { async run(model, input) {
     calls++;
-    assert.equal(model, '@cf/qwen/qwen3-30b-a3b-fp8');
+    assert.equal(model, '@cf/qwen/qwen3.8-9b');
     assert.match(input.messages[0].content, /Central Kurdish/);
-    assert.ok(input.max_tokens >= 1024);
+    assert.ok(input.max_completion_tokens >= 1024);
     assert.deepEqual(JSON.parse(input.messages[1].content).texts, [{ id: 0, text: source }]);
     return responseModel([{ id: 0, text: sorani }]);
   } } };
@@ -92,7 +92,7 @@ test('a daily allocation error is distinct from a temporary model failure', asyn
 });
 
 test('native Sorani, Arabic, and English do not require inference', async () => {
-  for (const [language, text] of [['ku', 'نرخی زێڕ لە عێراق بەرز بوو'], ['ar', 'ارتفعت أسعار الذهب في العراق'], ['en', 'Gold rises in Iraq']]) {
+  for (const [language, text] of [['ku', 'نرخی زێڕ لە عێراق بەرز بوو'], ['ku','USD/IQD بەرزبووەوە لە هەولێر'], ['ar', 'ارتفعت أسعار الذهب في العراق'], ['ar','ارتفع USD/IQD في بغداد'], ['en', 'Gold rises in Iraq']]) {
     const response = await onRequest(post([text], language).context);
     assert.equal(response.status, 200);
     assert.equal((await response.json()).results[0].state, 'original');
