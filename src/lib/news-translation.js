@@ -9,10 +9,12 @@ const abortError = () => new DOMException('Translation cancelled', 'AbortError')
 const failed = (text, error, providerCode) => ({ source: text, text, state: 'failed', error,
   ...(typeof providerCode === 'string' && /^\d{4,5}$/.test(providerCode) ? { providerCode } : {}) });
 
-export function createNewsTranslator({ fetcher = (...args) => fetch(...args), now = Date.now, storage = () => globalThis.sessionStorage, retryDelay = 2000 } = {}) {
+export function createNewsTranslator({ fetcher = (...args) => fetch(...args), now = Date.now, storage = () => globalThis.sessionStorage, retryDelay = 2000, serviceCooldown = 5000 } = {}) {
   const cache = new Map();
   const jobs = new Map();
   let active = 0, sequence = 0, pausedUntil = 0, pauseError = '', pauseProviderCode;
+  let resumeTimer;
+  const terminalPause = () => ['daily-limit','translation-not-configured','model-unavailable','paid-plan-required','invalid-model-request'].includes(pauseError);
   const keyFor = (text, language) => `${TRANSLATION_VERSION}:${language}:${text}`;
 
   function remember(text, language, result) {
@@ -67,7 +69,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
       });
       const data = await response.json();
       if (response.status === 429 || response.status === 503) {
-        pausedUntil = now() + (data.error === 'daily-limit' ? 5 * 60 * 1000 : 60 * 1000);
+        pausedUntil = now() + (data.error === 'daily-limit' ? 5 * 60 * 1000 : data.error === 'service-busy' ? 60 * 1000 : serviceCooldown);
         pauseError = data.error || 'service-unavailable';
         pauseProviderCode = data.results?.find(row => row.providerCode)?.providerCode;
       }
@@ -98,8 +100,13 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
   }
 
   function pump() {
+    if (!jobs.size) { clearTimeout(resumeTimer); resumeTimer = undefined; return; }
     if (now() < pausedUntil) {
-      for (const job of [...jobs.values()]) if (!job.running) finish(job, failed(job.text, pauseError, pauseProviderCode));
+      if (terminalPause()) {
+        for (const job of [...jobs.values()]) if (!job.running) finish(job, failed(job.text, pauseError, pauseProviderCode));
+      } else if (!resumeTimer) {
+        resumeTimer = setTimeout(() => { resumeTimer = undefined; pump(); }, pausedUntil - now() + 10);
+      }
       return;
     }
     while (active < 2) {
@@ -122,7 +129,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
     if (signal?.aborted) return Promise.reject(abortError());
     const saved = peek(text, language);
     if (saved) return Promise.resolve(saved);
-    if (now() < pausedUntil) return Promise.resolve(failed(text, pauseError, pauseProviderCode));
+    if (now() < pausedUntil && terminalPause()) return Promise.resolve(failed(text, pauseError, pauseProviderCode));
     const key = keyFor(text, language);
     let job = jobs.get(key);
     if (!job) {
@@ -178,7 +185,7 @@ export function createNewsTranslator({ fetcher = (...args) => fetch(...args), no
     return attempt(value, language, options);
   }
 
-  return { translate, peek, retry() { pausedUntil = 0; pauseError = ''; pauseProviderCode = undefined; } };
+  return { translate, peek, retry() { pausedUntil = 0; pauseError = ''; pauseProviderCode = undefined; clearTimeout(resumeTimer); resumeTimer = undefined; queueMicrotask(pump); } };
 }
 
 export const newsTranslator = createNewsTranslator();

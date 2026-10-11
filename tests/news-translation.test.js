@@ -38,9 +38,9 @@ test('server runs the translation model through its AI binding without keys or e
   let calls = 0;
   const env = { AI: { async run(model, input) {
     calls++;
-    assert.equal(model, '@cf/qwen/qwen3.8-27b');
+    assert.equal(model, '@cf/qwen/qwen3-30b-a3b-fp8');
     assert.match(input.messages[0].content, /Central Kurdish/);
-    assert.ok(input.max_completion_tokens > 256);
+    assert.ok(input.max_tokens >= 1024);
     assert.deepEqual(JSON.parse(input.messages[1].content).texts, [{ id: 0, text: source }]);
     return responseModel([{ id: 0, text: sorani }]);
   } } };
@@ -236,6 +236,18 @@ test('temporary failures recover automatically and cancellation interrupts retry
       results:body.texts.map(text=>({source:text,text,state:'failed',error:'invalid-output'})) });
   } });
   await assert.rejects(cancelled.translate(source,'ku',{signal:controller.signal}),{name:'AbortError'});
+});
+
+test('a failed passage cannot fail news that has not been requested yet', async () => {
+  const client=createNewsTranslator({storage:()=>null,serviceCooldown:1,retryDelay:0,fetcher:async (_url,options)=>{
+    const body=JSON.parse(options.body);
+    if(body.texts[0]==='Story 0') return Response.json({version:TRANSLATION_VERSION,language:body.language,error:'service-unavailable',
+      results:[{source:'Story 0',text:'Story 0',state:'failed',error:'service-unavailable'}]}, {status:503});
+    return apiResponse(options,text=>`هەواڵی کوردی ${text.match(/\d+/)[0]}`);
+  }});
+  const results=await Promise.all(Array.from({length:6},(_,i)=>client.translate(`Story ${i}`,'ku',{retry:false})));
+  assert.equal(results[0].state,'failed');
+  assert.ok(results.slice(1).every(result=>result.state==='translated'));
 });
 
 test('replacing a cancelled feed starts fresh work and cannot lose the new subscriber', async () => {
