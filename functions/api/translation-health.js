@@ -1,13 +1,23 @@
 import { TRANSLATION_VERSION } from '../../src/lib/translation-format.js';
 import { translateNewsBatch } from '../lib/news-translator.js';
 export async function onRequest(context) {
-  const source = 'Gold prices fell by 2% in Baghdad today.';
-  const { results, error, diagnostic } = await translateNewsBatch(context, [source], 'ku', { bypassCache:true });
-  const result = results[0];
+  const sources = [
+    'Gold prices fell by 2% in Baghdad today.',
+    'After airport strike, Trump considering whether to join fight against Houthis'
+  ];
+  const probes = await Promise.all(sources.map(async source => {
+    const started = Date.now();
+    const { results, error, diagnostic } = await translateNewsBatch(context, [source], 'ku', { bypassCache:true });
+    const result = results[0];
+    return { source, translation:result.text, state:result.state, durationMs:Date.now()-started,
+      ...(error || result.error ? { error:error || result.error } : {}),
+      ...(diagnostic ? { diagnostic } : {}) };
+  }));
+  const failure = probes.find(probe => probe.state !== 'translated');
   return Response.json({
-    ok: result.state === 'translated', version: TRANSLATION_VERSION,
-    apiKeyRequired: false, freshInference:true, sample: source, translation: result.text,
-    ...(error || result.error ? { error: error || result.error } : {}),
-    ...(diagnostic ? { diagnostic } : {})
+    ok: !failure, version: TRANSLATION_VERSION,
+    apiKeyRequired: false, freshInference:true, sample:sources[0], translation:probes[0].translation, probes,
+    ...(failure?.error ? { error:failure.error } : {}),
+    ...(failure?.diagnostic ? { diagnostic:failure.diagnostic } : {})
   }, { headers: { 'Cache-Control': 'no-store' } });
 }

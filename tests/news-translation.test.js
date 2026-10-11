@@ -277,7 +277,10 @@ test('old translation fields and translations for another language are ignored b
 
 test('status and health inspect the actual binding without exposing environment secrets', async () => {
   const call = requestContext('https://hawal.example/api/translation-health');
-  call.context.env = { unusedSecret: 'must-not-leak', AI: { async run() { return responseModel([{ id: 0, text: 'نرخی زێڕ ئەمڕۆ لە بەغدا بە 2% دابەزی.' }]); } } };
+  call.context.env = { unusedSecret: 'must-not-leak', AI: { async run(_model,input) {
+    const text=JSON.parse(input.messages.at(-1).content).texts[0].text;
+    return responseModel([{ id: 0, text: text.includes('2%')?'نرخی زێڕ ئەمڕۆ لە بەغدا بە 2% دابەزی.':'دوای هێرشەکەی فڕۆکەخانە، ترامپ بیر لە بەشداریکردن لە شەڕی دژی حوسییەکان دەکاتەوە' }]);
+  } } };
   assert.equal((await (await status(call.context)).json()).configured, true);
   const result = await (await health(call.context)).json();
   assert.equal(result.ok, true); assert.equal(result.apiKeyRequired, false);
@@ -300,7 +303,7 @@ test('health cannot report success from a cached translation when inference fail
     const probe=requestContext('https://hawal.example/api/translation-health');
     probe.context.env=env;
     const result=await (await health(probe.context)).json();
-    assert.equal(calls,2); assert.equal(result.ok,false);
+    assert.equal(calls,3); assert.equal(result.ok,false);
     assert.equal(result.freshInference,true); assert.equal(result.error,'service-unavailable');
   } finally { restoreCache(); }
 });
