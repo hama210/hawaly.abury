@@ -3,7 +3,8 @@ import { translateNewsBatch } from '../lib/news-translator.js';
 export async function onRequest(context) {
   const sources = [
     'Gold prices fell by 2% in Baghdad today.',
-    'After airport strike, Trump considering whether to join fight against Houthis'
+    'After airport strike, Trump considering whether to join fight against Houthis',
+    'السعودية: ضربة ثانية تستهدف مطار الرياض'
   ];
   const probes = await Promise.all(sources.map(async source => {
     const started = Date.now();

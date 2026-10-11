@@ -315,7 +315,7 @@ test('health cannot report success from a cached translation when inference fail
     const probe=requestContext('https://hawal.example/api/translation-health');
     probe.context.env=env;
     const result=await (await health(probe.context)).json();
-    assert.equal(calls,3); assert.equal(result.ok,false);
+    assert.equal(calls,4); assert.equal(result.ok,false);
     assert.equal(result.freshInference,true); assert.equal(result.error,'service-unavailable');
   } finally { restoreCache(); }
 });
