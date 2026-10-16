@@ -4,21 +4,23 @@ import {
   validateTranslation
 } from '../lib/translation-check.js';
 
-const PREFIX = 'hawal-inline-translation-v13:';
+const PREFIX = 'hawal-inline-translation-v14:';
 const TTL = 24 * 60 * 60 * 1000;
 
 const BATCH = 8;
-const CONCURRENCY = 2;
+const CONCURRENCY = 3;
 
 const entries = new Map();
 const skipped = new Map();
 
 function original(item, field) {
-  return String(
-    field === 'title'
-      ? (item.titleEn || item.title || '')
-      : (item.summaryEn || item.summary || '')
-  ).trim();
+  if (field === 'title') {
+    return String(item.titleEn || item.title || '').trim();
+  }
+  if (field === 'content') {
+    return String(item.contentEn || item.content || '').trim();
+  }
+  return String(item.summaryEn || item.summary || '').trim();
 }
 
 function cacheKey(lang, text) {
@@ -35,7 +37,8 @@ function cacheKey(lang, text) {
   return PREFIX + lang + ':' + (hash >>> 0).toString(36);
 }
 
-function cached(lang, text) {
+export function getCachedTranslation(lang, text) {
+  if (!text) return '';
 
   const key = cacheKey(lang, text);
 
@@ -44,7 +47,7 @@ function cached(lang, text) {
   if (!entry) {
     try {
       entry = JSON.parse(
-        sessionStorage.getItem(key) || 'null'
+        localStorage.getItem(key) || sessionStorage.getItem(key) || 'null'
       );
     } catch {}
 
@@ -70,7 +73,7 @@ function cached(lang, text) {
   return result.ok ? result.text : '';
 }
 
-function save(lang, originalText, candidate) {
+export function saveCachedTranslation(lang, originalText, candidate) {
 
   const approved = validateTranslation(
     originalText,
@@ -93,13 +96,45 @@ function save(lang, originalText, candidate) {
   entries.set(key, value);
 
   try {
-    sessionStorage.setItem(
-      key,
-      JSON.stringify(value)
-    );
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
   } catch {}
 
   return true;
+}
+
+export async function clientFallbackTranslate(text, lang, signal) {
+  if (!text || lang === 'en') return '';
+  const tl = lang === 'ku' ? 'ckb' : lang;
+  const endpoints = [
+    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`,
+    `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${tl}&q=${encodeURIComponent(text)}`
+  ];
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { headers: { Accept: 'application/json' }, signal });
+      if (!res.ok) continue;
+      const data = await res.json();
+      let candidate = '';
+      if (Array.isArray(data) && Array.isArray(data[0])) {
+        candidate = data[0].map(seg => (Array.isArray(seg) ? seg[0] : (typeof seg === 'string' ? seg : ''))).join('').trim();
+      } else if (Array.isArray(data) && typeof data[0] === 'string') {
+        candidate = data[0].trim();
+      } else if (data?.sentences && Array.isArray(data.sentences)) {
+        candidate = data.sentences.map(s => s?.trans || '').join('').trim();
+      }
+      const checked = validateTranslation(text, candidate, lang);
+      if (checked.ok) {
+        saveCachedTranslation(lang, text, checked.text);
+        return checked.text;
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') throw err;
+    }
+  }
+  return '';
 }
 
 function createWorker(lang, setTick, setBusy, setIssue) {
@@ -121,7 +156,7 @@ function createWorker(lang, setTick, setBusy, setIssue) {
 export function useClientTranslator(
   news,
   lang,
-  visibleLimit = 28
+  visibleLimit = 60
 ) {
 
   const source = Array.isArray(news)
@@ -145,6 +180,8 @@ export function useClientTranslator(
         titleAr: '',
         summaryKu: '',
         summaryAr: '',
+        contentKu: '',
+        contentAr: '',
         _hawalInlineVerified: true
       };
 
@@ -154,19 +191,23 @@ export function useClientTranslator(
 
       const title = original(item, 'title');
       const summary = original(item, 'summary');
+      const content = original(item, 'content');
 
       const fields =
         lang === 'ku'
-          ? ['titleKu', 'summaryKu']
-          : ['titleAr', 'summaryAr'];
+          ? ['titleKu', 'summaryKu', 'contentKu']
+          : ['titleAr', 'summaryAr', 'contentAr'];
 
       return {
         ...clean,
         [fields[0]]:
-          cached(lang, title) || '',
+          getCachedTranslation(lang, title) || '',
 
         [fields[1]]:
-          cached(lang, summary) || ''
+          getCachedTranslation(lang, summary) || '',
+
+        [fields[2]]:
+          getCachedTranslation(lang, content) || ''
       };
     });
 
@@ -199,26 +240,25 @@ export function useClientTranslator(
       return;
     }
 
-    const visible = source.slice(
-      0,
-      Math.min(
-        Math.max(1, visibleLimit),
-        source.length
-      )
-    );
+    // Translate visible items first, then remaining items so filtered tabs & briefs are also translated
+    const limit = Math.min(Math.max(1, visibleLimit), source.length);
+    const prioritized = [
+      ...source.slice(0, limit),
+      ...source.slice(limit)
+    ];
 
     const now = Date.now();
 
     const headlines = [];
     const summaries = [];
 
-    for (const item of visible) {
+    for (const item of prioritized) {
 
       for (const field of ['title', 'summary']) {
 
         const text = original(item, field);
 
-        if (!text) {
+        if (!text || text.length > 1150) {
           continue;
         }
 
@@ -229,7 +269,7 @@ export function useClientTranslator(
         }
 
         if (
-          cached(lang, text)
+          getCachedTranslation(lang, text)
         ) {
           continue;
         }
@@ -300,64 +340,56 @@ export function useClientTranslator(
                   .json()
                   .catch(() => null);
 
-              if (
-                !response.ok ||
-                !result?.ok ||
-                !Array.isArray(
-                  result.translated
-                ) ||
-                result.translated.length !==
-                  group.length
-              ) {
-                throw new Error(
-                  'translation failed'
-                );
-              }
-
               let changed = false;
+              const failedJobs = [];
 
-              group.forEach(
-                (job, index) => {
-
-                  const translated =
-                    result.translated[index];
-
+              if (
+                response.ok &&
+                result?.ok &&
+                Array.isArray(result.translated) &&
+                result.translated.length === group.length
+              ) {
+                group.forEach((job, index) => {
+                  const translated = result.translated[index];
                   const approved =
-                    result.translatedFlags?.[
-                      index
-                    ] &&
-                    save(
-                      work.lang,
-                      job.text,
-                      translated
-                    );
+                    result.translatedFlags?.[index] &&
+                    saveCachedTranslation(work.lang, job.text, translated);
 
                   if (approved) {
                     changed = true;
-                    work.setIssue('');
                   } else {
-                    const reason = String(result.failureReasons?.[index] || 'translation-unavailable');
-                    work.setIssue(reason.slice(0,180));
+                    failedJobs.push({
+                      job,
+                      reason: String(result.failureReasons?.[index] || 'translation-unavailable')
+                    });
+                  }
+                });
+              } else {
+                group.forEach(job => {
+                  failedJobs.push({ job, reason: 'request-failed' });
+                });
+              }
 
-                    skipped.set(
-                      job.key,
-                      Date.now() +
-                        30 * 1000
-                    );
+              // Client-side direct fallback for any item that failed on server (e.g. Cloudflare 429 or static host)
+              if (failedJobs.length && !work.closed) {
+                for (const entry of failedJobs) {
+                  if (work.closed) break;
+                  const direct = await clientFallbackTranslate(entry.job.text, work.lang, work.controller.signal);
+                  if (direct) {
+                    changed = true;
+                  } else {
+                    work.setIssue(entry.reason.slice(0, 180));
+                    skipped.set(entry.job.key, Date.now() + 25 * 1000);
                   }
                 }
-              );
+              }
 
-              if (
-                changed &&
-                !work.closed
-              ) {
-                work.setTick(
-                  value => value + 1
-                );
+              if (changed && !work.closed) {
+                work.setIssue('');
+                work.setTick(value => value + 1);
               }
             })
-            .catch(error => {
+            .catch(async error => {
 
               if (
                 work.closed ||
@@ -367,15 +399,25 @@ export function useClientTranslator(
                 return;
               }
 
-              work.setIssue('request-failed');
-              group.forEach(job => {
+              let changed = false;
+              for (const job of group) {
+                if (work.closed) break;
+                try {
+                  const direct = await clientFallbackTranslate(job.text, work.lang, work.controller.signal);
+                  if (direct) {
+                    changed = true;
+                  } else {
+                    skipped.set(job.key, Date.now() + 15 * 1000);
+                  }
+                } catch {}
+              }
 
-                skipped.set(
-                  job.key,
-                  Date.now() +
-                    15 * 1000
-                );
-              });
+              if (changed && !work.closed) {
+                work.setIssue('');
+                work.setTick(value => value + 1);
+              } else if (!work.closed) {
+                work.setIssue('request-failed');
+              }
             })
             .finally(() => {
 
