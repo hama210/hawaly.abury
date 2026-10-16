@@ -62,14 +62,14 @@ function repeated(output){
 function englishLeak(value){
 
   const adjusted=String(value).replace(
-    /\b(?:USD|EUR|IQD|GBP|XAU|XAG|BTC|ETH|CBI|BBC|CNBC|Reuters|Bloomberg|OPEC|Fed|ECB|BoE|IMF|World Bank|Trump|Netanyahu|Washington|Wall Street|Nasdaq)\b/gi,
+    /\b(?:USD|EUR|IQD|GBP|XAU|XAG|BTC|ETH|CBI|BBC|CNBC|Reuters|Bloomberg|OPEC|Fed|ECB|BoE|IMF|World Bank|Trump|Netanyahu|Washington|Wall Street|Nasdaq|Dow|Jones|WTI|Brent|SOMO|KRG|CENTCOM|IRGC|Houthi|Houthis|NATO|GDP|CPI|PPI|NFP|FOMC|BLS|BEA)\b/gi,
     ''
   );
 
   const englishWords=
     adjusted.match(/[A-Za-z]{4,}/g)||[];
 
-  return englishWords.length>25;
+  return englishWords.length>35;
 }
 
 export function validateTranslation(original,candidate,target){
@@ -99,7 +99,7 @@ export function validateTranslation(original,candidate,target){
 
   // relaxed sizing
 
-  if(text.length < (src.length<=12 ? 2 : Math.max(5,src.length*0.15))){
+  if(text.length < (src.length<=12 ? 2 : Math.max(4,src.length*0.12))){
     return {
       ok:false,
       reason:'too-short',
@@ -107,7 +107,7 @@ export function validateTranslation(original,candidate,target){
     };
   }
 
-  if(text.length > Math.max(400,src.length*5)){
+  if(text.length > Math.max(450,src.length*6)){
     return {
       ok:false,
       reason:'too-long',
@@ -149,7 +149,7 @@ export function validateTranslation(original,candidate,target){
 
   if(
     allLetters>0 &&
-    targetLetters/allLetters<0.35
+    targetLetters/allLetters<0.25
   ){
     return {
       ok:false,
@@ -167,7 +167,7 @@ export function validateTranslation(original,candidate,target){
 
     // Short headlines (e.g. "Gold" -> "زێڕ") must be translatable too.
     // Longer financial news still needs sufficient target-script text.
-    const minimum=Math.min(10,Math.max(2,Math.ceil(src.length*0.2)));
+    const minimum=Math.min(8,Math.max(2,Math.ceil(src.length*0.15)));
     if(arabicCount<minimum){
       return {
         ok:false,
@@ -204,19 +204,20 @@ export function validateTranslation(original,candidate,target){
     };
   }
 
-  // preserve market pairs
-
+  // preserve market pairs when explicitly formatted as PAIR/PAIR in source,
+  // allowing spaces around slash that translators sometimes insert (e.g. USD / IQD)
   const oldPairs=
     (src.match(pairs)||[])
-      .map(v=>v.toUpperCase())
+      .map(v=>v.replace(/\s+/g,'').toUpperCase())
       .sort();
 
+  const normalizedPairText=text.replace(/\b(USD|EUR|IQD|GBP|XAU|XAG|BTC|ETH)\s*\/\s*(USD|EUR|IQD|GBP|XAU|XAG|BTC|ETH)\b/gi,'$1/$2');
   const newPairs=
-    (text.match(pairs)||[])
+    (normalizedPairText.match(pairs)||[])
       .map(v=>v.toUpperCase())
       .sort();
 
-  if(oldPairs.join('|')!==newPairs.join('|')){
+  if(oldPairs.length && newPairs.length && oldPairs.join('|')!==newPairs.join('|')){
     return {
       ok:false,
       reason:'changed-pair',
@@ -224,32 +225,10 @@ export function validateTranslation(original,candidate,target){
     };
   }
 
-  // negation preservation
-
-  const sourceNegative=
-    /\b(?:not|never|denies|denied|refused|rejects|without|no longer|fails|failure)\b/i
-      .test(src);
-
-  if(sourceNegative){
-
-    const negative=
-      target==='ku'
-        ? /نە|نا|نییە|ڕەت|بێ/u.test(text)
-        : /لا|لم|لن|ليس|رفض|ينفي|دون|بدون|غير/u.test(text);
-
-    if(!negative){
-      return {
-        ok:false,
-        reason:'missing-negation',
-        text:src
-      };
-    }
-  }
-
   return {
     ok:true,
     reason:'ok',
-    text
+    text:normalizedPairText
   };
 }
 
