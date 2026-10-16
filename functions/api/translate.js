@@ -2,10 +2,10 @@ import {validateTranslation,alreadyInTargetLanguage} from '../../src/lib/transla
 
 const TRANSLATION_VERSION='hawal-inline-v12';
 const TTL=24*60*60;
-const REQUEST_LIMIT=10;
-const MAX_TEXT_CHARS=950;
-const MAX_BODY_BYTES=16000;
-const TIMEOUT_MS=7000;
+const REQUEST_LIMIT=12;
+const MAX_TEXT_CHARS=1200;
+const MAX_BODY_BYTES=24000;
+const TIMEOUT_MS=8000;
 const targetCodes={ku:{microsoft:'ku',google:'ckb'},ar:{microsoft:'ar',google:'ar'}};
 
 function headers(){return {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};}
@@ -60,6 +60,19 @@ async function googlePublic(text,target){
   const url='https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl='+targetCodes[target].google+'&dt=t&q='+encodeURIComponent(text);
   const result=await fetchJson(url,{headers:{'Accept':'application/json'}});
   return clean((result?.[0]||[]).map(segment=>Array.isArray(segment)?segment[0]:'').join(''));
+}
+async function googleClients5(text,target){
+  const url='https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl='+targetCodes[target].google+'&q='+encodeURIComponent(text);
+  const result=await fetchJson(url,{headers:{'Accept':'application/json'}});
+  if(Array.isArray(result)){
+    const first=result[0];
+    if(typeof first==='string')return clean(first);
+    if(Array.isArray(first))return clean(first.map(segment=>Array.isArray(segment)?segment[0]:(typeof segment==='string'?segment:'')).join(''));
+  }
+  if(result?.sentences && Array.isArray(result.sentences)){
+    return clean(result.sentences.map(s=>s?.trans||'').join(''));
+  }
+  return '';
 }
 async function cacheKey(request,text,target){
   const payload=new TextEncoder().encode(TRANSLATION_VERSION+'\n'+target+'\n'+text);
@@ -138,9 +151,9 @@ export async function onRequest(context){
   if(!targetCodes[lang])return respond({ok:false,error:'Only Sorani and Arabic targets are supported'},400);
   if(!Array.isArray(body?.texts)||body.texts.length<1||body.texts.length>REQUEST_LIMIT||
     body.texts.some(value=>typeof value!=='string'||value.length>MAX_TEXT_CHARS))
-      return respond({ok:false,error:'Expected 1-10 text passages of up to 950 characters'},413);
+      return respond({ok:false,error:'Expected 1-12 text passages of up to 1200 characters'},413);
   const originals=body.texts.map(clean);
-  const result=await mapBounded(originals,3,txt=>translateOne(txt,lang,request,context));
+  const result=await mapBounded(originals,4,txt=>translateOne(txt,lang,request,context));
   return respond({
     ok:true,
     lang,
