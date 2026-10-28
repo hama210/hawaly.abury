@@ -1,5 +1,7 @@
 // Keep named countries out of inference: models must copy the reserved tokens.
 const countries = [
+  // Match the currency phrase before US can be replaced as a country.
+  [/\b(?:US|U\.S\.) dollars?\b|الدولار الأمريكي/gu, 'دۆلاری ئەمریکی'],
   [/\bSaudi(?: Arabia)?\b|(?:المملكة العربية السعودية|السعودية)/giu, 'عەرەبستانی سعودی'],
   [/\bSouth Korea\b|كوريا الجنوبية/giu, 'کۆریای باشوور'],
   [/\bUnited Arab Emirates\b|الإمارات العربية المتحدة/giu, 'ئیماراتی عەرەبییە یەکگرتووەکان'],
@@ -16,6 +18,23 @@ const countries = [
   [/\bQatar\b|قطر/giu, 'قەتەر']
 ];
 
+// Months are facts too. Reserve them through the Arabic bridge so September
+// cannot turn into January, even if the remaining output looks like Sorani.
+const months = [
+  [/\bJanuary\b|يناير|كانون الثاني/giu, 'کانوونی دووەم'],
+  [/\bFebruary\b|فبراير|شباط/giu, 'شوبات'],
+  [/\bMarch\b|مارس|آذار/gu, 'ئازار'],
+  [/\bApril\b|أبريل|نيسان/giu, 'نیسان'],
+  [/(?<=\bin )May\b|\bMay(?= \d)|مايو|أيار/gu, 'ئایار'],
+  [/\bJune\b|يونيو|حزيران/giu, 'حوزەیران'],
+  [/\bJuly\b|يوليو|تموز/giu, 'تەممووز'],
+  [/\bAugust\b|أغسطس|آب(?=[\s،.،]|$)/gu, 'ئاب'],
+  [/\bSeptember\b|سبتمبر|أيلول/giu, 'ئەیلوول'],
+  [/\bOctober\b|أكتوبر|تشرين الأول/giu, 'تشرینی یەکەم'],
+  [/\bNovember\b|نوفمبر|تشرين الثاني/giu, 'تشرینی دووەم'],
+  [/\bDecember\b|ديسمبر|كانون الأول/giu, 'کانوونی یەکەم'],
+];
+
 export function protectSoraniCountries(sources) {
   let prefix = 'HAWAL_COUNTRY_';
   while (sources.some(source => source.includes(prefix))) prefix += '_';
@@ -23,7 +42,7 @@ export function protectSoraniCountries(sources) {
   const records = sources.map(source => {
     const entities = [];
     let text = source;
-    for (const [pattern, name] of countries) {
+    for (const [pattern, name] of [...countries, ...months]) {
       text = text.replace(pattern, () => {
         const token = `[[${prefix}${sequence++}]]`;
         entities.push({token, name});

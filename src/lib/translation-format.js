@@ -1,4 +1,6 @@
-export const TRANSLATION_VERSION = 'hawal-news-v7';
+import { quantitySignatures } from './translation-quantities.js';
+
+export const TRANSLATION_VERSION = 'hawal-news-v8';
 export const TRANSLATION_LANGUAGES = {
   ku: { code: 'ckb', name: 'Central Kurdish (Sorani), written in the Kurdish Arabic alphabet' },
   ar: { code: 'ar', name: 'Modern Standard Arabic' },
@@ -78,6 +80,9 @@ export function checkTranslatedText(source, candidate, language) {
     if (!text.replace(/\s/g, '').includes(pair.replace(/\s/g, ''))) {
       return { ok: false, error: 'changed-currency-pair' };
     }
+  }
+  if (JSON.stringify(quantitySignatures(source)) !== JSON.stringify(quantitySignatures(text))) {
+    return { ok: false, error: 'changed-quantity' };
   }
   if (/(?:\bSaudi\b|السعود|سع[و]+د)/iu.test(source)
       && !/(?:\bSaudi\b|سع[و]+د)/iu.test(text)) {

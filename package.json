@@ -8,7 +8,7 @@
     "prebuild": "node scripts/patch-main.mjs",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test",
+    "test": "node --import ./scripts/disable-test-network.mjs --test tests/*.test.js",
     "check": "npm run test && npm run build"
   },
   "dependencies": {
