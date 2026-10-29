@@ -35,6 +35,12 @@ import { useClientTranslator } from './hooks/useClientTranslator.js';
 import { translateArticleBody } from './lib/article-translation.js';
 import { imageForNews, coverForCategory } from './lib/news-images.js';
 
+const MOBILE_VIEWS = ['home', 'markets', 'news', 'more'];
+function viewFromHash() {
+  const hash = window.location.hash.slice(1).toLowerCase();
+  return MOBILE_VIEWS.includes(hash) ? hash : 'home';
+}
+
 const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
 const categoryMap = {
   ku: { all:'هەموو', oil:'نەوت', crypto:'کریپتۆ', kurdistan:'کوردستان', iraq:'عێراق / USD/IQD', forex:'EUR و GBP', metals:'زێڕ و زیو', indices:'Dow و Nasdaq', geopolitics:'جەنگ' },
@@ -487,7 +493,7 @@ function App() {
   }, [selected]);
 
   const [refreshing, setRefreshing] = useState(false);
-  const [activeView, setActiveView] = useState('home');
+  const [activeView, setActiveView] = useState(viewFromHash);
   const [featureTarget, setFeatureTarget] = useState(null);
   const dict = t[lang] || t.ku;
   const copy = uiCopy[lang] || uiCopy.ku;
@@ -496,11 +502,29 @@ function App() {
   const displayNews=translatedNews;
   const designCopy = navigationCopy[lang] || navigationCopy.ku;
   const navigate = view => {
+    if (!MOBILE_VIEWS.includes(view)) return;
+    if (view !== viewFromHash()) {
+      window.history.pushState({ hawalView:view }, '', `#${view}`);
+    }
     setActiveView(view);
     setFeatureTarget(null);
     if (view === 'home') { setActive('all'); setQuery(''); }
-    window.scrollTo({ top:0, behavior:'smooth' });
+    // An animated scroll can leave Safari mid-scroll as the previous tab disappears.
+    window.scrollTo({ top:0, behavior:'auto' });
   };
+  useEffect(() => {
+    const restoreView = () => {
+      setActiveView(viewFromHash());
+      setFeatureTarget(null);
+      window.scrollTo({ top:0, behavior:'auto' });
+    };
+    window.addEventListener('popstate', restoreView);
+    window.addEventListener('hashchange', restoreView);
+    return () => {
+      window.removeEventListener('popstate', restoreView);
+      window.removeEventListener('hashchange', restoreView);
+    };
+  }, []);
   useEffect(() => {
     if (!featureTarget) return;
     const id = featureTarget === 'history' ? 'dollar-history' : featureTarget === 'alerts' ? 'market-alerts' : featureTarget === 'verify' ? 'verify' : 'intelligence';
@@ -553,9 +577,9 @@ function App() {
 
   return <div className="page" id="top">
     <div className="shell">
-      <Header lang={lang} setLang={next=>{location.href=pagePath(next,route.page);}} theme={theme} setTheme={setTheme}
+      <Header lang={lang} setLang={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}} theme={theme} setTheme={setTheme}
         query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} onSearch={()=>navigate('news')}/>
-      <LanguagePills lang={lang} onLanguage={next=>{location.href=pagePath(next,route.page);}}/>
+      <LanguagePills lang={lang} onLanguage={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}}/>
       {route.page !== 'home' ? <AboutPage lang={lang} page={route.page}/> : <>
       <Navigation active={activeView} onNavigate={navigate} lang={lang}/>
       <section className={'hawal-screen home-screen '+(activeView==='home'?'':'is-hidden-view')} aria-label={designCopy.home}>
