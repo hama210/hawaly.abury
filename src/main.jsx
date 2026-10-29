@@ -472,6 +472,20 @@ function App() {
   const [newsVisibleCount, setNewsVisibleCount] = useState(36);
   const [markets, setMarkets] = useState(bootstrap.markets || []);
   const [selected, setSelected] = useState(null);
+  // Keep the page in place while reading an article on iOS and Android.
+  useEffect(() => {
+    if (!selected) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousPadding = document.body.style.paddingRight;
+    const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = 'hidden';
+    if (scrollBarWidth > 0) document.body.style.paddingRight = `${scrollBarWidth}px`;
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPadding;
+    };
+  }, [selected]);
+
   const [refreshing, setRefreshing] = useState(false);
   const [activeView, setActiveView] = useState('home');
   const [featureTarget, setFeatureTarget] = useState(null);
