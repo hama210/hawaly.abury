@@ -140,10 +140,19 @@ test('news parses official Atom feeds and decodes numeric headline entities', as
     const payload = await response.json()
     await request.settle()
     assert.equal(response.status, 200)
-    assert.equal(payload.items[0].title, 'US payrolls rise — Fed outlook in focus')
-    assert.equal(payload.items[0].source, 'US Employment (BLS)')
-    assert.equal(payload.items[0].sourceTier, 'official')
-    assert.equal(payload.items[0].link, 'https://www.bls.gov/example')
+    // Feed additions can move a publisher to another batch. Check every batch.
+    for (let batch = 1; batch < payload.batchCount; batch++) {
+      const nextRequest = requestContext(`https://example.com/api/news?mode=full&batch=${batch}&limit=40`)
+      const nextResponse = await onRequest(nextRequest.context)
+      const nextPayload = await nextResponse.json()
+      payload.items.push(...nextPayload.items)
+      await nextRequest.settle()
+    }
+    const item = payload.items.find(row => row.source === 'US Employment (BLS)')
+    assert.ok(item, 'employment Atom feed should be available in some batch')
+    assert.equal(item.title, 'US payrolls rise — Fed outlook in focus')
+    assert.equal(item.sourceTier, 'official')
+    assert.equal(item.link, 'https://www.bls.gov/example')
   } finally {
     restoreFetch()
     restoreWarn()
