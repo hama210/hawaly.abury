@@ -35,6 +35,12 @@ const months = [
   [/\bDecember\b|ديسمبر|كانون الأول/giu, 'کانوونی یەکەم'],
 ];
 
+const tradeTerms = [
+  [/\bTurkish exports\b|الصادرات التركية/giu, 'هەناردەکانی تورکیا'],
+  [/\bexports?\b|الصادرات|صادرات/giu, 'هەناردە'],
+  [/\bimports?\b|الواردات|واردات/giu, 'هاوردە'],
+];
+
 export function protectSoraniCountries(sources) {
   let prefix = 'HAWAL_COUNTRY_';
   while (sources.some(source => source.includes(prefix))) prefix += '_';
@@ -42,7 +48,7 @@ export function protectSoraniCountries(sources) {
   const records = sources.map(source => {
     const entities = [];
     let text = source;
-    for (const [pattern, name] of [...countries, ...months]) {
+    for (const [pattern, name] of [...countries, ...months, ...tradeTerms]) {
       text = text.replace(pattern, () => {
         const token = `[[${prefix}${sequence++}]]`;
         entities.push({token, name});

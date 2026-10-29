@@ -53,6 +53,18 @@ test('server retries a corrupt monetary amount once then retains the complete or
   assert.equal(body.results[0].text, source);
 });
 
+test('observed Sorani financial mistranslations and invented missiles fail closed', () => {
+  for (const [source, output] of [
+    ['Turkish exports: Iraq fourth-largest market in September', 'دراوسێی تورکیا: عێراق چوارەم بازاڕە لە ئەیلوول'],
+    ['Microsoft stock jumps 4%', 'هەڵەی مایکرۆسۆفت ٤٪ بەرزبووەوە'],
+    ['The central bank did not change interest rates.', 'بانکە ناوەندییەکە نرخەکانی نەگۆڕی.'],
+    ['After airport strike, Trump considers joining the fight', 'دوای هێرشی مووشەکی بۆ فڕۆکەخانە، ترامپ بیر لە بەشداریکردن دەکاتەوە'],
+  ]) assert.equal(checkTranslatedText(source, output, 'ku').ok, false);
+  assert.equal(checkTranslatedText('Microsoft stock jumps 4%', 'پشکی مایکرۆسۆفت ٤٪ بەرزبووەوە', 'ku').ok, true);
+  const protectedText = protectSoraniCountries(['Turkish exports: Iraq fourth-largest market in September']);
+  assert.equal(protectedText.restore(0, protectedText.texts[0]), 'هەناردەکانی تورکیا: عێراق fourth-largest market in ئەیلوول');
+});
+
 test('reader retries only its failed chunk and never displays a partial translation', async () => {
   const source = Array.from({length:70}, (_,i) => `Market report ${i}: Gold rose today.`).join('\n');
   const seen = new Map();

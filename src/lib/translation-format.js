@@ -1,6 +1,6 @@
 import { quantitySignatures } from './translation-quantities.js';
 
-export const TRANSLATION_VERSION = 'hawal-news-v8';
+export const TRANSLATION_VERSION = 'hawal-news-v9';
 export const TRANSLATION_LANGUAGES = {
   ku: { code: 'ckb', name: 'Central Kurdish (Sorani), written in the Kurdish Arabic alphabet' },
   ar: { code: 'ar', name: 'Modern Standard Arabic' },
@@ -83,6 +83,22 @@ export function checkTranslatedText(source, candidate, language) {
   }
   if (JSON.stringify(quantitySignatures(source)) !== JSON.stringify(quantitySignatures(text))) {
     return { ok: false, error: 'changed-quantity' };
+  }
+  // Narrow regression guards for observed financial mistranslations. These do
+  // not certify general semantics; failures go through retry/original fallback.
+  if (language === 'ku') {
+    const terms = [
+      [/\bexports?\b|صادرات/iu, /هەناردە/u],
+      [/\bimports?\b|واردات/iu, /هاوردە/u],
+      [/\binterest rates?\b|أسعار الفائدة/iu, /سوود/u],
+      [/\bstocks?\s+(?:jumps?|rises?|falls?|slides?|drops?|gains?|climbs?|plunges?)\b/iu, /پشک|سەهم/u],
+    ];
+    if (terms.some(([original, translated]) => original.test(source) && !translated.test(text))) {
+      return { ok: false, error: 'changed-financial-term' };
+    }
+    if (/airport strike/iu.test(source) && !/missile|rocket/iu.test(source) && /مووشەک|موشەک/u.test(text)) {
+      return { ok: false, error: 'added-weapon' };
+    }
   }
   if (/(?:\bSaudi\b|السعود|سع[و]+د)/iu.test(source)
       && !/(?:\bSaudi\b|سع[و]+د)/iu.test(text)) {

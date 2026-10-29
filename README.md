@@ -49,3 +49,22 @@ Cloudflare Workers AI includes a daily free allocation. The existing account's p
 Check `/api/translation-status` for the deployed binding and `/api/translation-health` for a real Sorani inference. Verify Kurdish and Arabic headlines, summaries, and the reader in a preview before merging. For local inference use Cloudflare Pages development with the `AI` binding; Vite alone reports that inference is not configured.
 
 Publisher images use approved media and verified OpenGraph photos when possible. Missing photos remain clearly labelled illustrations, not invented images.
+
+### Translation regression checks
+
+`npm test` disables real network fetches; provider responses are mocked. The
+financial validator compares each supported quantity's digits, explicit sign,
+percentage marker, magnitude and currency, allowing Arabic/Kurdish digits and
+translated unit names. Sorani country, month and trade-term placeholders survive
+both inference steps. Targeted guards reject the observed exports/stock/interest
+rate mistranslations and an invented missile in the airport-strike sample.
+These are bounded checks, not a guarantee of semantic accuracy for arbitrary news.
+
+After deploying a preview, explicitly run
+`node scripts/check-translation-preview.mjs https://PREVIEW.pages.dev`.
+This spends inference quota on a bounded Sorani/Arabic headline, summary and
+multi-chunk reader check. It prints source/output pairs for human review, and
+labels its injected-client-503 recovery check separately from live inference.
+Translation caches may satisfy these requests; `/api/translation-health` remains
+the fixed Sorani cache-bypassing inference probe. Keep the PR in draft until the
+actual output has been reviewed, even when all automated checks pass.
