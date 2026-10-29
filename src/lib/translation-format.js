@@ -1,6 +1,6 @@
 import { quantitySignatures } from './translation-quantities.js';
 
-export const TRANSLATION_VERSION = 'hawal-news-v10';
+export const TRANSLATION_VERSION = 'hawal-news-v11';
 export const TRANSLATION_LANGUAGES = {
   ku: { code: 'ckb', name: 'Central Kurdish (Sorani), written in the Kurdish Arabic alphabet' },
   ar: { code: 'ar', name: 'Modern Standard Arabic' },
@@ -115,6 +115,11 @@ export function checkTranslatedText(source, candidate, language) {
 export function translationChunks(value, limit = MAX_TRANSLATION_TEXT) {
   const text = cleanTranslationText(value);
   if (!text) return [];
+  // Long readers translate each paragraph independently: combining unrelated
+  // paragraphs into a completion worsens terminology and sentence fidelity.
+  if (text.length > limit && /\n\n/u.test(text)) {
+    return text.split(/\n{2,}/u).flatMap(paragraph => translationChunks(paragraph, limit));
+  }
   const chunks = [];
   let remaining = text;
   while (remaining.length > limit) {

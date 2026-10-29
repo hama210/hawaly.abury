@@ -88,6 +88,7 @@ test('paragraph chunks match the API source contract without losing words', () =
   const source = Array.from({length:70}, (_,i) => `Report ${i}: Gold prices rose in the market today.`).join('\n\n');
   const chunks = translationChunks(source);
   assert.ok(chunks.length > 1);
+  assert.equal(chunks.length, 70);
   assert.ok(chunks.every(chunk=>chunk === cleanTranslationText(chunk)));
   assert.equal(chunks.join(' ').replace(/\s+/g,' '), source.replace(/\s+/g,' '));
 });
