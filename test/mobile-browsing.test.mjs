@@ -27,3 +27,12 @@ test('mobile navigation preserves tab state through browser history', () => {
   assert.match(source, /addEventListener\('hashchange', restoreView\)/);
   assert.match(source, /useState\(\(\) => viewFromHash\(window\.location\.hash\)\)/);
 });
+
+test('installed mobile app fetches new JS and CSS rather than caching old bundles', () => {
+  const sw = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
+  const main = readFileSync(new URL('../src/main.jsx', import.meta.url), 'utf8');
+  assert.match(sw, /request\.destination === 'script'/);
+  assert.match(sw, /request\.destination === 'style'/);
+  assert.match(sw, /hawali-aburi-v32-mobile-browsing/);
+  assert.match(main, /sw\.js\?v=20261029-mobile-browsing-v2/);
+});
