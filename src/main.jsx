@@ -480,14 +480,9 @@ function App() {
     const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
     document.body.style.overflow = 'hidden';
     if (scrollBarWidth > 0) document.body.style.paddingRight = `${scrollBarWidth}px`;
-    const handleEscape = event => {
-      if (event.key === 'Escape') setSelected(null);
-    };
-    document.addEventListener('keydown', handleEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
       document.body.style.paddingRight = previousPadding;
-      document.removeEventListener('keydown', handleEscape);
     };
   }, [selected]);
 
