@@ -31,12 +31,24 @@ function withIntelligence(items, prefix = 'news') {
 }
 
 function mergeUnique(primary = [], backup = []) {
-  const seen = new Set();
+  const seen = new Map();
   const output = [];
   for (const item of [...primary, ...backup]) {
     const key = String(item.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
+    if (!key) continue;
+    if (seen.has(key)) {
+      // Preserve the dedicated Warsh attribution if the same official speech
+      // also occurs in the general Federal Reserve speeches feed.
+      const index = seen.get(key);
+      const group = String(item.sourceGroup || '');
+      const previousGroup = String(output[index].sourceGroup || '');
+      if (/^Chairman Warsh (Speeches|Testimony)$/.test(group) &&
+          !/^Chairman Warsh (Speeches|Testimony)$/.test(previousGroup)) {
+        output[index] = item;
+      }
+      continue;
+    }
+    seen.set(key, output.length);
     output.push(item);
   }
   return output;
