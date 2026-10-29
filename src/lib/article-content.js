@@ -1,5 +1,6 @@
 // An RSS item is not automatically a full article.
 // Only show text supplied by its publisher/feed, never invent a body from a headline.
+import { localizedNewsField } from './translation-format.js';
 export function cleanArticleText(value) {
   return String(value ?? '').replace(/\s+/gu, ' ').trim();
 }
@@ -20,13 +21,11 @@ export function meaningfulArticleText(value, title) {
 export function storyExcerpt(item,lang='en') {
   if(!item)return '';
   const headline=item.titleEn || item.title || '';
-  const translated=item._hawalInlineVerified===true?(lang==='ku'?item.summaryKu:lang==='ar'?item.summaryAr:''):'';
-  const translatedHeadline=lang==='ku'?item.titleKu:lang==='ar'?item.titleAr:'';
-  const local=meaningfulArticleText(translated,translatedHeadline||headline);
+  const local=meaningfulArticleText(localizedNewsField(item,'summary',lang),localizedNewsField(item,'title',lang));
   if(local)return local;
   const summary=meaningfulArticleText(item.summaryEn || item.summary,headline);
   if(summary)return summary;
-  return meaningfulArticleText(item.contentEn || item.content,headline);
+  return meaningfulArticleText(localizedNewsField(item,'content',lang),headline);
 }
 export function articleSelection(item) {
   if(!item)return {text:'',original:'',isExtended:false,isAvailable:false};
