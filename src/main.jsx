@@ -34,12 +34,7 @@ import { articleSelection, storyExcerpt, readerCopy } from './lib/article-conten
 import { useClientTranslator } from './hooks/useClientTranslator.js';
 import { translateArticleBody } from './lib/article-translation.js';
 import { imageForNews, coverForCategory } from './lib/news-images.js';
-
-const MOBILE_VIEWS = ['home', 'markets', 'news', 'more'];
-function viewFromHash() {
-  const hash = window.location.hash.slice(1).toLowerCase();
-  return MOBILE_VIEWS.includes(hash) ? hash : 'home';
-}
+import { MOBILE_VIEWS, viewFromHash } from './lib/mobile-view.js';
 
 const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
 const categoryMap = {
@@ -493,7 +488,7 @@ function App() {
   }, [selected]);
 
   const [refreshing, setRefreshing] = useState(false);
-  const [activeView, setActiveView] = useState(viewFromHash);
+  const [activeView, setActiveView] = useState(() => viewFromHash(window.location.hash));
   const [featureTarget, setFeatureTarget] = useState(null);
   const dict = t[lang] || t.ku;
   const copy = uiCopy[lang] || uiCopy.ku;
@@ -503,7 +498,7 @@ function App() {
   const designCopy = navigationCopy[lang] || navigationCopy.ku;
   const navigate = view => {
     if (!MOBILE_VIEWS.includes(view)) return;
-    if (view !== viewFromHash()) {
+    if (view !== viewFromHash(window.location.hash)) {
       window.history.pushState({ hawalView:view }, '', `#${view}`);
     }
     setActiveView(view);
@@ -514,7 +509,7 @@ function App() {
   };
   useEffect(() => {
     const restoreView = () => {
-      setActiveView(viewFromHash());
+      setActiveView(viewFromHash(window.location.hash));
       setFeatureTarget(null);
       window.scrollTo({ top:0, behavior:'auto' });
     };
