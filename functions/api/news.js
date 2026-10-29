@@ -19,6 +19,11 @@ export const FEEDS = [
   ['FXStreet','forex','https://www.fxstreet.com/rss/news','specialist'],
   ['ForexLive','forex','https://www.forexlive.com/feed/news','specialist'],
   ['Federal Reserve','markets','https://www.federalreserve.gov/feeds/press_monetary.xml','official',8000],
+  // Official Fed RSS feeds: releases, all speeches, and Warsh-specific remarks.
+  ['Federal Reserve News','markets','https://www.federalreserve.gov/feeds/press_all.xml','official',9000,'fed-official',14],
+  ['Federal Reserve Speeches','markets','https://www.federalreserve.gov/feeds/speeches.xml','official',9000,'fed-official',30],
+  ['Chairman Warsh Speeches','markets','https://www.federalreserve.gov/feeds/speeches.xml','official',9000,'fed-warsh',120],
+  ['Chairman Warsh Testimony','markets','https://www.federalreserve.gov/feeds/testimony.xml','official',9000,'fed-warsh',120],
   ['European Central Bank','forex','https://www.ecb.europa.eu/rss/press.html','official',8000],
   ['Bank of England','forex','https://www.bankofengland.co.uk/rss/news','official',8000],
   ['US Inflation (BLS)','markets','https://www.bls.gov/feed/cpi.rss','official',11000],
@@ -66,6 +71,10 @@ const MAX_FEEDS_PER_REQUEST = 22;
 const FETCH_CONCURRENCY = 11;
 const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
 const FAST_FEED_SOURCES = [
+  'Federal Reserve',
+  'Federal Reserve News',
+  'Chairman Warsh Speeches',
+  'Chairman Warsh Testimony',
   'Shafaq Economy',
   'Shafaq USD-IQD',
   'Iraq Dollar Live',
@@ -223,6 +232,13 @@ function isFreshNewsItem(item, now = Date.now(), maxAgeMs = NEWS_MAX_AGE_MS){
 
 function isRelevantToFeed(item, feed){
   const text = `${item.title} ${item.summary}`;
+  // The RSS itself comes from the Federal Reserve. Do not label Google or
+  // unrelated officials' remarks as a speech by Chairman Warsh.
+  if(feed.format === 'fed-warsh')
+    return /\bwarsh\b/i.test(`${text} ${item.link}`)
+      && /^https:\/\/(?:www\.)?federalreserve\.gov\/newsevents\/(?:speech|testimony)\//i.test(item.link);
+  if(feed.format === 'fed-official')
+    return /^https:\/\/(?:www\.)?federalreserve\.gov\/newsevents\//i.test(item.link);
   if(feed.tier === 'curated' && feed.url.includes('news.google.com') && !TRUSTED_PUBLISHERS.test(item.source)) return false;
   if(feed.format === 'priority-trump') return /\b(trump|white house|president|administration|tariff|sanction)\b/i.test(text)
     && /\b(iran|iraq|saudi|yemen|houthi|war|military|ceasefire|tariff|oil|economy|economic|dollar|market|sanction|trade|hormuz)\b/i.test(text);
@@ -324,7 +340,9 @@ async function fetchFeedAttempt(feed, timeoutMs){
       headers: { 'user-agent': 'HawaliAburiBot/1.7' }
     });
     if(!res.ok) throw new Error(String(res.status));
-    const perFeedLimit = feed.format === 'centcom-dvids' ? 36
+    const perFeedLimit = feed.format === 'fed-warsh' ? 90
+      : feed.format === 'fed-official' ? 45
+      : feed.format === 'centcom-dvids' ? 36
       : feed.format === 'iran-us-direct' ? 28
       : feed.format?.startsWith('priority-') ? 35
       : feed.category === 'iraq' ? 30 : 24;
