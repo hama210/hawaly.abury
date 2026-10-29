@@ -55,7 +55,8 @@ function strengthScore(item) {
 
 function isFreshLiveItem(item, now = Date.now()) {
   const publishedAt = Date.parse(item?.publishedAt);
-  const sourceWindowMs = Math.min(30, Math.max(3, Number(item?.displayMaxAgeDays) || 3)) * 24 * 60 * 60 * 1000;
+  // Official historical remarks remain accessible longer than daily news.
+  const sourceWindowMs = Math.min(120, Math.max(3, Number(item?.displayMaxAgeDays) || 3)) * 24 * 60 * 60 * 1000;
   return !item?.isFallback
     && Number.isFinite(publishedAt)
     && publishedAt >= now - Math.max(NEWS_DISPLAY_MAX_AGE, sourceWindowMs)
@@ -95,6 +96,8 @@ function prepareNews(primary = [], backup = []) {
   // Preserve a few high-interest headlines across high-volume RSS batches.
   // Final presentation remains strictly latest-first with genuine timestamps.
   const priorities = [
+    /^(Chairman Warsh Speeches|Chairman Warsh Testimony)$/,
+    /^(Federal Reserve News|Federal Reserve Speeches)$/,
     /^(Trump White House|Trump Reuters|Trump Announcements)$/,
     /^(Saudi War Updates|Reuters Saudi War)$/,
     /^(Iraq Dollar Live|Iraq Dollar Reaction|Shafaq USD-IQD)$/
