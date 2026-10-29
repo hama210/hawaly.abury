@@ -34,6 +34,7 @@ import { articleSelection, storyExcerpt, readerCopy } from './lib/article-conten
 import { useClientTranslator } from './hooks/useClientTranslator.js';
 import { translateArticleBody } from './lib/article-translation.js';
 import { imageForNews, coverForCategory } from './lib/news-images.js';
+import { MOBILE_VIEWS, viewFromHash } from './lib/mobile-view.js';
 
 const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
 const categoryMap = {
@@ -487,7 +488,7 @@ function App() {
   }, [selected]);
 
   const [refreshing, setRefreshing] = useState(false);
-  const [activeView, setActiveView] = useState('home');
+  const [activeView, setActiveView] = useState(() => viewFromHash(window.location.hash));
   const [featureTarget, setFeatureTarget] = useState(null);
   const dict = t[lang] || t.ku;
   const copy = uiCopy[lang] || uiCopy.ku;
@@ -496,11 +497,29 @@ function App() {
   const displayNews=translatedNews;
   const designCopy = navigationCopy[lang] || navigationCopy.ku;
   const navigate = view => {
+    if (!MOBILE_VIEWS.includes(view)) return;
+    if (view !== viewFromHash(window.location.hash)) {
+      window.history.pushState({ hawalView:view }, '', `#${view}`);
+    }
     setActiveView(view);
     setFeatureTarget(null);
     if (view === 'home') { setActive('all'); setQuery(''); }
-    window.scrollTo({ top:0, behavior:'smooth' });
+    // An animated scroll can leave Safari mid-scroll as the previous tab disappears.
+    window.scrollTo({ top:0, behavior:'auto' });
   };
+  useEffect(() => {
+    const restoreView = () => {
+      setActiveView(viewFromHash(window.location.hash));
+      setFeatureTarget(null);
+      window.scrollTo({ top:0, behavior:'auto' });
+    };
+    window.addEventListener('popstate', restoreView);
+    window.addEventListener('hashchange', restoreView);
+    return () => {
+      window.removeEventListener('popstate', restoreView);
+      window.removeEventListener('hashchange', restoreView);
+    };
+  }, []);
   useEffect(() => {
     if (!featureTarget) return;
     const id = featureTarget === 'history' ? 'dollar-history' : featureTarget === 'alerts' ? 'market-alerts' : featureTarget === 'verify' ? 'verify' : 'intelligence';
@@ -553,9 +572,9 @@ function App() {
 
   return <div className="page" id="top">
     <div className="shell">
-      <Header lang={lang} setLang={next=>{location.href=pagePath(next,route.page);}} theme={theme} setTheme={setTheme}
+      <Header lang={lang} setLang={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}} theme={theme} setTheme={setTheme}
         query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} onSearch={()=>navigate('news')}/>
-      <LanguagePills lang={lang} onLanguage={next=>{location.href=pagePath(next,route.page);}}/>
+      <LanguagePills lang={lang} onLanguage={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}}/>
       {route.page !== 'home' ? <AboutPage lang={lang} page={route.page}/> : <>
       <Navigation active={activeView} onNavigate={navigate} lang={lang}/>
       <section className={'hawal-screen home-screen '+(activeView==='home'?'':'is-hidden-view')} aria-label={designCopy.home}>
@@ -643,6 +662,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20261010-inline-sorani-v1', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20261029-mobile-browsing-v2', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }

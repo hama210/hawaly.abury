@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hawali-aburi-v31-inline-sorani';
+const CACHE_NAME = 'hawali-aburi-v32-mobile-browsing';
 // Never precache the HTML document. A cached index can keep pointing at an
 // old JavaScript bundle after a new Cloudflare Pages deployment.
 const APP_SHELL = ['/offline.html', '/manifest.webmanifest', '/hawali-logo-96.webp', '/hawali-logo-192.png'];
@@ -7,6 +7,8 @@ function shouldBypass(request, url) {
   return request.method !== 'GET'
     || request.mode === 'navigate'
     || request.destination === 'document'
+    || request.destination === 'script'
+    || request.destination === 'style'
     || url.pathname.startsWith('/api/')
     || url.pathname.startsWith('/src/')
     || url.pathname.startsWith('/@vite')
@@ -19,7 +21,7 @@ self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))).then(() => self.clients.claim()));
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi-') && key !== CACHE_NAME).map(key => caches.delete(key)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
