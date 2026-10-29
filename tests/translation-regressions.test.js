@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkTranslatedText, TRANSLATION_VERSION } from '../src/lib/translation-format.js';
+import { checkTranslatedText, TRANSLATION_VERSION, translationChunks, cleanTranslationText } from '../src/lib/translation-format.js';
 import { protectSoraniCountries } from '../functions/lib/translation-entities.js';
 import { onRequest } from '../functions/api/translate.js';
 import { createNewsTranslator } from '../src/lib/news-translation.js';
@@ -66,14 +66,14 @@ test('observed Sorani financial mistranslations and invented missiles fail close
 });
 
 test('reader retries only its failed chunk and never displays a partial translation', async () => {
-  const source = Array.from({length:70}, (_,i) => `Market report ${i}: Gold rose today.`).join('\n');
+  const source = Array.from({length:70}, (_,i) => `Market report ${i}: Gold rose today.`).join('\n\n');
   const seen = new Map();
   const client = createNewsTranslator({storage:()=>null, retryDelay:0, fetcher:async (_url, options) => {
     const {language, texts} = JSON.parse(options.body);
     return Response.json({version:TRANSLATION_VERSION, language, results:texts.map(text=>{
       const count = (seen.get(text) || 0) + 1; seen.set(text, count);
       if (text.includes('report 69') && count === 1) return {source:text,text,state:'failed',error:'invalid-output'};
-      return {source:text,text:text.replace(/Market report (\d+): Gold rose today\./g, 'ڕاپۆرتی بازاڕ $1: زێڕ ئەمڕۆ بەرزبووەوە.'),state:'translated'};
+      return {source:cleanTranslationText(text),text:text.replace(/Market report (\d+): Gold rose today\./g, 'ڕاپۆرتی بازاڕ $1: زێڕ ئەمڕۆ بەرزبووەوە.'),state:'translated'};
     })});
   }});
   const result = await client.translate(source, 'ku');
@@ -82,4 +82,19 @@ test('reader retries only its failed chunk and never displays a partial translat
   assert.equal([...seen.values()].filter(count=>count===2).length,1);
   assert.ok(result.text.includes('69'));
   assert.ok(!result.text.includes('Market report'));
+});
+
+test('paragraph chunks match the API source contract without losing words', () => {
+  const source = Array.from({length:70}, (_,i) => `Report ${i}: Gold prices rose in the market today.`).join('\n\n');
+  const chunks = translationChunks(source);
+  assert.ok(chunks.length > 1);
+  assert.ok(chunks.every(chunk=>chunk === cleanTranslationText(chunk)));
+  assert.equal(chunks.join(' ').replace(/\s+/g,' '), source.replace(/\s+/g,' '));
+});
+
+test('source placeholders are excluded from Arabic bridge script ratios', () => {
+  const source = '[[HAWAL_COUNTRY_2]]: [[HAWAL_COUNTRY_0]] fourth-largest market in [[HAWAL_COUNTRY_1]]';
+  const output = '[[HAWAL_COUNTRY_2]]: [[HAWAL_COUNTRY_0]] رابع أكبر سوق في [[HAWAL_COUNTRY_1]]';
+  assert.equal(checkTranslatedText(source, output, 'ar').ok, true);
+  assert.equal(checkTranslatedText('Gold rises', '[[HAWAL_COUNTRY_123]] يرتفع', 'ar').ok, false);
 });

@@ -1,6 +1,6 @@
 import { quantitySignatures } from './translation-quantities.js';
 
-export const TRANSLATION_VERSION = 'hawal-news-v9';
+export const TRANSLATION_VERSION = 'hawal-news-v10';
 export const TRANSLATION_LANGUAGES = {
   ku: { code: 'ckb', name: 'Central Kurdish (Sorani), written in the Kurdish Arabic alphabet' },
   ar: { code: 'ar', name: 'Modern Standard Arabic' },
@@ -56,14 +56,18 @@ export function checkTranslatedText(source, candidate, language) {
       && !(language === 'en' && /^[\p{Script=Latin}\P{L}]+$/u.test(text))) {
     return { ok: false, error: 'untranslated-output' };
   }
-  const letters = text.match(/\p{L}/gu) || [];
+  // The Arabic bridge must copy source placeholders. Their Latin spelling is
+  // protocol data, not untranslated English; keep unknown/invented tokens in
+  // the language checks. Restoration separately requires every token once.
+  const languageText = text.replace(/\[\[HAWAL_COUNTRY_+\d+\]\]/g, token => source.includes(token) ? '' : token);
+  const letters = languageText.match(/\p{L}/gu) || [];
   if (letters.length && language !== 'en') {
     const arabic = letters.filter(letter => /\p{Script=Arabic}/u.test(letter)).length;
     if (arabic / letters.length < 0.4) return { ok: false, error: 'wrong-language' };
     if (language === 'ku' && letters.length > 12 && !/[ەێۆڕڵ]/u.test(text)) {
       return { ok: false, error: 'wrong-language' };
     }
-    const words = text.match(/\p{L}+/gu) || [];
+    const words = languageText.match(/\p{L}+/gu) || [];
     if (words.some(word => /\p{Script=Arabic}/u.test(word) && /[A-Za-z]/.test(word))
         || /\b(?:the|and|but|because|nothing|during|without|would|could|should|despite|between|through)\b/.test(text)) {
       return { ok: false, error: 'mixed-language' };
@@ -118,7 +122,9 @@ export function translationChunks(value, limit = MAX_TRANSLATION_TEXT) {
     if (end < limit / 2) end = remaining.lastIndexOf(' ', limit);
     if (end < 1) end = limit;
     if (/[\uD800-\uDBFF]/u.test(remaining[end - 1])) end--;
-    chunks.push(remaining.slice(0, end));
+    // Match the server's source normalization, including a split between two
+    // paragraph newlines; otherwise row.source !== job.text rejects valid text.
+    chunks.push(remaining.slice(0, end).trim());
     remaining = remaining.slice(end).trimStart();
   }
   if (remaining) chunks.push(remaining);
