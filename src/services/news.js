@@ -179,7 +179,7 @@ export async function fetchNews(onUpdate, { force = false, onHealth, onStatus } 
   // Publish the fast response immediately. Only three full requests run in the
   // first wave; a second wave covers the remaining feeds without requiring the
   // first API batch to succeed. Each response updates the visible list.
-  const fastRequest = fetchPayload('/api/news?mode=fast&limit=48', force, 20000)
+  const fastRequest = fetchPayload('/api/news?mode=fast&limit=48', force, 29000)
     .then(payload => handle(payload, 'fast'));
   const batchRequest = batch => fetchBatch(batch, force)
     .then(payload => handle(payload, 'full'));
