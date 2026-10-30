@@ -159,8 +159,11 @@ export async function fetchNews(onUpdate, { force = false, onHealth, onStatus } 
   let successfulFeeds = 0;
 
   const publish = () => {
-    latest = prepareNews(fullItems, mergeUnique(fastItems, cached));
-    saveCachedNews(latest);
+    const received = mergeUnique(fullItems, fastItems);
+    // A fresh provider response must never be crowded out by older browser
+    // storage or a previous SEO snapshot. Use cache only as last-known fallback.
+    latest = received.length ? prepareNews(received) : prepareNews(cached);
+    if (received.length) saveCachedNews(latest);
     if (typeof onUpdate === 'function') onUpdate(latest);
   };
 
@@ -194,9 +197,13 @@ export async function fetchNews(onUpdate, { force = false, onHealth, onStatus } 
       Array.from({ length: remaining }, (_, index) => batchRequest(index + FIRST_WAVE_BATCHES))
     );
   }
+  const current = prepareNews(fullItems, fastItems);
+  const hasRecent24h = current.some(item => Date.now() - Date.parse(item.publishedAt) <= 86400000);
   if (typeof onStatus === 'function') {
     onStatus({
-      status: successfulFeeds > 0 && latest.length ? 'live' : successfulResponses ? 'no-fresh-articles' : 'unavailable',
+      status: current.length && successfulFeeds > 0 ? (hasRecent24h ? 'live' : 'outdated')
+        : successfulResponses ? 'no-fresh-articles' : 'unavailable',
+      showingLastKnown: !current.length && latest.length > 0,
       successfulResponses,
       successfulFeeds,
       newestPublishedAt: latest[0]?.publishedAt || null
