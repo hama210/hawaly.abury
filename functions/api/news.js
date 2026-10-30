@@ -71,7 +71,8 @@ export const FEEDS = [
 // A large 22-feed batch with sequential publisher fallbacks frequently timed
 // out in the browser before the final articles could be displayed.
 const MAX_FEEDS_PER_REQUEST = 12;
-const FETCH_CONCURRENCY = 4;
+// Bound the worst-case latency: two waves of at most six feeds each.
+const FETCH_CONCURRENCY = 6;
 const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
 // Fast first paint: reserve expensive full-catalogue polling for the batches.
 const FAST_FEED_SOURCES = [
@@ -90,6 +91,7 @@ const FAST_FEED_SOURCES = [
 ];
 const FAST_FEED_TIMEOUT_MS = 5000;
 const FULL_FEED_TIMEOUT_MS = 5500;
+const MAX_SOURCE_TIMEOUT_MS = 6500;
 const FAST_CACHE_TTL = 60;
 const FULL_CACHE_TTL = 120;
 const SOURCE_CACHE_TTL = 60;
@@ -327,11 +329,13 @@ function treasuryHtmlToFeedXml(html, feedUrl){
 async function fetchFeedAttempt(feed, timeoutMs){
   const startedAt = Date.now();
   const controller = new AbortController();
-  const timeoutId = setTimeout(()=>controller.abort('feed timeout'), Math.max(timeoutMs, Number(feed.timeoutMs) || 0));
+  // A source override must not make the whole Cloudflare response time out.
+  const feedDeadline = Math.min(MAX_SOURCE_TIMEOUT_MS, Math.max(timeoutMs, Number(feed.timeoutMs) || 0));
+  const timeoutId = setTimeout(()=>controller.abort('feed timeout'), feedDeadline);
   try{
     const res = await fetch(feed.url, {
       signal: controller.signal,
-      cf: { cacheTtl: SOURCE_CACHE_TTL, cacheEverything: false },
+      cf: { cacheTtl: SOURCE_CACHE_TTL, cacheEverything: true },
       headers: { 'user-agent': 'HawaliAburiBot/1.7' }
     });
     if(!res.ok) throw new Error(String(res.status));
@@ -402,7 +406,7 @@ async function fetchFeed(feed, timeoutMs){
     ...feed,
     url:googleNewsFeed('site:' + domain + ' when:7d'),
     format:'fallback-google'
-  }, Math.min(3000, timeoutMs));
+  }, Math.min(2500, timeoutMs));
   if(!backup.ok) return primary;
   return {
     ...backup,
@@ -427,7 +431,7 @@ async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'news-reliable-v16');
+  cacheUrl.searchParams.set('version', 'news-reliable-v17');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
@@ -509,11 +513,15 @@ export async function onRequest(context) {
     }));
   }
   const ttl = mode === 'fast' ? FAST_CACHE_TTL : FULL_CACHE_TTL;
+  const recent24h = items.filter(item => Date.now() - Date.parse(item.publishedAt) <= 24 * 60 * 60 * 1000).length;
+  const newestPublishedAt = items[0]?.publishedAt || null;
   const response = Response.json({
     updatedAt: new Date().toISOString(),
     status: items.length ? 'live' : 'unavailable',
     order: 'latest-first',
     count: items.length,
+    newestPublishedAt,
+    recent24h,
     translated: false,
     mode,
     batch: mode === 'fast' ? 'fast' : batch,
@@ -528,7 +536,8 @@ export async function onRequest(context) {
     'Server-Timing': `news;dur=${Date.now() - startedAt}`
   }});
 
-  if(cacheKey){
+  // Do not cache an all-failed batch: retry immediately when sources recover.
+  if(cacheKey && succeeded > 0){
     const cacheWrite = cache.put(cacheKey, response.clone()).catch(error => {
       console.warn(JSON.stringify({ event:'news_cache_write_failed', message:error instanceof Error ? error.message : String(error) }));
     });
