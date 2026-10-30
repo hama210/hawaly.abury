@@ -67,29 +67,34 @@ export const FEEDS = [
   ['Central Bank of Iraq','iraq',googleNewsFeed('site:cbi.iq (dinar OR banking OR monetary OR dollar) when:60d'),'official']
 ].map(([source, category, url, tier, timeoutMs, format, maxAgeDays]) => ({ source, category, url, tier, timeoutMs, format, maxAgeDays }));
 
-// Keep each request within a predictable latency envelope on Cloudflare Pages.
-// A large 22-feed batch with sequential publisher fallbacks frequently timed
-// out in the browser before the final articles could be displayed.
-const MAX_FEEDS_PER_REQUEST = 12;
-const FETCH_CONCURRENCY = 4;
+const MAX_FEEDS_PER_REQUEST = 22;
+const FETCH_CONCURRENCY = 11;
 const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
-// Fast first paint: reserve expensive full-catalogue polling for the batches.
 const FAST_FEED_SOURCES = [
+  'Federal Reserve',
   'Federal Reserve News',
   'Chairman Warsh Speeches',
   'Chairman Warsh Testimony',
   'Shafaq Economy',
+  'Shafaq USD-IQD',
   'Iraq Dollar Live',
-  'Reuters Markets',
+  'Iraq Dollar Reaction',
+  'Trump White House',
   'Trump Reuters',
+  'Trump Announcements',
   'Saudi War Updates',
+  'Reuters Saudi War',
+  'Reuters Iran-US Conflict',
+  'AP Middle East Conflict',
+  'CENTCOM Updates',
   'BBC War',
+  'Al Jazeera War',
   'Guardian Iran',
   'FXStreet',
-  'Al Jazeera War'
+  'CNBC Markets'
 ];
-const FAST_FEED_TIMEOUT_MS = 5000;
-const FULL_FEED_TIMEOUT_MS = 5500;
+const FAST_FEED_TIMEOUT_MS = 9000;
+const FULL_FEED_TIMEOUT_MS = 8000;
 const FAST_CACHE_TTL = 60;
 const FULL_CACHE_TTL = 120;
 const SOURCE_CACHE_TTL = 60;
@@ -402,7 +407,7 @@ async function fetchFeed(feed, timeoutMs){
     ...feed,
     url:googleNewsFeed('site:' + domain + ' when:7d'),
     format:'fallback-google'
-  }, Math.min(3000, timeoutMs));
+  }, Math.min(7000, timeoutMs));
   if(!backup.ok) return primary;
   return {
     ...backup,
@@ -427,7 +432,7 @@ async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'news-reliable-v16');
+  cacheUrl.searchParams.set('version', 'more-news-v15');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
@@ -477,7 +482,7 @@ export async function onRequest(context) {
   const feedResults = await fetchFeeds(
     selectedFeeds,
     mode === 'fast' ? FAST_FEED_TIMEOUT_MS : FULL_FEED_TIMEOUT_MS,
-    FETCH_CONCURRENCY
+    mode === 'fast' ? selectedFeeds.length : FETCH_CONCURRENCY
   );
   const raw = feedResults.flatMap(result => result.items);
   const iraq = latestFirst(dedupeItems(raw.filter(isIraqEconomy)));

@@ -1,8 +1,6 @@
 {
   "version": 1,
-  "include": [
-    "/*"
-  ],
+  "include": ["/*"],
   "exclude": [
     "/assets/*",
     "/news-covers/*",
@@ -17,6 +15,8 @@
     "/sw.js",
     "/manifest.webmanifest",
     "/offline.html",
+    "/robots.txt",
+    "/sitemap.xml",
     "/browserconfig.xml"
   ]
 }

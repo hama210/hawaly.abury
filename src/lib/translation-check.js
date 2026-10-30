@@ -20,7 +20,7 @@ function normalizedDigits(text){
 
 function values(text){
   return (normalizedDigits(text).match(numeric)||[])
-    .map(v=>{const normalized=v.replace(/[٬،]/g,',').replace(/٫/g,'.').replace(/,(?=\d{3}(?:\D|$))/g,'').replace(',','.');const n=Number(normalized);return Number.isFinite(n)?String(n):'invalid:'+v;})
+    .map(v=>v.replace(/[,.،٬٫]/g,''))
     .sort();
 }
 
@@ -131,7 +131,7 @@ export function validateTranslation(original,candidate,target){
     };
   }
 
-  if(target!=='en' && englishLeak(text)){
+  if(englishLeak(text)){
     return {
       ok:false,
       reason:'english-leak',
@@ -149,7 +149,7 @@ export function validateTranslation(original,candidate,target){
 
   if(
     allLetters>0 &&
-    (target==='en' ? (text.match(/[A-Za-z]/g)||[]).length/allLetters<0.6 : targetLetters/allLetters<0.25)
+    targetLetters/allLetters<0.25
   ){
     return {
       ok:false,
@@ -161,7 +161,7 @@ export function validateTranslation(original,candidate,target){
   // Sorani detection
   // don't reject valid Sorani for missing one letter
 
-  if(target==='ku' || target==='ckb'){
+  if(target==='ku'){
     const arabicCount=
       (text.match(arabicScript)||[]).length;
 
@@ -246,11 +246,9 @@ export function alreadyInTargetLanguage(text,target){
   const ratio=
     (raw.match(arabicScript)||[]).length/letters;
 
-  if(target==='ku' || target==='ckb'){
+  if(target==='ku'){
     return ratio>0.75 && kurdishLetters.test(raw);
   }
-
-  if(target==='en') return ratio<0.1 && /[A-Za-z]/.test(raw);
 
   if(target==='ar'){
     return ratio>0.75 && !kurdishLetters.test(raw);

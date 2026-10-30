@@ -21,7 +21,7 @@ test('the four preview-inspired screens are part of the actual application',()=>
 });
 
 test('home and market cards use genuine API quote values and never invented mockup numbers',()=>{
-  assert.match(dashboard,/cityRecord\(markets,'erbil'\)/);
+  assert.match(dashboard,/markets\.find\(m=>m\.symbol==='USD\/IQD'\)/);
   assert.match(dashboard,/markets\.find\(m=>m\.symbol==='XAU\/USD'\)/);
   assert.match(dashboard,/markets\.find\(m=>m\.symbol==='BRENT\/USD'\)/);
   assert.match(dashboard,/quoteState\(q\)/);
@@ -51,7 +51,7 @@ test('mobile design matches navy-blue screenshot while supporting narrow and RTL
   assert.match(css,/@media\(max-width:370px\)/);
   assert.match(css,/\.pulse-card strong\{[^}]*overflow:hidden/);
   assert.match(css,/\[data-theme="light"\]/);
-  assert.match(sw,/v34-news-reliability/);
+  assert.match(sw,/v32-mobile-browsing/);
 });
 
 test('the actual homepage renders more than four news cards and mobile grid stays readable',()=>{

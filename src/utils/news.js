@@ -3,12 +3,12 @@ import { imageForNews, coverForCategory } from '../lib/news-images.js';
 // publisher wording is always the fallback when providers fail.
 export function getTitle(item,lang='en'){
   const original=item?.titleEn || item?.title || '';
-  return item?._hawalInlineVerified===true && lang==='en' ? item?.translatedTitleEn || original : item?._hawalInlineVerified===true && lang==='ku' ? item?.titleKu || original
+  return item?._hawalInlineVerified===true && lang==='ku' ? item?.titleKu || original
     : item?._hawalInlineVerified===true && lang==='ar' ? item?.titleAr || original : original;
 }
 export function getSummary(item,lang='en'){
   const original=item?.summaryEn || item?.summary || '';
-  return item?._hawalInlineVerified===true && lang==='en' ? item?.translatedSummaryEn || original : item?._hawalInlineVerified===true && lang==='ku' ? item?.summaryKu || original
+  return item?._hawalInlineVerified===true && lang==='ku' ? item?.summaryKu || original
     : item?._hawalInlineVerified===true && lang==='ar' ? item?.summaryAr || original : original;
 }
 export function getWhy(item){

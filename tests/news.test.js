@@ -407,12 +407,7 @@ test('a blocked original RSS retains the source via publisher-domain headlines',
     return new Response('unavailable',{status:503});
   });
   try{
-    // BBC may move to another batch as the catalogue is split into
-    // smaller bounded requests; locate its actual configured batch.
-    const bbcIndex=FEEDS.findIndex(feed=>feed.source==='BBC Business');
-    assert.ok(bbcIndex>=0);
-    const bbcBatch=bbcIndex%Math.ceil(FEEDS.length/12);
-    const call=requestContext('https://example.com/api/news?mode=full&batch='+bbcBatch+'&refresh=1');
+    const call=requestContext('https://example.com/api/news?mode=full&batch=0&refresh=1');
     const data=await (await onRequest(call.context)).json();
     await call.settle();
     assert.ok(directAttempts);

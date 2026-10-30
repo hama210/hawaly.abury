@@ -25,7 +25,7 @@ export function articleChunks(body, max = 700) {
 
 export async function translateArticleBody(text, lang, { signal, fetcher = fetch } = {}) {
   const original = String(text || '').trim();
-  if (!original || alreadyInTargetLanguage(original, lang)) {
+  if (!original || lang === 'en' || alreadyInTargetLanguage(original, lang)) {
     return { translated: false, text: original };
   }
 
@@ -50,7 +50,7 @@ export async function translateArticleBody(text, lang, { signal, fetcher = fetch
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ lang, texts: batch }),
-          signal:AbortSignal.any([...(signal?[signal]:[]),AbortSignal.timeout(45000)])
+          signal
         });
         if (response.ok) {
           const data = await response.json();

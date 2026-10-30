@@ -22,15 +22,28 @@ test('Central Kurdish financial phrases preserve figures and reject repeated gib
   assert.equal(alreadyInTargetLanguage('نرخی دۆلار لە عێراق','ku'),true);
   assert.equal(alreadyInTargetLanguage('Central bank of Iraq','ku'),false);
 });
-test('Google-only public translation uses Sorani ckb and caches validated text',async()=>{
-  const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});let count=0;
-  const restoreFetch=replaceGlobal('fetch',async url=>{count++;assert.match(String(url),/translate.googleapis.com/);assert.match(String(url),/tl=ckb/);return Response.json([[['دۆلار بۆ ١٥١,٠٠٠ دینار لە عێراق بەرز دەبێتەوە']]]);});
+test('Microsoft Translator uses Central Kurdish code ku, region secret and caches results',async()=>{
+  const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});
+  let count=0;
+  const restoreFetch=replaceGlobal('fetch',async (url,options)=>{
+    count++;
+    assert.match(String(url),/api.cognitive.microsofttranslator.com\/translate\?api-version=3.0&to=ku/);
+    assert.equal(options.headers['Ocp-Apim-Subscription-Key'],'secret');
+    assert.equal(options.headers['Ocp-Apim-Subscription-Region'],'westeurope');
+    assert.equal(JSON.parse(options.body)[0].Text,'Dollar rises to 151,000 dinars in Iraq');
+    return Response.json([{translations:[{to:'ku',text:'دۆلار بۆ ١٥١,٠٠٠ دینار لە عێراق بەرز دەبێتەوە'}]}]);
+  });
   try{
     const a=post(['Dollar rises to 151,000 dinars in Iraq']);
+    a.context.env={MICROSOFT_TRANSLATOR_KEY:'secret',MICROSOFT_TRANSLATOR_REGION:'westeurope'};
     const first=await (await onRequest(a.context)).json();await a.settle();
-    assert.deepEqual(first.translatedFlags,[true]);assert.deepEqual(first.sources,['google-public']);
-    const second=await (await onRequest(post(['Dollar rises to 151,000 dinars in Iraq']).context)).json();
-    assert.deepEqual(second.sources,['cache']);assert.equal(count,1);
+    assert.deepEqual(first.translatedFlags,[true]);
+    assert.deepEqual(first.sources,['microsoft']);
+    const b=post(['Dollar rises to 151,000 dinars in Iraq']);
+    b.context.env=a.context.env;
+    const second=await (await onRequest(b.context)).json();
+    assert.deepEqual(second.sources,['cache']);
+    assert.equal(count,1);
   }finally{restoreFetch();restoreCache();}
 });
 test('Google Cloud Translation uses Sorani ckb and handles encoded translation',async()=>{
@@ -143,24 +156,24 @@ test('Vite development routes share the actual Pages translator contract',()=>{
   assert.doesNotMatch(vite,/fallbackTranslate|FALLBACKS/);
 });
 
-test('fixed-input translation-health checks Google provider without exposing secrets',async()=>{
+test('fixed-input translation-health checks real Microsoft provider without exposing secrets',async()=>{
   const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});
   let calls=0;
   const restoreFetch=replaceGlobal('fetch',async (url,options)=>{
     calls++;
-    assert.match(String(url),/translation.googleapis.com/);
-    assert.ok(String(url).includes('key=private-test-key'));
+    assert.match(String(url),/api\.cognitive\.microsofttranslator\.com/);
+    assert.equal(options.headers['Ocp-Apim-Subscription-Key'],'private-test-key');
     const input=JSON.parse(options.body);
-    assert.equal(input.q[0],'Gold prices fell in Baghdad today.');
-    return Response.json({data:{translations:[{translatedText:'نرخی زێڕ ئەمڕۆ لە بەغدا دابەزی.'}]}});
+    assert.equal(input[0].Text,'Gold prices fell in Baghdad today.');
+    return Response.json([{translations:[{to:'ku',text:'نرخی زێڕ ئەمڕۆ لە بەغدا دابەزی.'}]}]);
   });
   try{
     const check=requestContext('https://hawal.example/api/translation-health');
-    check.context.env={GOOGLE_TRANSLATE_API_KEY:'private-test-key'};
+    check.context.env={MICROSOFT_TRANSLATOR_KEY:'private-test-key'};
     const result=await (await checkTranslationHealth(check.context)).json();
     await check.settle();
     assert.equal(result.ok,true);
-    assert.equal(result.provider,'google-cloud');
+    assert.equal(result.provider,'microsoft');
     assert.match(result.sampleTranslation,/زێڕ/);
     assert.doesNotMatch(JSON.stringify(result),/private-test-key/);
     const second=requestContext('https://hawal.example/api/translation-health');
@@ -170,17 +183,17 @@ test('fixed-input translation-health checks Google provider without exposing sec
   }finally{restoreFetch();restoreCache();}
 });
 
-test('translation-health reports safe Google HTTP failures, never key values',async()=>{
+test('translation-health reports safe Microsoft HTTP failures, never key values',async()=>{
   const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});
   const restoreFetch=replaceGlobal('fetch',async (url)=>{
-    return new Response('unauthorized',{status:String(url).includes('translation.googleapis.com')?401:429});
+    return new Response('unauthorized',{status:String(url).includes('microsofttranslator')?401:429});
   });
   try{
     const check=requestContext('https://hawal.example/api/translation-health');
-    check.context.env={GOOGLE_TRANSLATE_API_KEY:'private-test-key'};
+    check.context.env={MICROSOFT_TRANSLATOR_KEY:'private-test-key'};
     const result=await (await checkTranslationHealth(check.context)).json();
     assert.equal(result.ok,false);
-    assert.match(result.failure,/google-cloud:http-401/);
+    assert.match(result.failure,/microsoft:http-401/);
     assert.doesNotMatch(JSON.stringify(result),/private-test-key/);
   }finally{restoreFetch();restoreCache();}
 });

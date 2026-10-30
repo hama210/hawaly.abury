@@ -1,4 +1,4 @@
-import { positive, quoteState, safeUrl, cityRecord, baghdadDate } from './market-tools.js';
+import { positive, quoteState, safeUrl } from './market-tools.js';
 
 export const HISTORY_KEY = 'hawall-market-observations-v2';
 export const ALERTS_KEY = 'hawall-notification-settings-v1';
@@ -56,33 +56,29 @@ export function normalizeHistory(points, now = Date.now()) {
   if (!Array.isArray(points)) return [];
   const unique = new Map();
   for (const item of points) {
-    if (!['erbil','sulaymaniyah','baghdad','official'].includes(item?.city) || !['buy','sell'].includes(item?.side)) continue;
+    if (!['erbil','sulaymaniyah','baghdad'].includes(item?.city) || !['buy','sell'].includes(item?.side)) continue;
     const stamp = Date.parse(item?.at || '');
     if (!positive(Number(item.price)) || !Number.isFinite(stamp) || stamp > now + 300000 || stamp < now - 90 * DAY) continue;
-    const entry = { city:item.city, side:item.side, price:Number(item.price), at:new Date(stamp).toISOString(), source:String(item.source || '').slice(0,120), sourceUrl:safeUrl(item.sourceUrl), observed:item.observed===true };
-    // Undated official references are daily observations, not new market ticks every minute.
-    const key=entry.observed ? baghdadDate(entry.at)+':'+entry.price : entry.at;
-    unique.set([entry.city,entry.side,key].join(':'), entry);
+    const entry = { city:item.city, side:item.side, price:Number(item.price), at:new Date(stamp).toISOString(), source:String(item.source || '').slice(0,120), sourceUrl:safeUrl(item.sourceUrl) };
+    unique.set([entry.city,entry.side,entry.at].join(':'), entry);
   }
   return [...unique.values()].sort((a,b) => Date.parse(a.at) - Date.parse(b.at)).slice(-1800);
 }
 
 export function collectRates(markets = [], now = Date.now()) {
-  const local = markets.find(item=>item.symbol==='USD/IQD');
-  const points = Array.isArray(local?.history) ? [...local.history] : [];
-  for (const city of ['erbil','sulaymaniyah','baghdad','official']) {
-    const q = cityRecord(markets,city);
-    if (!q || !safeUrl(q.sourceUrl)) continue;
-    const state=quoteState(q,now);
-    if (state !== 'reported' && !(city==='official' && state==='undated')) continue;
-    const at=q.updatedAt || q.fetchedAt;
-    if (!Number.isFinite(Date.parse(at))) continue;
+  const local = markets.find(item => item.symbol === 'USD/IQD');
+  if (!local || quoteState(local, now) !== 'reported' || !safeUrl(local.sourceUrl)) return [];
+  const time = Date.parse(local.updatedAt || '');
+  if (!Number.isFinite(time)) return [];
+  const points = [];
+  for (const city of ['erbil','sulaymaniyah','baghdad']) {
     for (const side of ['buy','sell']) {
-      const price=city==='official' ? q.price*100 : q[side];
-      if (positive(price)) points.push({city,side,price,at,source:q.source,sourceUrl:q.sourceUrl,observed:!q.updatedAt});
+      if (positive(local?.[city]?.[side])) {
+        points.push({ city, side, price:local[city][side], at:local.updatedAt, source:local.source, sourceUrl:local.sourceUrl });
+      }
     }
   }
-  return normalizeHistory(points,now);
+  return points;
 }
 
 export function historyFor(points, city = 'erbil', side = 'sell', days = 7, now = Date.now()) {
@@ -103,12 +99,13 @@ export function chartCoordinates(points, width = 640, height = 180) {
 }
 
 export function marketSnapshot(markets = [], news = [], now = Date.now()) {
+  const local = markets.find(q => q.symbol === 'USD/IQD');
   const gold = markets.find(q => q.symbol === 'XAU/USD');
   const quotes = {};
-  for (const city of ['erbil','sulaymaniyah','baghdad']) {
-    const q=cityRecord(markets,city);
-    if (q && quoteState(q,now)==='reported' && safeUrl(q.sourceUrl) && positive(q.sell)) {
-      quotes[city]={price:q.sell,at:q.updatedAt,sourceUrl:q.sourceUrl,source:q.source};
+  if (local && quoteState(local, now) === 'reported' && safeUrl(local.sourceUrl)) {
+    for (const city of ['erbil','sulaymaniyah','baghdad']) {
+      const price = local?.[city]?.sell;
+      if (positive(price)) quotes[city] = { price, at:local.updatedAt, sourceUrl:local.sourceUrl };
     }
   }
   if (gold && quoteState(gold, now) === 'reported' && safeUrl(gold.sourceUrl)) quotes.gold = { price:gold.price, at:gold.updatedAt, sourceUrl:gold.sourceUrl };
@@ -126,7 +123,7 @@ export function calculateAlerts(previous, current, settings, seen = []) {
   const before = previous?.quotes?.[city], after = current?.quotes?.[city];
   const diff = after && before ? after.price - before.price : 0;
   const threshold = Number(settings.threshold);
-  if (before && after && (before.source && after.source ? before.source === after.source : before.sourceUrl === after.sourceUrl) &&
+  if (before && after && before.sourceUrl === after.sourceUrl &&
       Date.parse(after.at) > Date.parse(before.at) && Number.isFinite(threshold) && threshold > 0 &&
       Math.abs(diff) >= threshold) {
     alerts.push({ id:'rate:'+city+':'+after.at, type:'rate', diff, price:after.price, city, url:after.sourceUrl });

@@ -1,12 +1,12 @@
 import {validateTranslation,alreadyInTargetLanguage} from '../../src/lib/translation-check.js';
 
-const TRANSLATION_VERSION='hawal-inline-v15';
+const TRANSLATION_VERSION='hawal-inline-v12';
 const TTL=24*60*60;
 const REQUEST_LIMIT=12;
 const MAX_TEXT_CHARS=1200;
 const MAX_BODY_BYTES=24000;
 const TIMEOUT_MS=8000;
-const targetCodes={ku:{google:'ckb'},ckb:{google:'ckb'},ar:{google:'ar'},en:{google:'en'}};
+const targetCodes={ku:{microsoft:'ku',google:'ckb'},ar:{microsoft:'ar',google:'ar'}};
 
 function headers(){return {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};}
 function clean(value){return String(value||'').replace(/\s+/gu,' ').trim();}
@@ -31,6 +31,20 @@ async function fetchJson(url,options={}){
     return await response.json();
   }finally{clearTimeout(timer);}
 }
+async function microsoft(text,target,env){
+  const key=env?.MICROSOFT_TRANSLATOR_KEY;
+  if(!key)return '';
+  const region=env?.MICROSOFT_TRANSLATOR_REGION;
+  const reqHeaders={
+    'Ocp-Apim-Subscription-Key':key,
+    'Content-Type':'application/json'
+  };
+  if(region)reqHeaders['Ocp-Apim-Subscription-Region']=region;
+  const result=await fetchJson('https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to='+targetCodes[target].microsoft,{
+    method:'POST',headers:reqHeaders,body:JSON.stringify([{Text:text}])
+  });
+  return clean(result?.[0]?.translations?.find(row=>row.to===targetCodes[target].microsoft)?.text || result?.[0]?.translations?.[0]?.text);
+}
 async function googleCloud(text,target,env){
   const key=env?.GOOGLE_TRANSLATE_API_KEY;
   if(!key)return '';
@@ -42,7 +56,7 @@ async function googleCloud(text,target,env){
 }
 async function googlePublic(text,target){
   // Unauthenticated Google web endpoint: best effort only, not a guaranteed API.
-  // A Google Cloud resource can be configured for supported production use.
+  // Prefer a licensed Microsoft or Google Cloud resource in production.
   const url='https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl='+targetCodes[target].google+'&dt=t&q='+encodeURIComponent(text);
   const result=await fetchJson(url,{headers:{'Accept':'application/json'}});
   return clean((result?.[0]||[]).map(segment=>Array.isArray(segment)?segment[0]:'').join(''));
@@ -80,6 +94,7 @@ async function translateOne(text,target,request,context){
     }
   }
   const providers=[];
+  if(context.env?.MICROSOFT_TRANSLATOR_KEY)providers.push(['microsoft',()=>microsoft(text,target,context.env)]);
   if(context.env?.GOOGLE_TRANSLATE_API_KEY)providers.push(['google-cloud',()=>googleCloud(text,target,context.env)]);
   providers.push(['google-public',()=>googlePublic(text,target)]);
   const failures=[];
@@ -132,8 +147,8 @@ export async function onRequest(context){
   if(new TextEncoder().encode(raw).length>MAX_BODY_BYTES)return respond({ok:false,error:'Translation request too large'},413);
   let body;
   try{body=JSON.parse(raw);}catch{return respond({ok:false,error:'Invalid JSON'},400);}
-  const lang=body?.lang==='ckb'?'ku':body?.lang;
-  if(!targetCodes[lang])return respond({ok:false,error:'Supported targets: ckb, ku, ar, en'},400);
+  const lang=body?.lang;
+  if(!targetCodes[lang])return respond({ok:false,error:'Only Sorani and Arabic targets are supported'},400);
   if(!Array.isArray(body?.texts)||body.texts.length<1||body.texts.length>REQUEST_LIMIT||
     body.texts.some(value=>typeof value!=='string'||value.length>MAX_TEXT_CHARS))
       return respond({ok:false,error:'Expected 1-12 text passages of up to 1200 characters'},413);

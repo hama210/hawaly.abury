@@ -1,4 +1,4 @@
-import { quoteState, mergeCityRates, RATE_CITIES, positive } from '../../src/lib/market-tools.js';
+import { quoteState } from '../../src/lib/market-tools.js';
 
 const SYMBOLS = [
   { symbol: 'CL=F', pair: 'WTI/USD', name: 'WTI crude futures · barrel', type: 'commodity' },
@@ -21,7 +21,7 @@ const USD_IQD = {
 };
 const MARKET_FETCH_TIMEOUT_MS = 3500;
 const FRESH_CACHE_TTL = 60;
-const LAST_GOOD_TTL = 7 * 24 * 60 * 60;
+const LAST_GOOD_TTL = 24 * 60 * 60;
 const LAST_GOOD_MAX_AGE_MS = LAST_GOOD_TTL * 1000;
 
 function round(value, digits = 2) {
@@ -120,38 +120,61 @@ async function fetchYahoo(symbol) {
   });
 }
 
-export function parseShafaqReports(xml, now = Date.now()) {
-  const reports = (xml.match(/<item\b[^>]*>[\s\S]*?<\/item>/gi) || []).map(block => ({
-    title:xmlValue(block,'title'), text:xmlValue(block,'description') + ' ' + xmlValue(block,'content:encoded'),
-    sourceUrl:xmlValue(block,'link'), time:Date.parse(xmlValue(block,'pubDate'))
-  })).filter(r => /dollar|USD\/IQD/i.test(r.title) && Number.isFinite(r.time) && r.time <= now+300000 && now-r.time <= 7*86400000)
-    .sort((a,b)=>b.time-a.time);
-  const cities = {}, history = [];
-  for (const report of reports) {
-    for (const city of RATE_CITIES) {
-      const quote = parseCityRate(report.text,city);
-      if (!quote) continue;
-      const record = {...quote, source:'Shafaq News local market', sourceUrl:report.sourceUrl,
-        updatedAt:new Date(report.time).toISOString(), marketKind:'local'};
-      if (!cities[city]) cities[city] = record;
-      for (const side of ['buy','sell']) if (positive(quote[side])) history.push({city,side,price:quote[side],at:record.updatedAt,source:record.source,sourceUrl:record.sourceUrl});
-    }
-  }
-  const selectedCity = ['erbil','baghdad','sulaymaniyah'].find(city=>cities[city]);
-  if (!selectedCity) throw new Error('no dated city USD/IQD quote in available reports');
-  const q = cities[selectedCity];
-  return {...USD_IQD, ...cities, price:q.sell || q.buy, buyPrice:q.buy, sellPrice:q.sell,
-    quoteCity:selectedCity, changePct:null, status:'neutral', source:q.source, sourceUrl:q.sourceUrl,
-    updatedAt:q.updatedAt, history:history.slice(0,180)};
-}
 async function fetchShafaqUsdIqd() {
   return withTimeout(async signal => {
-    const res = await fetch('https://shafaq.com/rss/en/Economy', {
-      signal, headers:{'user-agent':'Mozilla/5.0 HawaliAburi/6.2'}, cf:{cacheTtl:60}
+    const sourceUrl = 'https://shafaq.com/rss/en/Economy';
+    const res = await fetch(sourceUrl, {
+      signal,
+      headers: { 'user-agent': 'Mozilla/5.0 HawaliAburi/2.0' },
+      cf: { cacheTtl: 300 }
     });
     if (!res.ok) throw new Error(`Shafaq ${res.status}`);
-    // Scan all available reports: a newer Erbil report must not hide an older Sulaymaniyah quote.
-    return parseShafaqReports(await readTextLimited(res));
+
+    const xml = await readTextLimited(
+      res,
+      text => /<item>[\s\S]*?<title>[\s\S]*?(?:dollar|USD\/IQD)[\s\S]*?<\/title>[\s\S]*?<\/item>/i.test(text)
+    );
+    const blocks = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
+    const block = blocks.find(item => /(?:dollar|USD\/IQD)/i.test(xmlValue(item, 'title')));
+    if (!block) throw new Error('no recent USD/IQD local-market report');
+
+    const description = xmlValue(block, 'description');
+    const publishedTime = Date.parse(xmlValue(block, 'pubDate'));
+    if (!Number.isFinite(publishedTime) || Date.now() - publishedTime > 4 * 24 * 60 * 60 * 1000) {
+      throw new Error('USD/IQD local-market report is stale');
+    }
+
+    const baghdadMarket = extractNumber(description, /Baghdad(?:'s)?[^.]{0,260}?exchanges?\s+at\s*([\d,]{5,})\s*dinars/i);
+    const baghdad = parseCityRate(description, 'baghdad');
+    const erbil = parseCityRate(description, 'erbil');
+    const baghdadSell = baghdad?.sell || null;
+    const baghdadBuy = baghdad?.buy || null;
+    const erbilSell = erbil?.sell || null;
+    const erbilBuy = erbil?.buy || null;
+    const sulaymaniyah = parseCityRate(description, 'sulaymaniyah');
+    const previous = extractNumber(description, /(?:down|up)\s+from[^0-9]{0,100}([\d,]{5,})\s*dinars/i);
+    const price = erbilSell || baghdadSell || baghdadMarket;
+    if (!price) throw new Error('could not parse local USD/IQD price');
+
+    const benchmark = baghdadMarket || price;
+    const changePct = previous ? round(((benchmark - previous) / previous) * 100, 2) : null;
+    return {
+      ...USD_IQD,
+      price,
+      buyPrice: erbilSell ? erbilBuy : baghdadBuy,
+      sellPrice: erbilSell || baghdadSell || null,
+      quoteCity: erbilSell ? 'erbil' : 'baghdad',
+      sulaymaniyah,
+      baghdad: baghdadSell || baghdadBuy || baghdadMarket
+        ? { market: baghdadMarket, sell: baghdadSell, buy: baghdadBuy }
+        : null,
+      erbil: erbilSell || erbilBuy ? { sell: erbilSell, buy: erbilBuy } : null,
+      changePct,
+      status: rateStatus(changePct),
+      source: 'Shafaq News local market',
+      sourceUrl: xmlValue(block, 'link'),
+      updatedAt: new Date(publishedTime).toISOString()
+    };
   });
 }
 
@@ -214,8 +237,7 @@ function hasPrice(item) {
 
 function isRecentLastGood(item, now = Date.now()) {
   const lastLiveTime = Date.parse(item?.lastLiveAt || '');
-  const sourceTime = Date.parse(item?.updatedAt || '') || lastLiveTime;
-  return hasPrice(item) && Number.isFinite(lastLiveTime) && now - sourceTime <= LAST_GOOD_MAX_AGE_MS;
+  return hasPrice(item) && Number.isFinite(lastLiveTime) && now - lastLiveTime <= LAST_GOOD_MAX_AGE_MS;
 }
 
 function unavailableItem(descriptor) {
@@ -233,21 +255,16 @@ function unavailableItem(descriptor) {
 
 function liveItem(item, now) {
   const state = quoteState(item);
-  return { ...item, dataStatus: state === 'reported' ? 'live' : state, fetchedAt: now, checkedAt:now, lastLiveAt: now };
+  return { ...item, dataStatus: state === 'reported' ? 'live' : state, fetchedAt: now, lastLiveAt: now };
 }
 
 function staleItem(item) {
-  const next={ ...item, dataStatus:'stale' };
-  if(next.marketKind==='local') for(const city of RATE_CITIES){
-    const stamp=Date.parse(next[city]?.updatedAt || next.updatedAt || '');
-    if(!Number.isFinite(stamp) || Date.now()-stamp>7*86400000) next[city]=null;
-  }
-  return next;
+  return { ...item, dataStatus: 'stale' };
 }
 
 function cacheKeyFor(url, kind) {
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('__hawali_cache', `markets-${kind}-v5`);
+  cacheUrl.searchParams.set('__hawali_cache', `markets-${kind}-v4`);
   return new Request(cacheUrl.toString(), { method: 'GET' });
 }
 
@@ -320,7 +337,7 @@ export async function onRequest(context) {
   const [usdIqd, cbi] = await Promise.all([localPromise, cbiPromise]);
   const descriptors = [...SYMBOLS.map((descriptor, index) => ({ descriptor, item: yahooResults[index] })), { descriptor: USD_IQD, item: usdIqd ? liveItem(usdIqd, now) : null }];
   const items = descriptors.map(({ descriptor, item }) => {
-    if (item) return item.symbol === USD_IQD.symbol ? mergeCityRates(item, previousItems.get(USD_IQD.symbol)) : item;
+    if (item) return item;
     const symbol = descriptor.pair || descriptor.symbol;
     const previous = previousItems.get(symbol);
     return previous ? staleItem(previous) : unavailableItem({
@@ -331,10 +348,6 @@ export async function onRequest(context) {
     });
   });
   items.push(cbi ? liveItem(cbi, now) : previousItems.has('CBI USD/IQD') ? staleItem(previousItems.get('CBI USD/IQD')) : unavailableItem({ symbol:'CBI USD/IQD', name:'CBI reference · 1 USD', marketKind:'official', quoteAmount:1 }));
-  for (const item of items) {
-    item.checkedAt = now;
-    if (item.marketKind === 'local') for (const city of RATE_CITIES) if (item[city]) item[city].checkedAt = now;
-  }
   const usdIndex = items.findIndex(item => item.symbol === USD_IQD.symbol);
   if (usdIndex > 0) items.unshift(items.splice(usdIndex, 1)[0]);
 
@@ -348,7 +361,6 @@ export async function onRequest(context) {
 
   const payload = {
     updatedAt: now,
-    checkedAt: now,
     dataStatus,
     counts: { live: liveCount, stale: staleCount, unavailable: unavailableCount, undated:items.filter(item => item.dataStatus === 'undated').length },
     failures,
