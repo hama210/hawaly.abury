@@ -1,5 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { onRequest as marketRequest } from './functions/api/markets.js';
+import { onRequest as newsRequest } from './functions/api/news.js';
 import { FEEDS } from './functions/api/news.js';
 import { onRequest as translateRequest } from './functions/api/translate.js';
 import { onRequest as translationStatusRequest } from './functions/api/translation-status.js';
@@ -59,6 +61,8 @@ function devTranslateApi() {
       // by Vite to client code; the official translator keys are never copied.
       const env = { ...loadEnv(server.config.mode, server.config.root, ''), ...process.env };
 
+      server.middlewares.use('/api/markets',(req,res)=>serveProductionHandler(req,res,marketRequest,'/api/markets'+(req.url || ''),env));
+      server.middlewares.use('/api/news',(req,res)=>serveProductionHandler(req,res,newsRequest,'/api/news'+(req.url || ''),env));
       server.middlewares.use('/api/sources', (req, res) => {
         if (req.method !== 'GET') {
           sendJson(res, 405, { ok:false, error:'GET only', sources:[] });

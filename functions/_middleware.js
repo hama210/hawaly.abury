@@ -4,15 +4,15 @@
 import { onRequest as loadNews } from './api/news.js';
 import { onRequest as loadMarkets } from './api/markets.js';
 import { pageRoute, pagePath } from '../src/lib/market-tools.js';
-import { renderPage } from '../src/lib/server-page.js';
+import { renderPage, siteOrigin, seoAsset } from '../src/lib/server-page.js';
 
-const EDGE_VERSION = '2026-10-ssr-routes-v2';
+const EDGE_VERSION = '2026-10-production-v6.2';
 const SNAPSHOT_SECONDS = 120;
 
 async function snapshot(context) {
   const origin = new URL(context.request.url).origin;
   const cache = globalThis.caches?.default;
-  const key = new Request(origin + '/__hawall_snapshot_v1');
+  const key = new Request(origin + '/__hawall_snapshot_v2');
   const cached = cache && await cache.match(key);
   if (cached) {
     try {
@@ -59,6 +59,8 @@ function htmlHeaders(headers, status) {
 
 export async function onRequest(context) {
   const url = new URL(context.request.url);
+  const origin=siteOrigin(context.env?.SITE_URL,url.href);
+  if (['/robots.txt','/sitemap.xml'].includes(url.pathname) && ['GET','HEAD'].includes(context.request.method)) return new Response(context.request.method==='HEAD'?null:seoAsset(url.pathname,origin),{headers:{'Content-Type':url.pathname.endsWith('.xml')?'application/xml; charset=utf-8':'text/plain; charset=utf-8','Cache-Control':'public, max-age=300'}});
   // The API must remain JSON; hashed JS/CSS, feeds and static files must pass through.
   if (!['GET','HEAD'].includes(context.request.method)
       || url.pathname.startsWith('/api/')
@@ -77,7 +79,7 @@ export async function onRequest(context) {
   try {
     const originalHtml = await response.text();
     const data = route.page === 'home' ? await snapshot(context) : { news:[], markets:[] };
-    const rendered = renderPage(originalHtml, { ...route, ...data });
+    const rendered = renderPage(originalHtml, { ...route, ...data, siteUrl:origin, contact:{email:context.env?.CONTACT_EMAIL || '',telegram:context.env?.CONTACT_TELEGRAM || ''} });
     const hasSnapshot = data.news.length || data.markets.some(item=>typeof item?.price==='number' && item.price > 0);
     const status = route.page !== 'home' || hasSnapshot ? 'ok' : 'empty';
     return new Response(context.request.method === 'HEAD' ? null : rendered, {

@@ -44,19 +44,19 @@ test('daily date uses Baghdad midnight and language routes are explicit',()=>{
  assert.equal(pageRoute('/missing').valid,false);
 });
 test('server HTML includes rates and headlines without JS, reciprocal language links, and escaped input',()=>{
- const html=renderPage(fs.readFileSync('index.html','utf8'),{lang:'ku',page:'home',markets:[{symbol:'USD/IQD',price:153000,erbil:{buy:152000,sell:153000},updatedAt:'2026-10-08T09:00:00Z',source:'Test feed',sourceUrl:'https://example.com/rate'}],news:[{title:'<script>alert(1)</script>',source:'Example',link:'https://example.com/story',publishedAt:'2026-10-08T09:00:00Z'}]});
+ const html=renderPage(fs.readFileSync('index.html','utf8'),{siteUrl:'https://hawal.example',lang:'ku',page:'home',markets:[{symbol:'USD/IQD',price:153000,erbil:{buy:152000,sell:153000},updatedAt:'2026-10-08T09:00:00Z',source:'Test feed',sourceUrl:'https://example.com/rate'}],news:[{title:'<script>alert(1)</script>',source:'Example',link:'https://example.com/story',publishedAt:'2026-10-08T09:00:00Z'}]});
  assert.match(html,/<html lang="ckb" dir="rtl">/);
- assert.match(html,/153,000/);
+ assert.ok(html.includes(new Intl.NumberFormat('ckb-IQ').format(153000)));
  assert.match(html,/&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
  assert.doesNotMatch(html,/<script>alert\(1\)/);
- assert.match(html,/hreflang="ar" href="https:\/\/hawaly-aburyy.pages.dev\/ar\/"/);
+ assert.match(html,/hreflang="ar" href="https:\/\/hawal.example\/ar\/"/);
  assert.match(html,/og-image.png/);
  assert.equal((html.match(/rel="canonical"/g)||[]).length,1);
  assert.match(html,/\\u003cscript>/);
- const en=renderPage(fs.readFileSync('index.html','utf8'),{lang:'en',page:'about'});
+ const en=renderPage(fs.readFileSync('index.html','utf8'),{siteUrl:'https://hawal.example',lang:'en',page:'about'});
  assert.match(en,/<html lang="en" dir="ltr">/);
  assert.match(en,/independent of the publishers/);
- assert.match(en,/https:\/\/hawaly-aburyy.pages.dev\/en\/about/);
+ assert.match(en,/https:\/\/hawal.example\/en\/about/);
 });
 
 test('middleware preserves JSON/assets and renders correct language HTML at the edge', async()=>{
@@ -64,7 +64,7 @@ test('middleware preserves JSON/assets and renders correct language HTML at the 
  const base={env:{},waitUntil(){},next:async()=>new Response(fs.readFileSync('index.html','utf8'),{headers:{'Content-Type':'text/html'}})};
  const response=await onRequest({...base,request:new Request('https://example.com/en/about')});
  assert.equal(response.status,200);
- assert.equal(response.headers.get('X-Hawall-Version'),'2026-10-ssr-routes-v2');
+ assert.equal(response.headers.get('X-Hawall-Version'),'2026-10-production-v6.2');
  assert.match(await response.text(),/lang="en" dir="ltr"/);
  const redirect=await onRequest({...base,request:new Request('https://example.com/ar')});
  assert.equal(redirect.status,308);

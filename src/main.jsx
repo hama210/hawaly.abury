@@ -1,13 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import './hawal-features.css';
 import './redesign.css';
+import './production.css';
+import { polishCopy } from './lib/polish-copy.js';
+import { NewsLanguage } from './components/NewsLanguage.jsx';
+import { RateMeta } from './components/RateBoard.jsx';
+import { useRateHistory } from './hooks/useRateHistory.js';
 import { DollarRates, MarketDesk, DailyBrief, CalendarLinks, AboutPage, InstallPanel } from './components/MarketDesk.jsx';
 import { MarketIntelligence, VerificationDesk, DollarHistory, MarketAlerts } from './components/HawalFeatures.jsx';
 import { Navigation, NavIcon, HomeMarkets, FeatureShortcuts, ScreenIntro, navigationCopy } from './components/HawalDashboard.jsx';
 import { dashboardCopy } from './lib/dashboard-copy.js';
-import { pageRoute, pagePath, timestamp, quoteState, safeUrl } from './lib/market-tools.js';
+import { pageRoute, pagePath, timestamp, quoteState, safeUrl, formatNumber, matchingRates } from './lib/market-tools.js';
 // One-time cleanup: remove previous erroneous machine translations from this
 // browser without touching market-rate notes or other unrelated user settings.
 try {
@@ -126,18 +131,18 @@ function sourceSummary(item,lang) {
   return getSummary(item || {},lang);
 }
 
-function formatPrice(value) {
+function formatPrice(value,lang='en') {
   if (value === null || value === undefined || value === '?' || value === '—') return '—';
   const number = Number(value);
   if (!Number.isFinite(number)) return String(value);
-  if (Math.abs(number) >= 1000) return number.toLocaleString('en-US', { maximumFractionDigits:2 });
-  if (Math.abs(number) >= 10) return number.toLocaleString('en-US', { maximumFractionDigits:2 });
-  return number.toLocaleString('en-US', { minimumFractionDigits:4, maximumFractionDigits:4 });
+  if (Math.abs(number) >= 1000) return number.toLocaleString(lang==='ku'?'ckb-IQ':lang==='ar'?'ar-IQ':'en-US', { maximumFractionDigits:2 });
+  if (Math.abs(number) >= 10) return number.toLocaleString(lang==='ku'?'ckb-IQ':lang==='ar'?'ar-IQ':'en-US', { maximumFractionDigits:2 });
+  return number.toLocaleString(lang==='ku'?'ckb-IQ':lang==='ar'?'ar-IQ':'en-US', { minimumFractionDigits:4, maximumFractionDigits:4 });
 }
 
-function formatChange(value) {
+function formatChange(value,lang='en') {
   if (value === null || value === undefined || !Number.isFinite(Number(value))) return '—';
-  return `${Number(value) > 0 ? '+' : ''}${value}%`;
+  return `${Number(value) > 0 ? '+' : ''}${formatNumber(Number(value),lang)}%`;
 }
 
 function changeClass(value) {
@@ -160,17 +165,21 @@ function copyLink(url) {
 
 function imageFallback(event) {
   const element=event.currentTarget;
+  element.onerror=null;
+  element.classList.add('img-failed');
   if(element.dataset.fallback==='logo') {
     element.style.visibility='hidden';
     return;
   }
   if(element.dataset.fallback==='category') {
     element.dataset.fallback='logo';
-    element.src='/hawali-logo-512.png';
+    element.src='/hawali-logo-96.webp';
+    element.onerror=imageFallback;
     return;
   }
   element.dataset.fallback='category';
-  element.src=coverForCategory(element.dataset.newsCategory);
+  element.src=coverForCategory(element.dataset.newsCategory||'markets');
+  element.onerror=imageFallback;
 }
 
 function selectMarketItems(markets) {
@@ -243,7 +252,7 @@ function MiddleEastBrief({ items, lang, onOpen }) {
     return clean.length > 190 ? `${clean.slice(0, 190).replace(/\s+\S*$/, '')}…` : clean;
   };
   return <section className="middle-east-brief" aria-labelledby="middle-east-title">
-    <div className="brief-heading"><div><span className="brief-live"><i />{copy.live}</span><h2 id="middle-east-title">{copy.title}</h2><p>{copy.description}</p></div><div className="brief-count"><strong>{todayCount}</strong><span>{copy.today}</span></div></div>
+    <div className="brief-heading"><div><span className="brief-live"><i />{copy.live}</span><h2 id="middle-east-title">{copy.title}</h2><p>{copy.description}</p></div><div className="brief-count"><strong>{formatNumber(todayCount,lang)}</strong><span>{copy.today}</span></div></div>
     <div className="brief-filters" role="tablist" aria-label={copy.title}>{filters.map(key => <button key={key} type="button" className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{copy[key]}</button>)}</div>
     {shown.length ? <div className="brief-list">{shown.map(({ item, region }) => <article className="brief-item" key={item.id}><div className="brief-time"><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><i /></div><button type="button" className="brief-copy" onClick={() => onOpen(item)}><span className="brief-region">{copy[region]}</span><h3 dir="auto">{sourceTitle(item,lang)}</h3><p dir="auto">{shorten(sourceSummary(item,lang))}</p><small>{item.source} · {copy.source}</small></button></article>)}</div> : <div className="brief-empty">{copy.empty}</div>}
     <p className="brief-note">{copy.note}</p>
@@ -266,7 +275,7 @@ function Header({ lang, setLang, theme, setTheme, query, setQuery, dict, refresh
     <label className={'search-wrap '+(searchOpen || query ? 'is-open' : '')}>
       <NavIcon name="search" size={17}/>
       <span className="sr-only">{copy.search}</span>
-      <input type="search" value={query} onChange={event => {setQuery(event.target.value);if(event.target.value)onSearch();}} placeholder={dict.search} />
+      <input type="search" value={query} onChange={event => {setQuery(event.target.value);if(event.target.value)onSearch(event.target.value);}} placeholder={polishCopy[lang].search} />
     </label>
     <div className="header-tools">
       <button className="icon-button header-search-toggle" type="button" aria-label={copy.search} aria-expanded={searchOpen || Boolean(query)} onClick={()=>{setSearchOpen(open=>!open);onSearch();}}><NavIcon name="search" size={19}/></button>
@@ -296,10 +305,10 @@ function MarketStrip({ markets, lang }) {
       const reportedAt = market.updatedAt ? timestamp(market.updatedAt, lang) : dashboardCopy[lang].undated;
       return <article className="market-item" key={market.symbol}>
         <div className="market-item-heading">
-          <span className="market-symbol" title={market.name || market.symbol} dir="ltr">{market.symbol.replace('/USD', '')}{market.quoteType === 'futures' ? ' · Futures' : ''}</span>
-          {market.marketKind !== 'local' && <span className={`market-change ${changeClass(market.changePct)}`} dir="ltr">{formatChange(market.changePct)}</span>}
+          <span className="market-symbol" title={market.name || market.symbol} dir="ltr">{market.symbol.replace('/USD', '')}{market.quoteType === 'futures' ? ' · '+polishCopy[lang].futures : ''}</span>
+          {market.marketKind !== 'local' && <span className={`market-change ${changeClass(market.changePct)}`} dir="ltr">{formatChange(market.changePct,lang)}</span>}
         </div>
-        <strong className="market-price" dir="ltr">{formatPrice(market.price)}</strong>
+        <strong className="market-price" dir="ltr">{formatPrice(market.price,lang)}</strong>
         <small className={`market-state ${state}`}>{dashboardCopy[lang][state] || state}</small>
         {market.marketKind === 'local' && <small className="market-city">{localCopy.erbil}</small>}
         <time className="market-updated" dateTime={market.updatedAt || undefined} title={reportedAt}>{reportedAt}</time>
@@ -329,12 +338,12 @@ function CategoryTabs({ active, setActive, lang }) {
 function Hero({ item, lang, dict, onOpen }) {
   if (!item) return null;
   const intel = focusedIntelligence(item);
-  return <article className="lead-story" role="button" tabIndex="0" onClick={() => onOpen(item)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') onOpen(item); }}>
+  return <article className="lead-story" role="button" tabIndex="0" onClick={() => onOpen(item)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') {event.preventDefault();onOpen(item);} }}>
     <img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" decoding="async" fetchPriority="high" referrerPolicy="no-referrer" onError={imageFallback} />
     <div className="lead-overlay" />
     <div className="lead-copy">
       <span className="lead-label">{uiCopy[lang]?.lead || uiCopy.ku.lead}</span>
-      <h2 dir="auto">{sourceTitle(item,lang)}</h2>
+      <NewsLanguage item={item} lang={lang}/><h2 dir="auto">{sourceTitle(item,lang)}</h2>
       {storyExcerpt(item, lang) && <p dir="auto">{storyExcerpt(item, lang)}</p>}
       <div className="hero-effects">{intel.effects?.slice(0, 4).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
       <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span>{isNewStory(item) && <span className="fresh-pill">{uiCopy[lang]?.fresh}</span>}<span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{impactLabel(intel.impact, lang)}</span></div>
@@ -348,7 +357,7 @@ function NewsCard({ item, lang, onOpen }) {
     <button className="story-image" type="button" onClick={() => onOpen(item)} aria-label={sourceTitle(item,lang)}><img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={imageFallback} /></button>
     <div className="story-copy">
       <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}<time dateTime={item.publishedAt}>{timestamp(item.publishedAt,lang)}</time></span></div>
-      <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noopener noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" type="button" onClick={() => onOpen(item)}>{sourceTitle(item,lang)}</button>
+      <NewsLanguage item={item} lang={lang}/><a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noopener noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" type="button" onClick={() => onOpen(item)}>{sourceTitle(item,lang)}</button>
       {storyExcerpt(item,lang) && <p dir="auto" className="story-excerpt">{storyExcerpt(item,lang)}</p>}
       <div className="card-effects">{intel.effects?.slice(0, 3).map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} />)}</div>
     </div>
@@ -359,6 +368,8 @@ function ArticleModal({ item, lang, dict, onClose }) {
   const reader = readerCopy[lang] || readerCopy.ku;
   const selectedText = articleSelection(item);
   const sourceLink = safeUrl(item?.link);
+  const modalRef=useRef(null);
+  const [shareStatus,setShareStatus]=useState('');
   const [articleBody,setArticleBody]=useState(selectedText.original);
   const [articleTranslating,setArticleTranslating]=useState(false);
   const [articleTranslated,setArticleTranslated]=useState(false);
@@ -366,7 +377,7 @@ function ArticleModal({ item, lang, dict, onClose }) {
     const controller=new AbortController();
     setArticleBody(selectedText.original);
     setArticleTranslated(false);
-    if(!item||!selectedText.isAvailable||lang==='en'){
+    if(!item||!selectedText.isAvailable){
       setArticleTranslating(false);
       return ()=>controller.abort();
     }
@@ -382,26 +393,36 @@ function ArticleModal({ item, lang, dict, onClose }) {
   },[item,lang]);
   useEffect(() => {
     if (!item) return undefined;
-    const handleKey = event => { if (event.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [item, onClose]);
+    const prior=document.activeElement;
+    const dialog=modalRef.current;
+    dialog?.querySelector('.modal-close')?.focus();
+    const handleKey = event => {
+      if(event.key==='Escape') onClose();
+      if(event.key!=='Tab' || !dialog) return;
+      const controls=[...dialog.querySelectorAll('a[href],button:not([disabled]),input,select,textarea,[tabindex="0"]')];
+      const first=controls[0], last=controls.at(-1);
+      if(event.shiftKey && document.activeElement===first){event.preventDefault();last?.focus();}
+      else if(!event.shiftKey && document.activeElement===last){event.preventDefault();first?.focus();}
+    };
+    window.addEventListener('keydown',handleKey);
+    return ()=>{window.removeEventListener('keydown',handleKey);prior?.focus?.();};
+  },[item]);
   if (!item) return null;
   const intel = focusedIntelligence(item);
   const copy = uiCopy[lang] || uiCopy.ku;
-  return <div className="modal-backdrop" onClick={onClose} role="presentation"><article className="article-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={event => event.stopPropagation()}>
+  return <div className="modal-backdrop" onClick={onClose} role="presentation"><article ref={modalRef} className="article-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={event => event.stopPropagation()}>
     <div className="modal-image"><img src={imageForNews(item)} data-news-category={item.category || "markets"} alt="" decoding="async" fetchPriority="high" referrerPolicy="no-referrer" onError={imageFallback} /></div>
     <div className="modal-content">
       <button className="modal-close" type="button" onClick={onClose} aria-label={uiCopy[lang]?.close}>×</button>
       <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>
-      <h2 id="modal-title" dir="auto">{sourceTitle(item,lang)}</h2>
+      <NewsLanguage item={item} lang={lang}/><h2 id="modal-title" dir="auto">{sourceTitle(item,lang)}</h2>
       <section className="article-reader" aria-label={copy.content}>
         <div className="article-reader-heading"><h3>{selectedText.isAvailable ? (selectedText.isExtended ? reader.extended : reader.excerpt) : copy.content}</h3><span className={'article-availability '+(selectedText.isAvailable?'has-text':'title-only')}>{selectedText.isAvailable?'RSS':'—'}</span></div>
         {selectedText.isAvailable ? <>
           <p className="article-body" dir={articleTranslated?(lang==='en'?'auto':'rtl'):'auto'}>{articleBody || selectedText.original}</p>
           {articleTranslating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی ناوەڕۆک...':lang==='ar'?'جارٍ ترجمة محتوى الخبر...':'Translating article...'}</p>}
-          {!articleTranslating && lang!=='en' && !articleTranslated &&
-            <small className="translation-inline-note">{lang==='ku'?'وەرگێڕانی دڵنیا بەردەست نییە؛ دەقی ڕەسەنی سەرچاوە پیشان دەدرێت.':'لا توجد ترجمة موثوقة؛ يُعرض نص المصدر الأصلي.'}</small>}
+          {!articleTranslating && !articleTranslated &&
+            <small className="translation-inline-note">{lang==='ku'?'وەرگێڕانی دڵنیا بەردەست نییە؛ دەقی ڕەسەنی سەرچاوە پیشان دەدرێت.':lang==='ar'?'لا توجد ترجمة موثوقة؛ يُعرض نص المصدر الأصلي.':'Original publisher text; translation unavailable or unnecessary.'}</small>}
           <p className="reader-note">{reader.notice}</p></> :
           <p className="article-body article-missing">{reader.missing}</p>}
         {sourceLink && <a className="reader-source-link" href={sourceLink} target="_blank" rel="noopener noreferrer">{reader.original} ↗</a>}
@@ -409,14 +430,14 @@ function ArticleModal({ item, lang, dict, onClose }) {
       <h3>{copy.effects}</h3>
       <div className="effect-grid">{intel.effects?.map(effect => <EffectBadge key={effect.asset} effect={effect} lang={lang} detailed />)}</div>
       <p className="effect-notice">{copy.effectNotice}</p>
-      <div className="modal-actions">{sourceLink && <a className="primary-button" href={sourceLink} target="_blank" rel="noopener noreferrer">{reader.more} ↗</a>}<button type="button" onClick={() => copyLink(sourceLink || location.href)}>{dict.share}</button></div>
+      <div className="modal-actions">{sourceLink && <a className="primary-button" href={sourceLink} target="_blank" rel="noopener noreferrer">{reader.more} ↗</a>}<button type="button" onClick={async()=>{try{await navigator.clipboard.writeText(sourceLink || location.href);setShareStatus(polishCopy[lang].copySuccess);}catch{setShareStatus(polishCopy[lang].copyFailed);}}}>{dict.share}</button></div><p role="status">{shareStatus}</p>
     </div>
   </article></div>;
 }
 
 function SourcesDisclosure({ lang, news, sourceHealth = {} }) {
-  const [open, setOpen] = useState(false);
   const [sources, setSources] = useState([]);
+  const [loaded,setLoaded]=useState(false);
   const copy = uiCopy[lang] || uiCopy.ku;
   const disclosure = {
     ku: { all:'سەرچاوە گرنگ و هەڵبژێردراوەکان', loading:'بارکردنی سەرچاوەکان', note:'تەنها سەرچاوە گرنگە فەرمی، جیهانی، دارایی و ناوخۆییەکان بۆ USD/IQD، دراو، کانزا، پێوەرەکان و جەنگ هەڵبژێردراون. ناوەڕۆک موڵکی بڵاوکەرەوەی ڕەسەنە.' },
@@ -435,30 +456,30 @@ function SourcesDisclosure({ lang, news, sourceHealth = {} }) {
       if (!alive) return;
       if (Array.isArray(data.details)) setSources(data.details.filter(item => item?.source));
       else if (Array.isArray(data.sources)) setSources(data.sources.filter(Boolean).map(source => ({ source, tier:'curated' })));
-    }).catch(() => { if (alive) setSources([]); });
+    }).catch(() => { if (alive) setSources([]); }).finally(()=>{if(alive)setLoaded(true);});
     return () => { alive = false; };
   }, []);
-  return <aside className={`sources-corner ${open ? 'is-open' : ''}`}>
-    {open && <div className="sources-panel" role="dialog" aria-label={disclosure.all}>
-      <div className="sources-head"><div><strong>{disclosure.all}</strong><small>{sources.length ? `${sources.length} ${t[lang]?.sources}` : disclosure.loading}</small></div><button type="button" onClick={() => setOpen(false)} aria-label={copy.close}>×</button></div>
-      <p>{disclosure.note}</p>
-      <div className="sources-list">{sources.length ? sources.map(source => { const status = sourceHealth[source.source]?.status || (activeSources.has(source.source) ? 'active' : 'unchecked'); const active = status === 'active'; return <span className={active ? 'source-active' : 'source-quiet'} key={source.source}><b>{source.source}</b><small>{sourceTierCopy[lang]?.[source.tier] || sourceTierCopy.en.curated} · {statusCopy[status] || statusCopy.unchecked}</small></span>; }) : <span>{disclosure.loading}...</span>}</div>
-    </div>}
-    <button className="sources-toggle" type="button" aria-expanded={open} onClick={() => setOpen(value => !value)}><span>Sources</span><b>{sources.length || '...'}</b></button>
-  </aside>;
+  return <details className="sources-integrated desk-panel" id="sources">
+    <summary><span>{polishCopy[lang].sources}</span><b>{sources.length?formatNumber(sources.length,lang):''}</b></summary>
+    <p className="desk-note">{disclosure.note}</p>
+    <div className="sources-list">{sources.length ? sources.map(source=>{
+      const status=sourceHealth[source.source]?.status || (activeSources.has(source.source)?'active':'unchecked');
+      return <div className={status==='active'?'source-active':'source-quiet'} key={source.source}><b>{source.source}</b><small>{sourceTierCopy[lang]?.[source.tier] || sourceTierCopy.en.curated} · {statusCopy[status] || statusCopy.unchecked}</small></div>;
+    }) : <p role="status">{loaded?polishCopy[lang].sourcesError:disclosure.loading}</p>}</div>
+  </details>;
 }
 
 function SiteFooter({ lang }) {
   const copy = developerCopy[lang] || developerCopy.en;
-  return <footer className="site-footer"><nav>{['home','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{dashboardCopy[lang][page]}</a>)}</nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong></div></footer>;
+  return <footer className="site-footer"><nav>{['home','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{dashboardCopy[lang][page]}</a>)}<button type="button" onClick={()=>{const panel=document.getElementById('sources');if(panel){panel.open=true;panel.querySelector('summary')?.focus();panel.scrollIntoView({block:'center'});}}}>{polishCopy[lang].sources}</button></nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong><small className="version-badge">v6.2</small></div></footer>;
 }
 
 
 function App() {
   const [lang, setLang] = useState(route.lang);
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState(()=>{try{return localStorage.getItem('theme')==='light'?'light':'dark';}catch{return 'dark';}});
   const [active, setActive] = useState('all');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(()=>new URLSearchParams(location.search).get('q') || '');
   const [news, setNews] = useState(() => bootstrap.news?.length ? bootstrap.news : getInitialNews());
   const [sourceHealth, setSourceHealth] = useState({});
   const receiveHealth = stats => {
@@ -472,6 +493,8 @@ function App() {
   const [homeVisibleCount, setHomeVisibleCount] = useState(24);
   const [newsVisibleCount, setNewsVisibleCount] = useState(36);
   const [markets, setMarkets] = useState(bootstrap.markets || []);
+  const [loadingMarkets,setLoadingMarkets]=useState(!bootstrap.markets?.length);
+  const rateHistory=useRateHistory(markets);
   const [selected, setSelected] = useState(null);
   // Keep the page in place while reading an article on iOS and Android.
   useEffect(() => {
@@ -530,8 +553,7 @@ function App() {
     document.documentElement.lang = lang === 'ku' ? 'ckb' : lang;
     document.documentElement.dir = LANGS[lang].dir;
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem('lang', lang);
-    localStorage.setItem('theme', theme);
+    try { localStorage.setItem('lang', lang); localStorage.setItem('theme', theme); } catch {}
   }, [lang, theme]);
 
   useEffect(() => {
@@ -545,7 +567,7 @@ function App() {
 
   useEffect(() => {
     let alive = true;
-    const load = () => fetchMarkets().then(items => { if (alive) setMarkets(items); });
+    const load = () => fetchMarkets().then(items => { if (alive) {setMarkets(items);setLoadingMarkets(false);} });
     load();
     const interval = setInterval(load, 60000);
     return () => { alive = false; clearInterval(interval); };
@@ -554,12 +576,14 @@ function App() {
   async function refreshAll() {
     if (refreshing) return;
     setRefreshing(true);
+    setLoadingMarkets(true);
     try {
       const [latest, nextMarkets] = await Promise.all([fetchNews(items => { if (items?.length) setNews(items); }, { force:true, onHealth:receiveHealth }), fetchMarkets()]);
       if (latest?.length) setNews(latest);
       setMarkets(nextMarkets);
     } finally {
       setRefreshing(false);
+      setLoadingMarkets(false);
     }
   }
 
@@ -569,33 +593,38 @@ function App() {
   }), [displayNews, query, active]);
   const hero = displayNews[0];
   const rest = displayNews.slice(1);
+  useEffect(()=>{setNewsVisibleCount(36);},[query,active]);
 
-  return <div className="page" id="top">
+  const rateMatches=matchingRates(markets,query);
+  const newsEmpty=<div className="empty-state" role="status"><strong>{loadingNews?polishCopy[lang].loadingNews:polishCopy[lang].newsEmpty}</strong>{!loadingNews&&<><p>{polishCopy[lang].newsEmptyNote}</p><button type="button" onClick={refreshAll}>{polishCopy[lang].retry}</button></>}</div>;
+  return <div className="page" id="top"><a className="skip-link" href="#main-content" onClick={e=>{e.preventDefault();document.getElementById('main-content')?.focus();}}>{polishCopy[lang].skip}</a>
     <div className="shell">
       <Header lang={lang} setLang={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}} theme={theme} setTheme={setTheme}
-        query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} onSearch={()=>navigate('news')}/>
+        query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} onSearch={value=>{if(route.page==='home')navigate('news');else location.href=pagePath(lang)+'?q='+encodeURIComponent(value || query)+'#news';}}/>
       <LanguagePills lang={lang} onLanguage={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}}/>
-      {route.page !== 'home' ? <AboutPage lang={lang} page={route.page}/> : <>
-      <Navigation active={activeView} onNavigate={navigate} lang={lang}/>
+      {route.page !== 'home' ? <AboutPage lang={lang} page={route.page} contact={bootstrap.contact}/> : <>
+      <Navigation active={activeView} onNavigate={navigate} lang={lang}/><main id="main-content" tabIndex="-1" className="main-content">
       <section className={'hawal-screen home-screen '+(activeView==='home'?'':'is-hidden-view')} aria-label={designCopy.home}>
+        <h1 className="sr-only">{dashboardCopy[lang].title}</h1>
+        <div className="home-rate-board">
+          <DollarRates markets={markets} lang={lang} loading={loadingMarkets} history={rateHistory} onRefresh={refreshAll}/>
+        </div>
         <div className="home-stage">
-          <div className="home-feature-main">
-            {hero ? <Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/> :
-              <div className="screen-intro"><p>HAWAL · NEWS</p><h1>{copy.loadingNews}</h1><span>{dashboardCopy[lang].subtitle}</span></div>}
-            <aside className="home-market-aside">
-              <HomeMarkets markets={markets} lang={lang} onNavigate={navigate}/>
-              <FeatureShortcuts lang={lang} onNavigate={navigate} onMoreTarget={setFeatureTarget}/>
-            </aside>
-          </div>
+          <HomeMarkets markets={markets} lang={lang} onNavigate={navigate}/>
+          <FeatureShortcuts lang={lang} onNavigate={navigate} onMoreTarget={setFeatureTarget}/>
+        </div>
+        <div className="home-feature-main home-feature-main--news-first">
+          {hero ? <Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/> :
+            <div className="screen-intro"><p>HAWAL · {copy.news}</p><h1>{loadingNews?copy.loadingNews:polishCopy[lang].newsEmpty}</h1><span>{dashboardCopy[lang].subtitle}</span></div>}
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
-        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':''}</p>}
-        {translationIssue && !translating && lang!=='en' && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.': 'تعذرت الترجمة؛ يظهر النص الأصلي.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':'إعادة المحاولة'}</button></div>}
+        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating headlines…'}</p>}
+        {translationIssue && !translating && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.':lang==='ar'?'تعذرت الترجمة؛ يظهر النص الأصلي.':'Translation unavailable; original publisher text is shown.'}</span><button type="button" onClick={retryTranslations}>{polishCopy[lang].retry}</button></div>}
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
           {rest.length ? <><div className="news-grid">{rest.slice(0, homeVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
-            {rest.length > homeVisibleCount && <button className="news-load-more" onClick={() => setHomeVisibleCount(value => value + 24)}>{lang==='ku' ? 'هەواڵی زیاتر پیشان بدە' : lang==='ar' ? 'عرض المزيد من الأخبار' : 'Show more news'} ({rest.length - homeVisibleCount})</button>}</> :
-            <div className="empty-state">{loadingNews?copy.loadingNews:dict.noResults}</div>}
+            {rest.length > homeVisibleCount && <button className="news-load-more" onClick={() => setHomeVisibleCount(value => value + 24)}>{lang==='ku' ? 'هەواڵی زیاتر پیشان بدە' : lang==='ar' ? 'عرض المزيد من الأخبار' : 'Show more news'} ({formatNumber(rest.length - homeVisibleCount,lang)})</button>}</> :
+            <div className="empty-state">{query || active!=='all'?<>{dict.noResults}<button type="button" onClick={()=>{setQuery('');setActive('all');}}>{polishCopy[lang].clear}</button></>:newsEmpty}</div>}
         </section>
         {(active==='all'||active==='geopolitics') && <MiddleEastBrief items={displayNews} lang={lang} onOpen={setSelected}/>}
         <TrustBar lang={lang}/>
@@ -604,7 +633,7 @@ function App() {
       <section className={'hawal-screen markets-screen '+(activeView==='markets'?'':'is-hidden-view')} aria-label={designCopy.markets}>
         <ScreenIntro page="markets" lang={lang}/>
         {activeView==='markets' && <MarketIntelligence markets={markets} news={displayNews} lang={lang}/>}
-        <DollarRates markets={markets} lang={lang}/>
+        <DollarRates markets={markets} lang={lang} loading={loadingMarkets} history={rateHistory} onRefresh={refreshAll}/>
         <div className="section-heading"><h2>{designCopy.latestRates}</h2><span>{dashboardCopy[lang].disclaimer}</span></div>
         <MarketStrip markets={markets} lang={lang}/>
         <DailyBrief items={displayNews} lang={lang}/>
@@ -614,10 +643,11 @@ function App() {
         <ScreenIntro page="news" lang={lang}/>
         {activeView==='news' && <VerificationDesk news={displayNews} lang={lang}/>}
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
+        {query && rateMatches.length>0 && <section className="desk-panel search-rates"><h2>{polishCopy[lang].rateResults}</h2><div className="search-rate-grid">{rateMatches.map(({city,quote})=><article key={city}><h3>{dashboardCopy[lang][city]}</h3><strong><bdi>{quote?formatNumber(city==='official'?quote.price*100:quote.price,lang):polishCopy[lang].unavailable}</bdi></strong><small>{dashboardCopy[lang].unit} · {city==='official'?dashboardCopy[lang].reference:quote?.sell?dashboardCopy[lang].sell:dashboardCopy[lang].buy}</small><RateMeta item={quote} lang={lang}/><button type="button" onClick={()=>navigate('markets')}>{designCopy.markets} →</button></article>)}</div></section>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
-        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':''}</p>}
-        {translationIssue && !translating && lang!=='en' && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.': 'تعذرت الترجمة؛ يظهر النص الأصلي.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':'إعادة المحاولة'}</button></div>}
-        <div className="topic-shortcuts" aria-label="News topics">
+        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating headlines…'}</p>}
+        {translationIssue && !translating && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.':lang==='ar'?'تعذرت الترجمة؛ يظهر النص الأصلي.':'Translation unavailable; original publisher text is shown.'}</span><button type="button" onClick={retryTranslations}>{polishCopy[lang].retry}</button></div>}
+        <div className="topic-shortcuts" aria-label={copy.menu}>
           {[
             ['Trump','Trump','ترامپ','ترامب'],
             ['Saudi','Saudi / Yemen','سعوودیە / یەمەن','السعودية / اليمن'],
@@ -628,8 +658,8 @@ function App() {
         <section className="latest-section" id="latest">
           <div className="section-heading"><h2>{copy.latest}</h2><span>{active==='all'?copy.allSections:categoryMap[lang]?.[active]}</span></div>
           {filtered.length ? <><div className="news-grid" aria-live="polite">{filtered.slice(0, newsVisibleCount).map(item=><NewsCard key={item.id} item={item} lang={lang} onOpen={setSelected}/>)}</div>
-            {filtered.length > newsVisibleCount && <button className="news-load-more" onClick={() => setNewsVisibleCount(value => value + 36)}>{lang==='ku' ? 'هەواڵی زیاتر پیشان بدە' : lang==='ar' ? 'عرض المزيد من الأخبار' : 'Show more news'} ({filtered.length - newsVisibleCount})</button>}</> :
-            <div className="empty-state">{loadingNews?copy.loadingNews:dict.noResults}</div>}
+            {filtered.length > newsVisibleCount && <button className="news-load-more" onClick={() => setNewsVisibleCount(value => value + 36)}>{lang==='ku' ? 'هەواڵی زیاتر پیشان بدە' : lang==='ar' ? 'عرض المزيد من الأخبار' : 'Show more news'} ({formatNumber(filtered.length - newsVisibleCount,lang)})</button>}</> :
+            <div className="empty-state">{query || active!=='all'?<>{dict.noResults}<button type="button" onClick={()=>{setQuery('');setActive('all');}}>{polishCopy[lang].clear}</button></>:newsEmpty}</div>}
         </section>
         {(active==='all'||active==='geopolitics') && <MiddleEastBrief items={displayNews} lang={lang} onOpen={setSelected}/>}
       </section>
@@ -637,18 +667,18 @@ function App() {
       <section className={'hawal-screen more-screen '+(activeView==='more'?'':'is-hidden-view')} aria-label={designCopy.more}>
         <ScreenIntro page="more" lang={lang}/>
         <div className="hawal-feature-grid">
-          <DollarHistory markets={markets} lang={lang}/>
+          <DollarHistory markets={markets} lang={lang} observations={rateHistory}/>
           <MarketAlerts markets={markets} news={displayNews} lang={lang}/>
         </div>
         <MarketDesk markets={markets} lang={lang}/>
         <CalendarLinks lang={lang}/>
         <InstallPanel lang={lang}/>
       </section>
-      </>}
+      </main></>}
+      <SourcesDisclosure lang={lang} news={displayNews} sourceHealth={sourceHealth}/>
       <SiteFooter lang={lang}/>
     </div>
     {route.page==='home' && <Navigation mobile active={activeView} onNavigate={navigate} lang={lang}/>}
-    <SourcesDisclosure lang={lang} news={displayNews} sourceHealth={sourceHealth}/>
     <ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/>
   </div>;
 }
@@ -662,6 +692,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20261029-mobile-browsing-v2', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20261030-production-v6.2', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }

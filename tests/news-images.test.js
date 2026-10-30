@@ -55,7 +55,7 @@ test('mobile news cards, lead story and modal use safe fallbacks, not raw broken
   assert.equal((main.match(/src=\{imageForNews\(item\)\}/g)||[]).length,3);
   assert.match(main,/data-news-category=\{item\.category/);
   assert.match(main,/imageFallback\(event\)/);
-  assert.match(main,/coverForCategory\(element\.dataset\.newsCategory\)/);
+  assert.match(main,/coverForCategory\(element\.dataset\.newsCategory\|\|'markets'\)/);
   assert.match(main,/referrerPolicy="no-referrer"/);
   assert.match(styles,/\.story-image img \{ width:100%; height:100%; object-fit:cover;/);
   assert.match(fs.readFileSync('public/_routes.json','utf8'),/news-covers\/\*/);

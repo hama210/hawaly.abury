@@ -4,7 +4,7 @@ import {
   validateTranslation
 } from '../lib/translation-check.js';
 
-const PREFIX = 'hawal-inline-translation-v14:';
+const PREFIX = 'hawal-inline-translation-v15:';
 const TTL = 24 * 60 * 60 * 1000;
 
 const BATCH = 8;
@@ -106,7 +106,7 @@ export function saveCachedTranslation(lang, originalText, candidate) {
 }
 
 export async function clientFallbackTranslate(text, lang, signal) {
-  if (!text || lang === 'en') return '';
+  if (!text || alreadyInTargetLanguage(text,lang)) return '';
   const tl = lang === 'ku' ? 'ckb' : lang;
   const endpoints = [
     `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`,
@@ -114,7 +114,7 @@ export async function clientFallbackTranslate(text, lang, signal) {
   ];
   for (const url of endpoints) {
     try {
-      const res = await fetch(url, { headers: { Accept: 'application/json' }, signal });
+      const res = await fetch(url, { headers: { Accept: 'application/json' }, signal:AbortSignal.any([...(signal?[signal]:[]),AbortSignal.timeout(8000)]) });
       if (!res.ok) continue;
       const data = await res.json();
       let candidate = '';
@@ -182,12 +182,10 @@ export function useClientTranslator(
         summaryAr: '',
         contentKu: '',
         contentAr: '',
+        translatedTitleEn:'', translatedSummaryEn:'', translatedContentEn:'',
         _hawalInlineVerified: true
       };
 
-      if (lang === 'en') {
-        return clean;
-      }
 
       const title = original(item, 'title');
       const summary = original(item, 'summary');
@@ -196,7 +194,7 @@ export function useClientTranslator(
       const fields =
         lang === 'ku'
           ? ['titleKu', 'summaryKu', 'contentKu']
-          : ['titleAr', 'summaryAr', 'contentAr'];
+          : lang === 'ar' ? ['titleAr', 'summaryAr', 'contentAr'] : ['translatedTitleEn','translatedSummaryEn','translatedContentEn'];
 
       return {
         ...clean,
@@ -235,16 +233,11 @@ export function useClientTranslator(
       task.current = work;
     }
 
-    if (lang === 'en') {
-      setTranslating(false);
-      return;
-    }
 
     // Translate visible items first, then remaining items so filtered tabs & briefs are also translated
     const limit = Math.min(Math.max(1, visibleLimit), source.length);
     const prioritized = [
-      ...source.slice(0, limit),
-      ...source.slice(limit)
+      ...source.slice(0, Math.min(source.length,limit+12))
     ];
 
     const now = Date.now();
@@ -331,7 +324,7 @@ export function useClientTranslator(
                 item => item.text
               )
             }),
-            signal: work.controller.signal
+            signal: AbortSignal.any([work.controller.signal,AbortSignal.timeout(45000)])
           })
             .then(async response => {
 

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { quoteState, safeUrl, timestamp } from '../lib/market-tools.js';
+import { quoteState, safeUrl, timestamp, formatNumber, cityRecord } from '../lib/market-tools.js';
 import { getTitle } from '../utils/news.js';
+import { polishCopy } from '../lib/polish-copy.js';
+import { dashboardCopy } from '../lib/dashboard-copy.js';
 import { featureCopy } from '../lib/hawal-feature-copy.js';
 import {
   HISTORY_KEY, ALERTS_KEY, TOPICS, DAYS, marketStories, sourceAssessment, claimWords,
@@ -18,14 +20,15 @@ const putStorage = (key,value) => { try { localStorage.setItem(key,JSON.stringif
 
 export function MarketIntelligence({ markets = [], news = [], lang = 'ku' }) {
   const c = featureCopy[lang] || featureCopy.ku;
+  const fmt = n => formatNumber(n,lang) || polishCopy[lang].missingSide;
   const [topic,setTopic] = useState('USD/IQD');
-  const item = markets.find(m => m.symbol === topic);
+  const item = topic==='USD/IQD' ? cityRecord(markets,'erbil') : markets.find(m => m.symbol === topic);
   const local = topic === 'USD/IQD';
-  const price = local ? item?.erbil?.sell : item?.price;
-  const fresh = quoteState(item) === 'reported' && (local ? Boolean(item?.erbil?.sell) : true);
+  const price = local ? item?.sell : item?.price;
+  const fresh = quoteState(item) === 'reported' && (local ? Boolean(item?.sell) : true);
   const stories = useMemo(()=>marketStories(news,topic),[news,topic]);
   return <section className="desk-panel hawal-feature" id="intelligence" aria-labelledby="hawal-intelligence-title">
-    <div className="feature-head"><div><p className="feature-kicker">01 / HAWAL INSIGHTS</p><h2 id="hawal-intelligence-title">{c.intelligence}</h2></div><span className="feature-icon" aria-hidden="true">◈</span></div>
+    <div className="feature-head"><div><p className="feature-kicker">{polishCopy[lang].insights}</p><h2 id="hawal-intelligence-title">{c.intelligence}</h2></div><span className="feature-icon" aria-hidden="true">◈</span></div>
     <p className="feature-description">{c.intelligentNote}</p>
     <label className="feature-field">{c.chooseMarket}<select value={topic} onChange={e=>setTopic(e.target.value)}>{TOPICS.map(key=><option key={key} value={key}>{key === 'USD/IQD' ? 'USD/IQD · '+labels[lang].erbil : key}</option>)}</select></label>
     <div className="insight-quote">
@@ -45,6 +48,7 @@ export function MarketIntelligence({ markets = [], news = [], lang = 'ku' }) {
 
 export function VerificationDesk({ news = [], lang = 'ku' }) {
   const c = featureCopy[lang] || featureCopy.ku;
+  const fmt = n => formatNumber(n,lang) || polishCopy[lang].missingSide;
   const [claim,setClaim] = useState('');
   const [submitted,setSubmitted] = useState(null);
   const related = useMemo(()=>submitted == null ? [] : findRelatedReports(submitted,news),[submitted,news]);
@@ -52,7 +56,7 @@ export function VerificationDesk({ news = [], lang = 'ku' }) {
   const defaultReports = useMemo(()=>news.filter(item=>safeUrl(item.link) && item.source && !item.isFallback).slice(0,3),[news]);
   const results = submitted == null ? defaultReports : related;
   return <section className="desk-panel hawal-feature" id="verify" aria-labelledby="hawal-verification-title">
-    <div className="feature-head"><div><p className="feature-kicker">02 / SOURCE CHECK</p><h2 id="hawal-verification-title">{c.verification}</h2></div><span className="feature-icon" aria-hidden="true">✓?</span></div>
+    <div className="feature-head"><div><p className="feature-kicker">{polishCopy[lang].verification}</p><h2 id="hawal-verification-title">{c.verification}</h2></div><span className="feature-icon" aria-hidden="true">✓?</span></div>
     <p className="feature-description">{c.verifyNote}</p>
     <form onSubmit={e=>{e.preventDefault();if(ready)setSubmitted(claim.trim());}} className="claim-form">
       <label className="feature-field">{c.claim}<textarea value={claim} onChange={e=>setClaim(e.target.value)} placeholder={c.claimHint} rows={3} maxLength={500}/></label>
@@ -77,13 +81,15 @@ function initialHistory() {
   });
   return normalizeHistory([...existing,...legacy]);
 }
-export function DollarHistory({ markets = [], lang = 'ku' }) {
+export function DollarHistory({ markets = [], lang = 'ku', observations }) {
   const c = featureCopy[lang] || featureCopy.ku;
+  const fmt = n => formatNumber(n,lang) || polishCopy[lang].missingSide;
   const [history,setHistory] = useState(initialHistory);
   const [city,setCity] = useState('erbil');
   const [side,setSide] = useState('sell');
   const [days,setDays] = useState(7);
   useEffect(()=>{
+    if (observations) return;
     const additions = collectRates(markets);
     if (!additions.length) return;
     setHistory(previous=>{
@@ -92,18 +98,18 @@ export function DollarHistory({ markets = [], lang = 'ku' }) {
       putStorage(HISTORY_KEY,next);
       return next;
     });
-  },[markets]);
-  const points = useMemo(()=>historyFor(history,city,side,days),[history,city,side,days]);
+  },[markets,observations]);
+  const points = useMemo(()=>historyFor(observations || history,city,side,days),[observations,history,city,side,days]);
   const coords = chartCoordinates(points);
   const delta = points.length > 1 ? points.at(-1).price - points[0].price : null;
   return <section className="desk-panel hawal-feature" id="dollar-history" aria-labelledby="hawal-history-title">
-    <div className="feature-head"><div><p className="feature-kicker">03 / LOCAL MARKET</p><h2 id="hawal-history-title">{c.history}</h2></div><span className="feature-icon" aria-hidden="true">⌁</span></div>
-    <p className="feature-description">{c.historyNote}</p>
+    <div className="feature-head"><div><p className="feature-kicker">{polishCopy[lang].localMarket}</p><h2 id="hawal-history-title">{c.history}</h2></div><span className="feature-icon" aria-hidden="true">⌁</span></div>
+    <p className="feature-description">{polishCopy[lang].historyNote}{city==='official'?' '+polishCopy[lang].observed:''}</p>
     <div className="feature-controls">
-      <label className="feature-field">{c.city}<select value={city} onChange={e=>setCity(e.target.value)}>{cities.map(k=><option value={k} key={k}>{labels[lang][k]}</option>)}</select></label>
-      <label className="feature-field">{c.side}<select value={side} onChange={e=>setSide(e.target.value)}><option value="sell">{c.sell}</option><option value="buy">{c.buy}</option></select></label>
+      <label className="feature-field">{c.city}<select value={city} onChange={e=>setCity(e.target.value)}>{[...cities,'official'].map(k=><option value={k} key={k}>{dashboardCopy[lang][k]}</option>)}</select></label>
+      <label className="feature-field">{c.side}<select disabled={city==='official'} value={side} onChange={e=>setSide(e.target.value)}><option value="sell">{c.sell}</option><option value="buy">{c.buy}</option></select></label>
     </div>
-    <div className="history-tabs" role="group" aria-label={c.range}>{DAYS.map(d=><button type="button" key={d} aria-pressed={days===d} className={days===d?'selected':''} onClick={()=>setDays(d)}>{d}D</button>)}</div>
+    <div className="history-tabs" role="group" aria-label={c.range}>{DAYS.map(d=><button type="button" key={d} aria-pressed={days===d} className={days===d?'selected':''} onClick={()=>setDays(d)}>{formatNumber(d,lang)} {polishCopy[lang].day}</button>)}</div>
     <div className="history-chart" aria-label={c.historyLabel}>
       {coords.length > 1 ? <svg role="img" aria-label={c.historyLabel} viewBox="0 0 640 180" preserveAspectRatio="none">
         <path d="M15 45 H625 M15 90 H625 M15 135 H625" fill="none" stroke="currentColor" opacity=".13" strokeDasharray="4 8"/>
@@ -112,7 +118,7 @@ export function DollarHistory({ markets = [], lang = 'ku' }) {
       </svg> : <p>{points.length ? c.needHistory : c.historyEmpty}</p>}
     </div>
     <div className="history-stats"><div><small>{c.first}</small><b dir="ltr">{fmt(points[0]?.price)}</b></div><div><small>{c.last}</small><b dir="ltr">{fmt(points.at(-1)?.price)}</b></div><div><small>{c.difference}</small><b dir="ltr" className={delta>0?'up':delta<0?'down':''}>{delta==null?'—':(delta>0?'+':'')+fmt(delta)}</b></div></div>
-    <p className="feature-foot">{points.length} {c.observations} · {c.historyLabel}</p>
+    <p className="feature-foot">{formatNumber(points.length,lang)} {c.observations} · {c.historyLabel}</p>
     {points.length > 0 && <div className="feature-foot">{c.historySource}: <a href={safeUrl(points.at(-1).sourceUrl)} target="_blank" rel="noopener noreferrer">{points.at(-1).source || c.original} ↗</a> · <time dateTime={points.at(-1).at}>{timestamp(points.at(-1).at,lang)}</time></div>}
   </section>;
 }
@@ -124,6 +130,7 @@ function savedSettings() {
 }
 export function MarketAlerts({ markets = [], news = [], lang = 'ku' }) {
   const c = featureCopy[lang] || featureCopy.ku;
+  const fmt = n => formatNumber(n,lang) || polishCopy[lang].missingSide;
   const [settings,setSettings] = useState(savedSettings);
   const [messages,setMessages] = useState([]);
   const [permissionText,setPermissionText] = useState('');
@@ -169,7 +176,7 @@ export function MarketAlerts({ markets = [], news = [], lang = 'ku' }) {
     try { const result=await Notification.requestPermission();setPermissionText(result === 'granted' ? c.enabled : c.notificationsBlocked); } catch { setPermissionText(c.browserUnsupported); }
   };
   return <section className="desk-panel hawal-feature" id="market-alerts" aria-labelledby="hawal-alerts-title">
-    <div className="feature-head"><div><p className="feature-kicker">04 / YOUR WATCHLIST</p><h2 id="hawal-alerts-title">{c.alerts}</h2></div><span className={'feature-icon '+(settings.enabled?'feature-on':'')} aria-hidden="true">♧</span></div>
+    <div className="feature-head"><div><p className="feature-kicker">{polishCopy[lang].watchlist}</p><h2 id="hawal-alerts-title">{c.alerts}</h2></div><span className={'feature-icon '+(settings.enabled?'feature-on':'')} aria-hidden="true">♧</span></div>
     <p className="feature-description">{c.alertsNote}</p>
     <label className="feature-field">{c.rateAlerts} · {c.city}<select value={settings.city} onChange={e=>change({city:e.target.value})}>{cities.map(k=><option key={k} value={k}>{labels[lang][k]}</option>)}</select></label>
     <label className="feature-field">{c.cityThreshold}<input type="number" min="1" step="1" value={settings.threshold} onChange={e=>change({threshold:e.target.value})}/></label>

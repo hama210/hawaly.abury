@@ -1,6 +1,6 @@
 export function articleText(item = {}) {
   const local=item._hawalInlineVerified===true
-    ? `${item.titleKu || ''} ${item.titleAr || ''} ${item.summaryKu || ''} ${item.summaryAr || ''}`
+    ? `${item.translatedTitleEn || ''} ${item.translatedSummaryEn || ''} ${item.titleKu || ''} ${item.titleAr || ''} ${item.summaryKu || ''} ${item.summaryAr || ''}`
     : '';
   return `${item.title || ''} ${item.titleEn || ''} ${item.summary || ''} ${item.summaryEn || ''} ${local} ${item.content || ''} ${item.source || ''} ${item.sourceGroup || ''} ${item.category || ''}`.toLowerCase();
 }

@@ -1,5 +1,7 @@
 import React from 'react';
-import { quoteState, safeUrl, timestamp } from '../lib/market-tools.js';
+import { polishCopy } from '../lib/polish-copy.js';
+import { dashboardCopy } from '../lib/dashboard-copy.js';
+import { quoteState, safeUrl, timestamp, formatNumber, cityRecord } from '../lib/market-tools.js';
 
 export const tabs = ['home','markets','news','more'];
 export const navigationCopy = {
@@ -26,7 +28,7 @@ export function NavIcon({ name, size = 22 }) {
 }
 export function Navigation({ active, onNavigate, lang, mobile = false }) {
  const c=navigationCopy[lang] || navigationCopy.ku;
- return <nav className={mobile?'mobile-nav redesigned-mobile-nav':'desktop-nav'} aria-label={mobile?'Mobile navigation':'Primary navigation'}>
+ return <nav className={mobile?'mobile-nav redesigned-mobile-nav':'desktop-nav'} aria-label={mobile?polishCopy[lang].mobileNav:polishCopy[lang].primaryNav}>
    {tabs.map(tab=><button key={tab} type="button" aria-current={active===tab?'page':undefined} aria-pressed={active===tab} className={active===tab?'active':''} onClick={()=>onNavigate(tab)}>
      <NavIcon name={tab} size={mobile?21:17}/><span>{c[tab]}</span>
    </button>)}
@@ -34,11 +36,11 @@ export function Navigation({ active, onNavigate, lang, mobile = false }) {
 }
 export function HomeMarkets({ markets=[], lang, onNavigate }) {
  const c=navigationCopy[lang] || navigationCopy.ku;
- const local=markets.find(m=>m.symbol==='USD/IQD');
+ const local=cityRecord(markets,'erbil');
  const items=[
-  {title:'USD/IQD',symbol:'USD/IQD',label:'🇮🇶',price:local?.erbil?.sell,state:quoteState(local),type:'local',source:local,unit:'IQD / $100'},
-  {title:'Gold (XAU)',symbol:'XAU/USD',label:'◉',unit:'USD / oz',source:markets.find(m=>m.symbol==='XAU/USD')},
-  {title:'Brent Oil',symbol:'BRENT/USD',label:'◈',unit:'USD / barrel',source:markets.find(m=>m.symbol==='BRENT/USD')}
+  {title:'USD/IQD',symbol:'USD/IQD',label:'🇮🇶',price:local?.sell,state:quoteState(local),type:'local',source:local,unit:'IQD / $100'},
+  {title:polishCopy[lang].gold+' (XAU)',symbol:'XAU/USD',label:'◉',unit:'USD / oz',source:markets.find(m=>m.symbol==='XAU/USD')},
+  {title:polishCopy[lang].brent,symbol:'BRENT/USD',label:'◈',unit:'USD / barrel',source:markets.find(m=>m.symbol==='BRENT/USD')}
  ];
  return <section className="home-markets" aria-label={c.marketPulse}>
    {items.map(item=>{
@@ -47,12 +49,12 @@ export function HomeMarkets({ markets=[], lang, onNavigate }) {
      const state=quoteState(q);
      const fresh=state==='reported'&&typeof value==='number'&&Number.isFinite(value)&&value>0;
      const change=Number.isFinite(q?.changePct) && item.type!=='local' ? q.changePct : null;
-     const amount=fresh?value.toLocaleString('en-US',{minimumFractionDigits:value<10?2:0,maximumFractionDigits:2}):'—';
+     const amount=typeof value==='number' && value>0?formatNumber(value,lang):polishCopy[lang].unavailable;
      return <button type="button" key={item.symbol} className="pulse-card" onClick={()=>onNavigate('markets')} aria-label={item.title + ', ' + (fresh?amount:c.noQuote)}>
        <div className="pulse-label"><span className={'pulse-symbol pulse-'+item.symbol.split('/')[0].toLowerCase()}>{item.label}</span><span dir="ltr">{item.title}</span></div>
        <strong dir="ltr">{amount}</strong>
-       <span className={'pulse-change '+(change>0?'up':change<0?'down':'')}>{change===null?(state==='reported'?c.tracked:c.noQuote):(change>0?'+':'')+change.toFixed(2)+'% '+(change>0?'▲':change<0?'▼':'')}</span>
-       <small>{fresh&&q?.updatedAt?timestamp(q.updatedAt,lang):c.noQuote}</small>
+       <span className={'pulse-change '+(change>0?'up':change<0?'down':'')}>{change===null?(state==='reported'?c.tracked:dashboardCopy[lang][state]):(change>0?'+':'')+formatNumber(change,lang,{minimumFractionDigits:2})+'% '+(change>0?'▲':change<0?'▼':'')}</span>
+       <small>{q?.updatedAt?timestamp(q.updatedAt,lang):c.noQuote}</small>
      </button>;
    })}
  </section>;

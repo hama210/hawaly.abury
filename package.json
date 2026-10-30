@@ -1,11 +1,10 @@
 {
   "name": "hawali-aburi",
-  "version": "6.0.0",
+  "version": "6.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/patch-main.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test",
