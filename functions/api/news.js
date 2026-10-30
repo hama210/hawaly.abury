@@ -79,11 +79,11 @@ const FAST_FEED_SOURCES = [
   'Chairman Warsh Speeches',
   'Shafaq Economy',
   'Iraq Dollar Live',
-  'Reuters Markets',
+  'Saudi War Updates',
   'Trump Reuters',
   'BBC Business',
   'FXStreet',
-  'CNBC Markets',
+  'BBC War',
   'Al Jazeera War'
 ];
 const FAST_FEED_TIMEOUT_MS = 5000;
