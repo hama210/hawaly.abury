@@ -357,6 +357,42 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
     radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 55%),
     var(--muted-card);
 }
+/* Only genuine publisher photos are displayed. When one cannot be retrieved,
+   preserve the existing card sizes and show a text-labelled empty state. */
+.story-image.img-failed,
+.modal-image.img-failed {position:relative}
+.story-image.img-failed img,
+.lead-story.img-failed > img,
+.modal-image.img-failed img {display:none}
+.story-image.img-failed::after,
+.modal-image.img-failed::after {
+  content:attr(data-image-state);
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  padding:12px;
+  color:var(--muted);
+  font-size:clamp(9px,1vw,12px);
+  font-weight:600;
+  line-height:1.8;
+  text-align:center;
+  pointer-events:none;
+}
+.lead-story.img-failed::before {
+  content:attr(data-image-state);
+  position:absolute;
+  top:14px;
+  inset-inline-start:14px;
+  z-index:1;
+  padding:4px 9px;
+  color:#d6e3ef;
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:8px;
+  background:rgba(0,0,0,.25);
+  font-size:10px;
+  pointer-events:none;
+}
 
 @media (max-width: 680px) {
   .update-ribbon {
