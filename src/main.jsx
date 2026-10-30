@@ -471,7 +471,7 @@ function SourcesDisclosure({ lang, news, sourceHealth = {} }) {
 
 function SiteFooter({ lang }) {
   const copy = developerCopy[lang] || developerCopy.en;
-  return <footer className="site-footer"><nav>{['home','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{dashboardCopy[lang][page]}</a>)}<button type="button" onClick={()=>{const panel=document.getElementById('sources');if(panel){panel.open=true;panel.querySelector('summary')?.focus();panel.scrollIntoView({block:'center'});}}}>{polishCopy[lang].sources}</button></nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong><small className="version-badge">v6.2</small></div></footer>;
+  return <footer className="site-footer"><nav>{['home','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{dashboardCopy[lang][page]}</a>)}<button type="button" onClick={()=>{const panel=document.getElementById('sources');if(panel){panel.open=true;panel.querySelector('summary')?.focus();panel.scrollIntoView({block:'center'});}}}>{polishCopy[lang].sources}</button></nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong><small className="version-badge">v6.3</small></div></footer>;
 }
 
 
@@ -559,7 +559,7 @@ function App() {
 
   useEffect(() => {
     let alive = true;
-    const update = items => { if (alive && items?.length) setNews(items); };
+    const update = items => { if (alive && items?.length) { setNews(items); setLoadingNews(false); } };
     const load = (initial = false) => fetchNews(update, { onHealth: stats => { if (alive) receiveHealth(stats); }, onStatus: status => { if (alive) setNewsFetchStatus(status); } }).then(update).finally(() => { if (alive && initial) setLoadingNews(false); });
     load(true);
     const interval = setInterval(() => load(false), 120000);
@@ -704,6 +704,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20261030-production-v6.2', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20261030-news-v6.3', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }
