@@ -1,0 +1,33 @@
+name: Live Mobile and Desktop UI Smoke
+
+on:
+  push:
+    branches:
+      - fix/v64-no-flash-fresh-news
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser driver
+        run: npm install --no-save --ignore-scripts puppeteer-core@24
+      - name: Verify current live mobile and desktop interface
+        run: node scripts/smoke-live-ui.mjs
+      - name: Keep mobile/desktop screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hawall-browser-smoke
+          path: |
+            hawall-mobile-smoke.png
+            hawall-desktop-smoke.png
+          if-no-files-found: ignore
