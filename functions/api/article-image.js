@@ -1,4 +1,4 @@
-import { coverForCategory, extractOpenGraphImage, trustedArticleUrl, trustedRemoteImage } from '../../src/lib/news-images.js';
+import { extractOpenGraphImage, trustedArticleUrl, trustedRemoteImage } from '../../src/lib/news-images.js';
 import { isGoogleNewsArticle, resolveGoogleNewsArticle } from '../lib/google-news.js';
 
 const MAX_HTML_BYTES=256*1024;
@@ -31,10 +31,13 @@ async function limitedBody(response,maxBytes,{truncate=false}={}){
   return output.subarray(0,offset);
 }
 
-function fallback(category){
-  return new Response(null,{status:302,headers:{
-    'Location':coverForCategory(category),
-    'Cache-Control':'public,max-age=900'
+function fallback(){
+  // A failed photo lookup must not masquerade as a publisher photo. The
+  // browser displays a neutral no-photo state without repeating category art.
+  // Never cache a negative result: a temporary block may clear on retry.
+  return new Response('Publisher photo unavailable',{status:404,headers:{
+    'Content-Type':'text/plain; charset=utf-8',
+    'Cache-Control':'no-store'
   }});
 }
 
@@ -46,12 +49,12 @@ export async function onRequest(context){
   const direct=trustedArticleUrl(raw);
   const google=isGoogleNewsArticle(raw);
   const category=url.searchParams.get('category')||'markets';
-  if(!direct&&!google)return fallback(category);
+  if(!direct&&!google)return fallback();
   const cache=globalThis.caches?.default;
   const key=new Request(url.origin+url.pathname+'?article='+encodeURIComponent(raw)+'&category='+encodeURIComponent(category));
   if(cache){
     const previous=await cache.match(key);
-    if(previous)return previous;
+    if(previous?.ok && /^image\//i.test(previous.headers.get('content-type')||''))return previous;
   }
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort('publisher image timeout'),10500);
@@ -86,9 +89,9 @@ export async function onRequest(context){
       headers:{'Content-Type':imageType,'Cache-Control':'public,max-age='+CACHE_SECONDS,'X-Content-Type-Options':'nosniff'}
     });
   }catch{
-    output=fallback(category);
+    output=fallback();
   }finally{clearTimeout(timeout);}
-  if(cache && (output.ok||output.status===302)){
+  if(cache && output.ok){
     const cacheWrite=cache.put(key,output.clone()).catch(()=>{});
     if(context.waitUntil)context.waitUntil(cacheWrite);
     else await cacheWrite;
