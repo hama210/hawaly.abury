@@ -19,7 +19,7 @@ test('malformed and unsafe image links fall back to local category covers',()=>{
   assert.equal(verifiedImageUrl('data:image/png;base64,ABC'),'');
   assert.equal(verifiedImageUrl('https://bad.example.com/favicon.ico'),'');
   assert.equal(extractNewsImage('<enclosure url="https://cdn.example.com/audio.mp3" type="audio/mpeg"/>','https://example.com/rss'),'');
-  assert.equal(imageForNews({image:'javascript:alert(1)',category:'oil'}),'/news-covers/oil.svg');
+  assert.equal(imageForNews({image:'javascript:alert(1)',category:'oil'}),'');
   assert.equal(imageForNews({image:'https://cdn.example.com/photo.jpg',category:'markets'}),'https://cdn.example.com/photo.jpg');
   assert.equal(coverForCategory('unknown'),'/news-covers/markets.svg');
   for(const category of ['iraq','kurdistan','forex','metals','oil','crypto','indices','geopolitics','markets']) {
@@ -55,7 +55,8 @@ test('mobile news cards, lead story and modal use safe fallbacks, not raw broken
   assert.equal((main.match(/src=\{imageForNews\(item\)\}/g)||[]).length,3);
   assert.match(main,/data-news-category=\{item\.category/);
   assert.match(main,/imageFallback\(event\)/);
-  assert.match(main,/coverForCategory\(element\.dataset\.newsCategory\)/);
+  assert.match(main,/parentElement\?\.classList\.add\('img-failed'\)/);
+  assert.doesNotMatch(main,/element\.src=coverForCategory/);
   assert.match(main,/referrerPolicy="no-referrer"/);
   assert.match(styles,/\.story-image img \{ width:100%; height:100%; object-fit:cover;/);
   assert.match(fs.readFileSync('public/_routes.json','utf8'),/news-covers\/\*/);
