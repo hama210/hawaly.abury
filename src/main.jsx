@@ -33,7 +33,7 @@ import { articleText, matchesCategory } from './utils/categories.js';
 import { articleSelection, storyExcerpt, readerCopy } from './lib/article-content.js';
 import { useClientTranslator } from './hooks/useClientTranslator.js';
 import { translateArticleBody } from './lib/article-translation.js';
-import { imageForNews, coverForCategory } from './lib/news-images.js';
+import { imageForNews } from './lib/news-images.js';
 import { MOBILE_VIEWS, viewFromHash } from './lib/mobile-view.js';
 
 const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
