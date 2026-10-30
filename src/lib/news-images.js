@@ -110,9 +110,15 @@ export function trustedRemoteImage(raw){
   return IMAGE_CDN_DOMAINS.some(domain=>hostname===domain||hostname.endsWith('.'+domain)) ? url : '';
 }
 
+// Return only an actual publisher photo or a per-article OpenGraph lookup.
+// Generic category illustrations look like article photographs when repeated
+// across news cards, so an unavailable image must remain an honest empty state.
 export function imageForNews(item){
-  const url=verifiedImageUrl(item?.image);
-  if(url)return isProxyableNewsImage(url) ? '/api/news-image?src='+encodeURIComponent(url) : url;
+  const image=verifiedImageUrl(item?.image);
+  const isCategoryCover=typeof item?.image==='string' && /^\/news-covers\/[a-z-]+\.svg(?:\?.*)?$/i.test(item.image);
+  if(image && item?.imageSource!=='illustration' && !isCategoryCover)
+    return isProxyableNewsImage(image) ? '/api/news-image?src='+encodeURIComponent(image) : image;
+
   const article=trustedArticleUrl(item?.link);
   let google=false;
   try{
@@ -120,7 +126,7 @@ export function imageForNews(item){
     google=link.protocol==='https:' && link.hostname==='news.google.com' &&
       /^\/(?:rss\/)?(?:articles|read)\/[A-Za-z0-9_-]{12,1500}$/.test(link.pathname);
   }catch{}
-  if((article||google) && item?.imageSource==='illustration')
+  if(article||google)
     return '/api/article-image?article='+encodeURIComponent(article||item.link)+'&category='+encodeURIComponent(item?.category||'markets');
-  return coverForCategory(item?.category);
+  return '';
 }
