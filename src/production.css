@@ -1,8 +1,18 @@
 /* Hawal 6.2: preserve the navy, blue and gold identity with readable states. */
-:root{--gold:#ffc65c;--muted:#abc0d8;color-scheme:dark}
-[data-theme="light"]{--gold:#805400;--muted:#465d78;--green:#006b57;--primary:#0062c9;--red:#b12a42;color-scheme:light}
+/* Keep v6.1's palette; only add the gold accent required by new widgets. */
+:root{--gold:#ffb727;color-scheme:dark}
+[data-theme="light"]{--gold:#805400;color-scheme:light}
 *{box-sizing:border-box}
 .main-content{min-width:0;display:grid;gap:16px}
+/* The v6.1 lead-story layout is the homepage default. Full rate tools live
+   behind a disclosure here and stay fully visible on the Markets screen. */
+.home-rates-disclosure{border:1px solid var(--line);border-radius:14px;background:var(--card);min-width:0;overflow:hidden}
+.home-rates-disclosure>summary{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;min-height:48px;padding:12px 18px;color:var(--text);font-weight:750;cursor:pointer}
+.home-rates-disclosure>summary span{color:var(--muted);font-size:11px;font-weight:500}
+.home-rates-disclosure[open]>summary{border-bottom:1px solid var(--line)}
+.home-rates-disclosure .dollar-panel{border:0;box-shadow:none;margin:0;border-radius:0}
+.news-feed-warning{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px;border:1px solid var(--line);border-inline-start:3px solid var(--gold);border-radius:10px;background:var(--card);color:var(--muted);font-size:12px;line-height:1.8}
+.news-feed-warning button{min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--card-strong);color:var(--primary-strong);padding:8px 14px;cursor:pointer}
 .main-content:focus,.information-page:focus{outline:none}
 :where(a,button,input,select,textarea,summary):focus-visible{outline:3px solid var(--gold);outline-offset:4px}
 :where(button,a,summary){-webkit-tap-highlight-color:transparent}

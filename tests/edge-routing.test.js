@@ -35,7 +35,7 @@ test('edge uses cached real news and quotes, escapes them, and advertises SSR st
     const response=await onRequest(page('https://example.com/en/'));
     assert.equal(response.status,200);
     assert.equal(response.headers.get('X-SSR'),'ok');
-    assert.equal(response.headers.get('X-Hawall-Version'),'2026-10-production-v6.2');
+    assert.equal(response.headers.get('X-Hawall-Version'),'2026-10-news-v6.3');
     const rendered=await response.text();
     assert.match(rendered,/lang="en" dir="ltr"/);
     assert.match(rendered,/153,000/);
@@ -81,4 +81,18 @@ test('assets and API payload pass through middleware without rewriting',async()=
   const head=await onRequest(page('https://example.com/en/','HEAD'));
   assert.equal(head.status,200);
   assert.equal(await head.text(),'');
+});
+
+
+test('slow source snapshots do not block initial HTML rendering', async()=>{
+  const restore=replaceGlobal('caches',{default:{async match(){return new Promise(()=>{});}}});
+  try {
+    const started=Date.now();
+    const response=await onRequest(page('https://example.com/'));
+    const elapsed=Date.now()-started;
+    assert.equal(response.status,200);
+    assert.equal(response.headers.get('X-SSR'),'empty');
+    assert.ok(elapsed<2500,'initial page should not wait for stalled news sources');
+    assert.match(await response.text(),/hawall-bootstrap/);
+  } finally {restore();}
 });
