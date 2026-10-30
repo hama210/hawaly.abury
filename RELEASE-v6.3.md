@@ -15,19 +15,19 @@ Prepared 30 October 2026.
 2. **Bounded RSS requests**: 12 sources per full batch rather than 22; four concurrent publisher requests per API invocation; shorter capped primary and fallback windows. Preserve priority Fed/Warsh, Iraq dollar, Reuters and key conflict sources in fast mode. Bump edge news cache key so a previously empty response is not reused.
 3. **Complete batch discovery**: load all six currently configured batches in two waves, including the later ones if early batches fail. Keep publishing whatever usable headlines arrive, with their genuine publication dates.
 4. **Visible failures**: add localized 'source unavailable' and 'no recent items' notices with retry. Keep old news distinguishable from live source activity.
-5. **Mobile/PWA refresh**: renew the service-worker cache name and asset registration revision. Mark the release v6.3.
-6. **Tests**: validate batch partition coverage, last-batch recovery, health status and the v6.1 hero position.
+5. **Fast first paint**: edge SSR now caps its wait for live news and market snapshot to 1.2 seconds, warming missing snapshots with Cloudflare `waitUntil`. Browser API refresh remains authoritative for current news; an absent snapshot is not misrepresented as fresh.\n6. **Mobile/PWA refresh**: renew the service-worker cache name and asset registration revision. Mark the release v6.3.
+7. **Tests**: validate batch partition coverage, last-batch recovery, health status and the v6.1 hero position.
 
 ## Files modified
 
-- `functions/api/news.js`
+- `functions/api/news.js`, `functions/_middleware.js`
 - `src/services/news.js`
 - `src/main.jsx`
 - `src/production.css`
 - `public/sw.js`
 - `package.json`, `package-lock.json`
 - `test/mobile-browsing.test.mjs`
-- `tests/redesign.test.js`, `tests/news.test.js`
+- `tests/redesign.test.js`, `tests/news.test.js`, `tests/edge-routing.test.js`
 - `tests/news-reliability-v63.test.js` (new)
 
 ## Required live acceptance checks
