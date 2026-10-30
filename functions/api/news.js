@@ -77,13 +77,15 @@ const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
 const FAST_FEED_SOURCES = [
   'Federal Reserve News',
   'Chairman Warsh Speeches',
+  'Chairman Warsh Testimony',
   'Shafaq Economy',
   'Iraq Dollar Live',
-  'Saudi War Updates',
+  'Reuters Markets',
   'Trump Reuters',
-  'BBC Business',
-  'FXStreet',
+  'Saudi War Updates',
   'BBC War',
+  'Guardian Iran',
+  'FXStreet',
   'Al Jazeera War'
 ];
 const FAST_FEED_TIMEOUT_MS = 5000;
