@@ -50,15 +50,7 @@ export function renderPage(template, data) {
  let html=template.replace(/<html\b[^>]*>/i,`<html lang="${lang==='ku'?'ckb':lang}" dir="${lang==='en'?'ltr':'rtl'}">`).replace(/<title>[\s\S]*?<\/title>/i,`<title>${escapeHtml(title)}</title>`);
  html=html.replace(/<meta\b[^>]*(?:name="description"|property="og:(?:title|description|url|locale|image)"|name="twitter:(?:title|description|image)")[^>]*>/gi,'').replace(/<link\b[^>]*rel="(?:canonical|alternate)"[^>]*>/gi,'').replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/gi,'');
  const tags=`<meta name="description" content="${escapeHtml(description)}"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${escapeHtml(url)}"><meta property="og:locale" content="${lang==='ku'?'ckb_IQ':lang==='ar'?'ar_IQ':'en_US'}"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:description" content="${escapeHtml(description)}"><meta property="og:image" content="${escapeHtml(origin)}/og-image.png"><meta name="twitter:image" content="${escapeHtml(origin)}/og-image.png"><link rel="canonical" href="${escapeHtml(url)}">${['ku','ar','en'].map(l=>`<link rel="alternate" hreflang="${l==='ku'?'ckb':l}" href="${escapeHtml(origin+pagePath(l,page))}">`).join('')}<link rel="alternate" hreflang="x-default" href="${escapeHtml(origin+pagePath('ku',page))}"><script type="application/ld+json">${scriptJson(structuredData(data,origin))}</script>`;
- // Hide the crawler-readable SSR summary only after JavaScript is known to be
- // running. It differs from the React dashboard and must never flash on refresh.
- // With JavaScript disabled the original summary remains visible and readable.
- const clientBoot = '<style>html.hawal-js #root>.server-summary{display:none!important}'+
-   'html.hawal-js #root:has(>.server-summary)::before{content:"";display:block;'+
-   'height:124px;margin:20px auto;max-width:1100px;border-radius:16px;'+
-   'background:linear-gradient(110deg,#071629,#10253b,#071629)}</style>'+
-   '<script>document.documentElement.classList.add("hawal-js")</script>';
- html=html.replace('</head>',tags+clientBoot+'</head>');
+ html=html.replace('</head>',tags+'</head>');
  html=html.replace(/<div id="root">[\s\S]*?<\/div>/,`<div id="root">${serverContent(data)}</div>`);
  return html.replace('</body>',`<script id="hawall-bootstrap" type="application/json">${scriptJson(data)}</script></body>`);
 }

@@ -35,7 +35,7 @@ test('edge uses cached real news and quotes, escapes them, and advertises SSR st
     const response=await onRequest(page('https://example.com/en/'));
     assert.equal(response.status,200);
     assert.equal(response.headers.get('X-SSR'),'ok');
-    assert.equal(response.headers.get('X-Hawall-Version'),'2026-10-news-v6.4');
+    assert.equal(response.headers.get('X-Hawall-Version'),'2026-10-news-v6.3');
     const rendered=await response.text();
     assert.match(rendered,/lang="en" dir="ltr"/);
     assert.match(rendered,/153,000/);

@@ -471,7 +471,7 @@ function SourcesDisclosure({ lang, news, sourceHealth = {} }) {
 
 function SiteFooter({ lang }) {
   const copy = developerCopy[lang] || developerCopy.en;
-  return <footer className="site-footer"><nav>{['home','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{dashboardCopy[lang][page]}</a>)}<button type="button" onClick={()=>{const panel=document.getElementById('sources');if(panel){panel.open=true;panel.querySelector('summary')?.focus();panel.scrollIntoView({block:'center'});}}}>{polishCopy[lang].sources}</button></nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong><small className="version-badge">v6.4</small></div></footer>;
+  return <footer className="site-footer"><nav>{['home','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{dashboardCopy[lang][page]}</a>)}<button type="button" onClick={()=>{const panel=document.getElementById('sources');if(panel){panel.open=true;panel.querySelector('summary')?.focus();panel.scrollIntoView({block:'center'});}}}>{polishCopy[lang].sources}</button></nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong><small className="version-badge">v6.3</small></div></footer>;
 }
 
 
@@ -480,8 +480,7 @@ function App() {
   const [theme, setTheme] = useState(()=>{try{return localStorage.getItem('theme')==='light'?'light':'dark';}catch{return 'dark';}});
   const [active, setActive] = useState('all');
   const [query, setQuery] = useState(()=>new URLSearchParams(location.search).get('q') || '');
-  // Avoid flashing a cached SEO story as if it were the latest live headline.
-  const [news, setNews] = useState([]);
+  const [news, setNews] = useState(() => bootstrap.news?.length ? bootstrap.news : getInitialNews());
   const [sourceHealth, setSourceHealth] = useState({});
   const receiveHealth = stats => {
     if (!Array.isArray(stats?.sources)) return;
@@ -598,15 +597,12 @@ function App() {
   useEffect(()=>{setNewsVisibleCount(36);},[query,active]);
 
   const rateMatches=matchingRates(markets,query);
-  const newsFetchMessage = newsFetchStatus?.status === 'outdated'
-    ? (lang==='ku'?'سەرچاوەکان پشکنران، بەڵام نوێترین هەواڵی بەردەست زیاتر لە ٢٤ کاتژمێر کۆنە.':lang==='ar'?'تم فحص المصادر، لكن أحدث خبر متاح أقدم من ٢٤ ساعة.':'Sources were checked, but the latest available headline is over 24 hours old.')
-    : newsFetchStatus?.status === 'unavailable'
+  const newsFetchMessage = newsFetchStatus?.status === 'unavailable'
     ? (lang==='ku'?'پەیوەندی بە سەرچاوەکانی هەواڵ سەرکەوتوو نەبوو. دووبارە هەوڵ بدەوە.':lang==='ar'?'تعذر الاتصال بمصادر الأخبار. يرجى إعادة المحاولة.':'Unable to reach news sources. Please retry.')
     : newsFetchStatus?.status === 'no-fresh-articles'
       ? (lang==='ku'?'سەرچاوەکان پشکنران، بەڵام هیچ هەواڵێکی نوێیان نەگەڕاندەوە.':lang==='ar'?'تم فحص المصادر ولكن لم تُرجع أخباراً حديثة.':'Sources were checked but returned no recent articles.')
       : null;
-  const lastKnownMessage = newsFetchStatus?.showingLastKnown ? (lang==='ku'?'ئەم هەواڵانە لە پاشەکەوتی پێشوون؛ وەک هەواڵی زیندوو هەژمار ناکرێن.':lang==='ar'?'هذه الأخبار من آخر نسخة محفوظة وليست تحديثاً مباشراً.':'These headlines are from a previous saved copy, not a live update.') : null;
-  const newsStatusPanel = newsFetchMessage ? <div className="news-feed-warning" role="status"><span>{newsFetchMessage}{lastKnownMessage ? ' '+lastKnownMessage : ''}{newsFetchStatus?.newestPublishedAt ? ' · '+timestamp(newsFetchStatus.newestPublishedAt,lang) : ''}</span><button type="button" onClick={refreshAll} disabled={refreshing}>{polishCopy[lang].retry}</button></div> : null;
+  const newsStatusPanel = newsFetchMessage ? <div className="news-feed-warning" role="status"><span>{newsFetchMessage}</span><button type="button" onClick={refreshAll} disabled={refreshing}>{polishCopy[lang].retry}</button></div> : null;
   const newsEmpty=<div className="empty-state" role="status"><strong>{loadingNews?polishCopy[lang].loadingNews:polishCopy[lang].newsEmpty}</strong>{!loadingNews&&<><p>{polishCopy[lang].newsEmptyNote}</p><button type="button" onClick={refreshAll}>{polishCopy[lang].retry}</button></>}</div>;
   return <div className="page" id="top"><a className="skip-link" href="#main-content" onClick={e=>{e.preventDefault();document.getElementById('main-content')?.focus();}}>{polishCopy[lang].skip}</a>
     <div className="shell">
@@ -708,6 +704,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20261030-news-v6.4', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20261030-news-v6.3', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }
