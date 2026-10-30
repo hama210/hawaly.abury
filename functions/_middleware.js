@@ -6,7 +6,7 @@ import { onRequest as loadMarkets } from './api/markets.js';
 import { pageRoute, pagePath } from '../src/lib/market-tools.js';
 import { renderPage, siteOrigin, seoAsset } from '../src/lib/server-page.js';
 
-const EDGE_VERSION = '2026-10-news-v6.3';
+const EDGE_VERSION = '2026-10-news-v6.4';
 const SNAPSHOT_SECONDS = 120;
 const SSR_WAIT_MS = 1200;
 
