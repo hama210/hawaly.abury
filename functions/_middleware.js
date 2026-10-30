@@ -6,8 +6,24 @@ import { onRequest as loadMarkets } from './api/markets.js';
 import { pageRoute, pagePath } from '../src/lib/market-tools.js';
 import { renderPage, siteOrigin, seoAsset } from '../src/lib/server-page.js';
 
-const EDGE_VERSION = '2026-10-production-v6.2';
+const EDGE_VERSION = '2026-10-news-v6.3';
 const SNAPSHOT_SECONDS = 120;
+const SSR_WAIT_MS = 1200;
+
+// Never hold the visitor's initial HTML hostage to slow publisher RSS feeds.
+// Warm the Edge snapshot in waitUntil, then prefer its cached result on later
+// requests. The browser's live API polling remains the source of news updates.
+async function withinDeadline(promise, fallback, timeoutMs = SSR_WAIT_MS) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise(resolve => { timer = setTimeout(() => resolve(fallback), timeoutMs); })
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function snapshot(context) {
   const origin = new URL(context.request.url).origin;
@@ -78,7 +94,16 @@ export async function onRequest(context) {
   const fallback = response.clone();
   try {
     const originalHtml = await response.text();
-    const data = route.page === 'home' ? await snapshot(context) : { news:[], markets:[] };
+    const emptySnapshot = { news:[], markets:[] };
+    const newsTask = route.page === 'home' ? snapshot(context) : Promise.resolve(emptySnapshot);
+    if (route.page === 'home' && typeof context.waitUntil === 'function') {
+      context.waitUntil(newsTask.then(() => undefined).catch(error => {
+        console.warn('Hawall background SSR warmup failed', error?.message || 'unknown error');
+      }));
+    }
+    const data = route.page === 'home'
+      ? await withinDeadline(newsTask, emptySnapshot)
+      : emptySnapshot;
     const rendered = renderPage(originalHtml, { ...route, ...data, siteUrl:origin, contact:{email:context.env?.CONTACT_EMAIL || '',telegram:context.env?.CONTACT_TELEGRAM || ''} });
     const hasSnapshot = data.news.length || data.markets.some(item=>typeof item?.price==='number' && item.price > 0);
     const status = route.page !== 'home' || hasSnapshot ? 'ok' : 'empty';
