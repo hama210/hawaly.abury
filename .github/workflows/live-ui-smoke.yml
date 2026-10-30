@@ -20,7 +20,9 @@ jobs:
           node-version: '22'
       - name: Install browser driver
         run: npm install --no-save --ignore-scripts puppeteer-core@24
-      - name: Verify current live mobile and desktop interface
+      - name: Verify Cloudflare branch preview on mobile and desktop
+        env:
+          SITE_URL: https://fix-v64-no-flash-fresh-news.hawaly-aburyy.pages.dev/
         run: node scripts/smoke-live-ui.mjs
       - name: Keep mobile/desktop screenshots
         if: always()
