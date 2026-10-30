@@ -490,6 +490,7 @@ function App() {
     }));
   };
   const [loadingNews, setLoadingNews] = useState(true);
+  const [newsFetchStatus, setNewsFetchStatus] = useState(null);
   const [homeVisibleCount, setHomeVisibleCount] = useState(24);
   const [newsVisibleCount, setNewsVisibleCount] = useState(36);
   const [markets, setMarkets] = useState(bootstrap.markets || []);
@@ -559,7 +560,7 @@ function App() {
   useEffect(() => {
     let alive = true;
     const update = items => { if (alive && items?.length) setNews(items); };
-    const load = (initial = false) => fetchNews(update, { onHealth: stats => { if (alive) receiveHealth(stats); } }).then(update).finally(() => { if (alive && initial) setLoadingNews(false); });
+    const load = (initial = false) => fetchNews(update, { onHealth: stats => { if (alive) receiveHealth(stats); }, onStatus: status => { if (alive) setNewsFetchStatus(status); } }).then(update).finally(() => { if (alive && initial) setLoadingNews(false); });
     load(true);
     const interval = setInterval(() => load(false), 120000);
     return () => { alive = false; clearInterval(interval); };
@@ -578,7 +579,7 @@ function App() {
     setRefreshing(true);
     setLoadingMarkets(true);
     try {
-      const [latest, nextMarkets] = await Promise.all([fetchNews(items => { if (items?.length) setNews(items); }, { force:true, onHealth:receiveHealth }), fetchMarkets()]);
+      const [latest, nextMarkets] = await Promise.all([fetchNews(items => { if (items?.length) setNews(items); }, { force:true, onHealth:receiveHealth, onStatus:setNewsFetchStatus }), fetchMarkets()]);
       if (latest?.length) setNews(latest);
       setMarkets(nextMarkets);
     } finally {
@@ -596,6 +597,12 @@ function App() {
   useEffect(()=>{setNewsVisibleCount(36);},[query,active]);
 
   const rateMatches=matchingRates(markets,query);
+  const newsFetchMessage = newsFetchStatus?.status === 'unavailable'
+    ? (lang==='ku'?'پەیوەندی بە سەرچاوەکانی هەواڵ سەرکەوتوو نەبوو. دووبارە هەوڵ بدەوە.':lang==='ar'?'تعذر الاتصال بمصادر الأخبار. يرجى إعادة المحاولة.':'Unable to reach news sources. Please retry.')
+    : newsFetchStatus?.status === 'no-fresh-articles'
+      ? (lang==='ku'?'سەرچاوەکان پشکنران، بەڵام هیچ هەواڵێکی نوێیان نەگەڕاندەوە.':lang==='ar'?'تم فحص المصادر ولكن لم تُرجع أخباراً حديثة.':'Sources were checked but returned no recent articles.')
+      : null;
+  const newsStatusPanel = newsFetchMessage ? <div className="news-feed-warning" role="status"><span>{newsFetchMessage}</span><button type="button" onClick={refreshAll} disabled={refreshing}>{polishCopy[lang].retry}</button></div> : null;
   const newsEmpty=<div className="empty-state" role="status"><strong>{loadingNews?polishCopy[lang].loadingNews:polishCopy[lang].newsEmpty}</strong>{!loadingNews&&<><p>{polishCopy[lang].newsEmptyNote}</p><button type="button" onClick={refreshAll}>{polishCopy[lang].retry}</button></>}</div>;
   return <div className="page" id="top"><a className="skip-link" href="#main-content" onClick={e=>{e.preventDefault();document.getElementById('main-content')?.focus();}}>{polishCopy[lang].skip}</a>
     <div className="shell">
@@ -606,18 +613,22 @@ function App() {
       <Navigation active={activeView} onNavigate={navigate} lang={lang}/><main id="main-content" tabIndex="-1" className="main-content">
       <section className={'hawal-screen home-screen '+(activeView==='home'?'':'is-hidden-view')} aria-label={designCopy.home}>
         <h1 className="sr-only">{dashboardCopy[lang].title}</h1>
-        <div className="home-rate-board">
-          <DollarRates markets={markets} lang={lang} loading={loadingMarkets} history={rateHistory} onRefresh={refreshAll}/>
-        </div>
         <div className="home-stage">
-          <HomeMarkets markets={markets} lang={lang} onNavigate={navigate}/>
-          <FeatureShortcuts lang={lang} onNavigate={navigate} onMoreTarget={setFeatureTarget}/>
-        </div>
-        <div className="home-feature-main home-feature-main--news-first">
-          {hero ? <Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/> :
-            <div className="screen-intro"><p>HAWAL · {copy.news}</p><h1>{loadingNews?copy.loadingNews:polishCopy[lang].newsEmpty}</h1><span>{dashboardCopy[lang].subtitle}</span></div>}
+          <div className="home-feature-main">
+            {hero ? <Hero item={hero} lang={lang} dict={dict} onOpen={setSelected}/> :
+              <div className="screen-intro"><p>HAWAL · {copy.news}</p><h1>{loadingNews?copy.loadingNews:polishCopy[lang].newsEmpty}</h1><span>{dashboardCopy[lang].subtitle}</span></div>}
+            <aside className="home-market-aside">
+              <HomeMarkets markets={markets} lang={lang} onNavigate={navigate}/>
+              <FeatureShortcuts lang={lang} onNavigate={navigate} onMoreTarget={setFeatureTarget}/>
+            </aside>
+          </div>
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
+        <details className="home-rates-disclosure">
+          <summary>{dashboardCopy[lang].rates} · USD/IQD <span>{polishCopy[lang].history} / {polishCopy[lang].converter}</span></summary>
+          <DollarRates markets={markets} lang={lang} loading={loadingMarkets} history={rateHistory} onRefresh={refreshAll}/>
+        </details>
+        {newsStatusPanel}
         {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating headlines…'}</p>}
         {translationIssue && !translating && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.':lang==='ar'?'تعذرت الترجمة؛ يظهر النص الأصلي.':'Translation unavailable; original publisher text is shown.'}</span><button type="button" onClick={retryTranslations}>{polishCopy[lang].retry}</button></div>}
         <section className="latest-section home-news" id="latest-home">
@@ -644,6 +655,7 @@ function App() {
         {activeView==='news' && <VerificationDesk news={displayNews} lang={lang}/>}
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         {query && rateMatches.length>0 && <section className="desk-panel search-rates"><h2>{polishCopy[lang].rateResults}</h2><div className="search-rate-grid">{rateMatches.map(({city,quote})=><article key={city}><h3>{dashboardCopy[lang][city]}</h3><strong><bdi>{quote?formatNumber(city==='official'?quote.price*100:quote.price,lang):polishCopy[lang].unavailable}</bdi></strong><small>{dashboardCopy[lang].unit} · {city==='official'?dashboardCopy[lang].reference:quote?.sell?dashboardCopy[lang].sell:dashboardCopy[lang].buy}</small><RateMeta item={quote} lang={lang}/><button type="button" onClick={()=>navigate('markets')}>{designCopy.markets} →</button></article>)}</div></section>}
+        {newsStatusPanel}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
         {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':'Translating headlines…'}</p>}
         {translationIssue && !translating && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.':lang==='ar'?'تعذرت الترجمة؛ يظهر النص الأصلي.':'Translation unavailable; original publisher text is shown.'}</span><button type="button" onClick={retryTranslations}>{polishCopy[lang].retry}</button></div>}
