@@ -1,3 +1,4 @@
+import { translationJson } from './translation-request.js';
 import { alreadyInTargetLanguage, validateTranslation } from './translation-check.js';
 import { getCachedTranslation, saveCachedTranslation, clientFallbackTranslate } from '../hooks/useClientTranslator.js';
 
@@ -46,14 +47,14 @@ export async function translateArticleBody(text, lang, { signal, fetcher = fetch
       let serverResults = null;
 
       try {
-        const response = await fetcher('/api/translate', {
+        const response = await translationJson('/api/translate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ lang, texts: batch }),
           signal
-        });
+        }, fetcher);
         if (response.ok) {
-          const data = await response.json();
+          const data = response.data;
           if (data?.ok && Array.isArray(data.translated) && data.translated.length === batch.length) {
             serverResults = data;
           }

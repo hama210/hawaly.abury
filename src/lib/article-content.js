@@ -1,16 +1,27 @@
 // An RSS item is not automatically a full article.
 // Only show text supplied by its publisher/feed, never invent a body from a headline.
+const entities = {amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' ',rsquo:'’',lsquo:'‘',rdquo:'”',ldquo:'“',ndash:'–',mdash:'—',hellip:'…'};
 export function cleanArticleText(value) {
-  return String(value ?? '').replace(/\s+/gu, ' ').trim();
+  let text=String(value ?? '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1');
+  for(let pass=0;pass<2;pass++) text=text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi,(raw,key)=>{
+    if(key[0]!=='#')return entities[key.toLowerCase()] ?? raw;
+    const number=key[1].toLowerCase()==='x'?parseInt(key.slice(2),16):Number(key.slice(1));
+    return number>0 && number<=0x10ffff && !(number>=0xd800 && number<=0xdfff)?String.fromCodePoint(number):'';
+  });
+  return text.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,' ')
+    .replace(/<\/?(?:p|div|li|h[1-6]|br|blockquote)\b[^>]*>/gi,'\n')
+    .replace(/<[^>]*>/g,' ')
+    .replace(/[^\S\n]+/gu,' ').replace(/ *\n */g,'\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 function comparable(value) {
   return cleanArticleText(value).normalize('NFKC').toLocaleLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
-export function meaningfulArticleText(value, title) {
+export function meaningfulArticleText(value, title, source = '') {
   const text=cleanArticleText(value);
   if(!text) return '';
   const key=comparable(text), heading=comparable(title);
+  if(source && key===heading+' '+comparable(source)) return '';
   if(!key || (heading && (key===heading || key===heading+' read more' || key===heading+' continue reading'))) return '';
   // The feed sometimes contains the exact headline before an actual description.
   if (heading && key.startsWith(heading+' ') && text.length <= cleanArticleText(title).length+16) return '';

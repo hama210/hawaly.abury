@@ -42,30 +42,17 @@ Hawal translates RSS headlines, summaries and available article text directly
 **inside its own website**. The interface remains Kurdish, Arabic and English.
 The translator uses Central Kurdish (Sorani) and Arabic targets:
 
-1. If `MICROSOFT_TRANSLATOR_KEY` is configured on Cloudflare Pages, use the
-   official Azure Translator API with target `ku`. A regional Microsoft
-   resource may also require `MICROSOFT_TRANSLATOR_REGION`.
-2. If `GOOGLE_TRANSLATE_API_KEY` is configured, use the official Cloud
-   Translation API with target `ckb` for Sorani.
-3. Without either key, try Google's public web translation endpoint as a
-   **best-effort fallback**. This is not a documented production API: it
-   may stop working, rate-limit or return inaccurate translations.
+Translation uses Google only: `ckb` for Sorani and `ar` for Arabic. Without
+keys it uses the public Google endpoint on a best-effort basis. Optional
+`GOOGLE_TRANSLATE_API_KEY` enables Google Cloud Translation. No Microsoft
+translation path is used. Never commit credentials.
 
-To configure the reliable supported provider: open Cloudflare Dashboard →
-Workers & Pages → Hawal Pages project → Settings → Variables and Secrets.
-Add the Microsoft or Google key as an encrypted **secret**, not as a GitHub file
-or browser variable. With Microsoft regional resources, also set the region.
-Save and redeploy. Translation API credentials are never returned to clients.
-Cloud translation products may have usage costs. Verify entitlements with
-your cloud account before enabling.
+The public endpoint can reject server traffic. Redirects and rate limits are
+reported as failures, not followed or worked around. Configuration is not proof
+of successful translation: `/api/translation-health` must return `ok:true`.
+Requests have deadlines and a failed batch pauses the queue until retry, instead
+of flooding the provider with every remaining headline. Successful output is cached.
 
-Check `/api/translation-status` for the deployment revision and whether a
-provider key is configured. Use `/api/translation-health` to run a cached
-fixed-text English-to-Sorani translation on the deployed site. The health
-endpoint returns a non-secret provider label and safe failure codes (for
-example `microsoft:http-401`), not API keys, headers or private feed text.
-An Azure key configured in Cloudflare is NOT proof that real translations
-work: verify `ok:true` and `provider:"microsoft"` in translation-health.
 The Kurdish/Arabic news screens also offer a Retry button if translation
 fails; they never present an unverified translation as publisher text.
 

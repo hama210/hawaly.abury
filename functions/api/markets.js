@@ -19,7 +19,7 @@ const USD_IQD = {
   marketKind: 'local',
   quoteAmount: 100
 };
-const MARKET_FETCH_TIMEOUT_MS = 3500;
+const MARKET_FETCH_TIMEOUT_MS = 8000;
 const FRESH_CACHE_TTL = 60;
 const LAST_GOOD_TTL = 24 * 60 * 60;
 const LAST_GOOD_MAX_AGE_MS = LAST_GOOD_TTL * 1000;
@@ -130,19 +130,20 @@ async function fetchShafaqUsdIqd() {
     });
     if (!res.ok) throw new Error(`Shafaq ${res.status}`);
 
-    const xml = await readTextLimited(
-      res,
-      text => /<item>[\s\S]*?<title>[\s\S]*?(?:dollar|USD\/IQD)[\s\S]*?<\/title>[\s\S]*?<\/item>/i.test(text)
-    );
-    const blocks = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
-    const block = blocks.find(item => /(?:dollar|USD\/IQD)/i.test(xmlValue(item, 'title')));
-    if (!block) throw new Error('no recent USD/IQD local-market report');
-
-    const description = xmlValue(block, 'description');
-    const publishedTime = Date.parse(xmlValue(block, 'pubDate'));
-    if (!Number.isFinite(publishedTime) || Date.now() - publishedTime > 4 * 24 * 60 * 60 * 1000) {
-      throw new Error('USD/IQD local-market report is stale');
-    }
+    const xml = await readTextLimited(res);
+    const reports = (xml.match(/<item\b[^>]*>[\s\S]*?<\/item>/gi) || [])
+      .filter(item => /(?:dollar|USD\/IQD)/i.test(xmlValue(item, 'title')))
+      .map(block => ({block, time:Date.parse(xmlValue(block,'pubDate'))}))
+      .filter(row => Number.isFinite(row.time) && row.time<=Date.now()+300000 && Date.now()-row.time<=4*86400000)
+      .sort((a,b)=>b.time-a.time);
+    const report=reports.find(row=>{
+      const text=xmlValue(row.block,'description') || xmlValue(row.block,'content:encoded');
+      return parseCityRate(text,'erbil')?.sell || parseCityRate(text,'baghdad')?.sell;
+    });
+    if(!report) throw new Error('no recent parseable USD/IQD local-market report');
+    const block=report.block;
+    const description=xmlValue(block,'description') || xmlValue(block,'content:encoded');
+    const publishedTime=report.time;
 
     const baghdadMarket = extractNumber(description, /Baghdad(?:'s)?[^.]{0,260}?exchanges?\s+at\s*([\d,]{5,})\s*dinars/i);
     const baghdad = parseCityRate(description, 'baghdad');

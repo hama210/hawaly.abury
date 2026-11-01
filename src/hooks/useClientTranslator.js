@@ -1,14 +1,15 @@
+import { translationJson } from '../lib/translation-request.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   alreadyInTargetLanguage,
   validateTranslation
 } from '../lib/translation-check.js';
 
-const PREFIX = 'hawal-inline-translation-v14:';
+const PREFIX = 'hawal-inline-translation-v15:';
 const TTL = 24 * 60 * 60 * 1000;
 
 const BATCH = 8;
-const CONCURRENCY = 3;
+const CONCURRENCY = 1;
 
 const entries = new Map();
 const skipped = new Map();
@@ -109,14 +110,13 @@ export async function clientFallbackTranslate(text, lang, signal) {
   if (!text || lang === 'en') return '';
   const tl = lang === 'ku' ? 'ckb' : lang;
   const endpoints = [
-    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`,
-    `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl=${tl}&q=${encodeURIComponent(text)}`
+    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`
   ];
   for (const url of endpoints) {
     try {
-      const res = await fetch(url, { headers: { Accept: 'application/json' }, signal });
+      const res = await translationJson(url, { headers: { Accept: 'application/json' }, signal });
       if (!res.ok) continue;
-      const data = await res.json();
+      const data = res.data;
       let candidate = '';
       if (Array.isArray(data) && Array.isArray(data[0])) {
         candidate = data[0].map(seg => (Array.isArray(seg) ? seg[0] : (typeof seg === 'string' ? seg : ''))).join('').trim();
@@ -217,7 +217,7 @@ export function useClientTranslator(
 
     let work = task.current;
 
-    if (!work || work.lang !== lang) {
+    if (!work || work.closed || work.lang !== lang) {
 
       if (work) {
         work.closed = true;
@@ -319,7 +319,7 @@ export function useClientTranslator(
 
           work.running++;
 
-          fetch('/api/translate', {
+          translationJson('/api/translate', {
             method: 'POST',
             headers: {
               'Content-Type':
@@ -335,10 +335,7 @@ export function useClientTranslator(
           })
             .then(async response => {
 
-              const result =
-                await response
-                  .json()
-                  .catch(() => null);
+              const result = response.data;
 
               let changed = false;
               const failedJobs = [];
@@ -370,18 +367,13 @@ export function useClientTranslator(
                 });
               }
 
-              // Client-side direct fallback for any item that failed on server (e.g. Cloudflare 429 or static host)
-              if (failedJobs.length && !work.closed) {
-                for (const entry of failedJobs) {
-                  if (work.closed) break;
-                  const direct = await clientFallbackTranslate(entry.job.text, work.lang, work.controller.signal);
-                  if (direct) {
-                    changed = true;
-                  } else {
-                    work.setIssue(entry.reason.slice(0, 180));
-                    skipped.set(entry.job.key, Date.now() + 25 * 1000);
-                  }
-                }
+              for(const entry of failedJobs) {
+                skipped.set(entry.job.key,Date.now()+60000);
+                if(!work.closed) work.setIssue(entry.reason.slice(0,180));
+              }
+              if(failedJobs.length===group.length && !changed) {
+                for(const job of work.queue) { skipped.set(job.key,Date.now()+60000); work.seen.delete(job.key); }
+                work.queue=[];
               }
 
               if (changed && !work.closed) {
@@ -399,25 +391,12 @@ export function useClientTranslator(
                 return;
               }
 
-              let changed = false;
-              for (const job of group) {
-                if (work.closed) break;
-                try {
-                  const direct = await clientFallbackTranslate(job.text, work.lang, work.controller.signal);
-                  if (direct) {
-                    changed = true;
-                  } else {
-                    skipped.set(job.key, Date.now() + 15 * 1000);
-                  }
-                } catch {}
+              for(const job of [...group,...work.queue]) {
+                skipped.set(job.key,Date.now()+60000);
+                work.seen.delete(job.key);
               }
-
-              if (changed && !work.closed) {
-                work.setIssue('');
-                work.setTick(value => value + 1);
-              } else if (!work.closed) {
-                work.setIssue('request-failed');
-              }
+              work.queue=[];
+              work.setIssue('request-failed');
             })
             .finally(() => {
 

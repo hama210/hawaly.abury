@@ -20,7 +20,7 @@ function normalizedDigits(text){
 
 function values(text){
   return (normalizedDigits(text).match(numeric)||[])
-    .map(v=>v.replace(/[,.،٬٫]/g,''))
+    .map(v=>v.replace(/[،٬,]/g,'').replace(/٫/g,'.'))
     .sort();
 }
 
@@ -217,7 +217,7 @@ export function validateTranslation(original,candidate,target){
       .map(v=>v.toUpperCase())
       .sort();
 
-  if(oldPairs.length && newPairs.length && oldPairs.join('|')!==newPairs.join('|')){
+  if(oldPairs.length && oldPairs.join('|')!==newPairs.join('|')){
     return {
       ok:false,
       reason:'changed-pair',

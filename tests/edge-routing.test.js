@@ -70,6 +70,8 @@ test('edge errors fall back to the unchanged working shell with an explicit stat
 });
 
 test('assets and API payload pass through middleware without rewriting',async()=>{
+  const restore=replaceGlobal('caches',{default:{async match(){return Response.json({news:[],markets:[]});}}});
+  try {
   const resource=await onRequest({request:new Request('https://example.com/assets/main.js'),next:async()=>new Response('const active=true;',{headers:{'Content-Type':'application/javascript'}})});
   assert.equal(await resource.text(),'const active=true;');
   assert.equal(resource.headers.get('X-SSR'),null);
@@ -81,4 +83,5 @@ test('assets and API payload pass through middleware without rewriting',async()=
   const head=await onRequest(page('https://example.com/en/','HEAD'));
   assert.equal(head.status,200);
   assert.equal(await head.text(),'');
+  } finally { restore(); }
 });

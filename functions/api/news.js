@@ -1,4 +1,4 @@
-import { meaningfulArticleText } from '../../src/lib/article-content.js';
+import { meaningfulArticleText, cleanArticleText } from '../../src/lib/article-content.js';
 import { extractNewsImage, coverForCategory } from '../../src/lib/news-images.js';
 
 const googleNewsFeed = query => `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
@@ -128,7 +128,7 @@ const INDEX_TERMS = /\b(nasdaq|dow|djia|stocks|equities|earnings|wall street)\b|
 const US_MACRO_TERMS = /\b(fed|fomc|inflation|cpi|ppi|payroll|payrolls|jobs|employment|unemployment|gdp|retail sales|treasury|tariff|recession)\b|federal reserve|interest rate|rate cut|rate hike/i;
 const TIER_WEIGHT = { official:36, major:32, local:28, specialist:22, curated:17 };
 
-const decode = (str='') => str.replace(/<!\[CDATA\[(.*?)\]\]>/gs,'$1').replace(/&#x([0-9a-f]+);/gi,(_,value)=>String.fromCodePoint(Number.parseInt(value,16))).replace(/&#(\d+);/g,(_,value)=>String.fromCodePoint(Number(value))).replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'').trim();
+const decode = cleanArticleText;
 const extractTag = (xml, tag) => decode(xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1] || '');
 const extractLink = xml => extractTag(xml,'link') || decode(xml.match(/<link[^>]+href=["']([^"']+)/i)?.[1] || '');
 // RSS image extraction lives in news-images.js and understands thumbnails, enclosures and HTML images.
@@ -263,7 +263,8 @@ function isRelevantToFeed(item, feed){
 }
 
 function itemKey(item){
-  return item.title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().slice(0,110);
+  try { const url=new URL(item.link); url.hash=''; for(const key of [...url.searchParams.keys()]) if(/^utm_|^traffic_source$/i.test(key)) url.searchParams.delete(key); return url.href; } catch {}
+  return item.title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim().slice(0,180);
 }
 
 function dedupeItems(items, seen = new Set()){
@@ -356,13 +357,13 @@ async function fetchFeedAttempt(feed, timeoutMs){
       const link = extractLink(entry) || extractTag(entry,'guid') || extractTag(entry,'id') || feed.url;
       const description = extractTag(entry,'description') || extractTag(entry,'summary') || extractTag(entry,'content');
       const syndicationText=extractTag(entry,'content:encoded') || extractTag(entry,'content') || description;
-      const content=meaningfulArticleText(syndicationText,title).slice(0,2400);
-      const summary=(meaningfulArticleText(description,title) || content).slice(0,1000);
+      const source = isGoogleFeed ? sourceFromGoogleTitle(rawTitle, feed.source) : feed.source;
+      const content=meaningfulArticleText(syndicationText,title,source).slice(0,25000);
+      const summary=(meaningfulArticleText(description,title,source) || content).slice(0,1000);
       const contentStatus=content.length > summary.length+65 ? 'rss-text' : summary ? 'excerpt' : 'headline-only';
       const publishedAt = extractTag(entry,'pubDate') || extractTag(entry,'published') || extractTag(entry,'updated') || extractTag(entry,'dc:date');
       const publisherImage=extractNewsImage(entry,feed.url);
       const image=publisherImage || coverForCategory(feed.category);
-      const source = isGoogleFeed ? sourceFromGoogleTitle(rawTitle, feed.source) : feed.source;
       const base = { id: `${feed.source}-${idx}-${title}`.slice(0,180), title, titleEn: title, summary, summaryEn: summary, content, contentEn: content, contentStatus, source, sourceGroup: feed.source, sourceTier: feed.tier, category: feed.category, link, publishedAt, image, imageSource:publisherImage ? 'publisher' : 'illustration', displayMaxAgeDays: Number(feed.maxAgeDays) || 3 };
       const intel = analyze(base);
       return { ...base, intelligence: intel, impact: intel.impact, sentiment: intel.sentiment, affected: intel.assets, iraqImpact: intel.iraqImpact, conflictRegion: feed.category === 'geopolitics' ? conflictRegionFor(base) : null };
@@ -432,7 +433,7 @@ async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'more-news-v15');
+  cacheUrl.searchParams.set('version', 'more-news-v16');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));

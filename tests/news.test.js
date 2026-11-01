@@ -6,7 +6,7 @@ import { matchesCategory } from '../src/utils/categories.js'
 import { MemoryCache, replaceGlobal, requestContext, silenceWarnings } from './helpers.js'
 
 function rssItem(title, description, publishedAt){
-  return `<item><title>${title}</title><link>https://example.com/story</link><description>${description}</description><pubDate>${publishedAt}</pubDate></item>`
+  return `<item><title>${title}</title><link>https://example.com/story/${encodeURIComponent(title)}</link><description>${description}</description><pubDate>${publishedAt}</pubDate></item>`
 }
 
 test('news rejects server-side search and non-GET requests', async () => {
