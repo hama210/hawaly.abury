@@ -125,6 +125,6 @@ test('Middle East conflict brief never bypasses localized excerpt verification',
   const main=fs.readFileSync('src/main.jsx','utf8');
   const brief=main.split('function MiddleEastBrief({ items, lang, onOpen }) {')[1]?.split('function focusedIntelligence')[0] || '';
   assert.ok(brief);
-  assert.match(brief,/storyExcerpt\\(item,lang\\) && <p dir="auto">\\{shorten\\(storyExcerpt\\(item,lang\\)\\)\\}<\\/p>/);
-  assert.doesNotMatch(brief,/shorten\\(sourceSummary\\(item,lang\\)\\)/);
+  assert.ok(brief.includes('{storyExcerpt(item,lang) && <p dir="auto">{shorten(storyExcerpt(item,lang))}</p>}'));
+  assert.ok(!brief.includes('shorten(sourceSummary(item,lang))'));
 });
