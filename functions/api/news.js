@@ -128,7 +128,27 @@ const INDEX_TERMS = /\b(nasdaq|dow|djia|stocks|equities|earnings|wall street)\b|
 const US_MACRO_TERMS = /\b(fed|fomc|inflation|cpi|ppi|payroll|payrolls|jobs|employment|unemployment|gdp|retail sales|treasury|tariff|recession)\b|federal reserve|interest rate|rate cut|rate hike/i;
 const TIER_WEIGHT = { official:36, major:32, local:28, specialist:22, curated:17 };
 
-const decode = (str='') => str.replace(/<!\[CDATA\[(.*?)\]\]>/gs,'$1').replace(/&#x([0-9a-f]+);/gi,(_,value)=>String.fromCodePoint(Number.parseInt(value,16))).replace(/&#(\d+);/g,(_,value)=>String.fromCodePoint(Number(value))).replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/<[^>]*>/g,'').trim();
+// Decode ordinary RSS entities and at most two nested encoding layers
+// (e.g. &amp;nbsp;) without leaving raw markup in news headings.
+export function decodeNewsText(value = '') {
+  let text = String(value).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
+  const named = { nbsp:' ', amp:'&', quot:'"', apos:"'", lt:'<', gt:'>', rsquo:"'" };
+  for (let pass = 0; pass < 3; pass++) {
+    const next = text.replace(/&#x([0-9a-f]+);|&#(\d+);|&(nbsp|amp|quot|apos|lt|gt|rsquo);/gi,
+      (match, hex, decimal, entity) => {
+        if (hex || decimal) {
+          const point = Number.parseInt(hex || decimal, hex ? 16 : 10);
+          return Number.isInteger(point) && point > 0 && point <= 0x10ffff &&
+            !(point >= 0xd800 && point <= 0xdfff) ? String.fromCodePoint(point) : match;
+        }
+        return named[entity.toLowerCase()];
+      });
+    if (next === text) break;
+    text = next;
+  }
+  return text.replace(/<[^>]*>/g, '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+}
+const decode = decodeNewsText;
 const extractTag = (xml, tag) => decode(xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1] || '');
 const extractLink = xml => extractTag(xml,'link') || decode(xml.match(/<link[^>]+href=["']([^"']+)/i)?.[1] || '');
 // RSS image extraction lives in news-images.js and understands thumbnails, enclosures and HTML images.
