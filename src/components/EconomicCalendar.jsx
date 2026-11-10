@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { fetchEconomicCalendar, CALENDAR_SOURCE_URL } from '../services/economic-calendar.js';
-import { analyzeCalendarEvent } from '../lib/economic-impact.js';
+import { analyzeCalendarEvent, calendarScenarios } from '../lib/economic-impact.js';
 import { calendarText, calendarEventTitle } from '../lib/calendar-i18n.js';
 
 const CURRENCIES = ['USD','EUR','GBP','JPY','CAD','AUD','NZD','CHF','CNY'];
@@ -58,6 +58,27 @@ function ImpactContext({ event, lang, c }) {
   </div>;
 }
 
+function BeforeRelease({ event, lang, c }) {
+  const scenarios = calendarScenarios(event);
+  if (!scenarios || event.impact === 'holiday') return null;
+  return <aside className="ec-before-release" aria-label={c.beforeRelease}>
+    <h4>{c.beforeRelease}</h4>
+    {scenarios.cases.length ? <>
+      <div className="ec-scenario-grid">{scenarios.cases.map(scenario => <div className="ec-scenario" key={scenario.comparison}>
+        <strong>{scenario.comparison === 'higher' ? c.ifHigher : c.ifLower}</strong>
+        <ul>{scenario.markets.map(market => <li key={market.asset}>
+          <b dir="auto">{assetLabel(market.asset,lang)}</b>
+          <span className={'ec-bias ec-bias-'+market.direction}>{market.direction === 'up' ? '↑ '+c.up : '↓ '+c.down}</span>
+        </li>)}</ul>
+      </div>)}</div>
+      <p>{c.ifEqual}</p>
+      <p>{c[scenarios.note]}</p>
+      {event.currency === 'USD' && <p>{c.ratesDisclaimer}</p>}
+    </> : <p>{c[scenarios.note]}</p>}
+    <p className="ec-disclaimer">{c.warning}</p>
+  </aside>;
+}
+
 function EventCard({ event, lang, c, now }) {
   const comparison = analyzeCalendarEvent(event);
   const resultClass = comparison.status === "surprise" ? (comparison.difference > 0 ? "above" : "below") : "neutral";
@@ -82,6 +103,7 @@ function EventCard({ event, lang, c, now }) {
       <div><span>{c.actual}</span><strong className={event.actual ? 'ec-result-' + resultClass : ''} dir="ltr">{event.actual || c.notAvailable}</strong></div>
     </div>
     {comparison.status === 'surprise' && <p className={'ec-comparison ec-result-' + resultClass}>{comparison.difference > 0 ? '↑ ' + c.actualHigher : '↓ ' + c.actualLower}</p>}
+    <BeforeRelease event={event} lang={lang} c={c}/>
     <details className="ec-details">
       <summary>{c.showDetails}</summary>
       <div className="ec-detail-inner">

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { analyzeCalendarEvent, parseEconomicValue, indicatorKind } from '../src/lib/economic-impact.js';
+import { analyzeCalendarEvent, parseEconomicValue, indicatorKind, calendarScenarios } from '../src/lib/economic-impact.js';
 import { normalizeCalendarPayload } from '../src/services/economic-calendar.js';
 import { calendarEventTitle, calendarText } from '../src/lib/calendar-i18n.js';
 import { pageRoute, pagePath } from '../src/lib/market-tools.js';
@@ -91,4 +91,24 @@ test('localized calendar routes are accepted', () => {
   assert.equal(pageRoute('/ar/calendar').lang,'ar');
   assert.equal(pageRoute('/en/calendar').page,'calendar');
   assert.equal(pagePath('ku','calendar'),'/calendar');
+});
+
+
+test('pre-release scenarios show both directions without mutating provider values', () => {
+  const event = {title:'Core CPI MoM',currency:'USD',actual:'',forecast:'0.3%'};
+  const result = calendarScenarios(event);
+  assert.deepEqual(result.cases.map(c => c.markets.map(m => m.direction)), [['up','down','down'],['down','up','up']]);
+  assert.equal(result.note,'rate_expectations');
+  assert.equal(event.actual,'');
+  assert.equal(event.forecast,'0.3%');
+});
+test('pre-release unemployment reverses direction and non-USD events do not predict metals', () => {
+  const result = calendarScenarios({title:'Unemployment Rate',currency:'GBP',forecast:'4%'});
+  assert.deepEqual(result.cases.map(c => c.markets), [[{asset:'GBP',direction:'down'}],[{asset:'GBP',direction:'up'}]]);
+});
+test('no speculative cases after release, without forecast, or for unsupported events', () => {
+  assert.equal(calendarScenarios({title:'CPI',actual:'0',forecast:'1'}),null);
+  assert.equal(calendarScenarios({title:'CPI',actual:'—',forecast:''}).cases.length,0);
+  assert.equal(calendarScenarios({title:'Fed speech',forecast:'1'}).note,'unsupported_indicator');
+  assert.equal(calendarScenarios({title:'Retail Sales',currency:'USD',actual:'—',forecast:'0'}).cases.length,2);
 });

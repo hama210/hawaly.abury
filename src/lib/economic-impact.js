@@ -52,3 +52,19 @@ export function analyzeCalendarEvent(event) {
   }
   return { ...base, status: 'surprise', direction, difference, note: kind === 'inflation' ? 'rate_expectations' : kind === 'policy' ? 'policy_expectations' : 'conditional', markets };
 }
+
+// Hypothetical cases only: never populate the event's actual or forecast fields.
+export function calendarScenarios(event) {
+  if (parseEconomicValue(event?.actual) !== null) return null;
+  if (indicatorKind(event?.title) === 'unknown') return { note:'unsupported_indicator', cases:[] };
+  if (parseEconomicValue(event?.forecast) === null) return { note:'no_forecast', cases:[] };
+  const kind = indicatorKind(event.title);
+  const currency = String(event.currency || '').toUpperCase();
+  const cases = ['higher','lower'].map(comparison => {
+    const up = (comparison === 'higher') !== (kind === 'inverse');
+    const markets = [{ asset:currency, direction:up ? 'up' : 'down' }];
+    if (currency === 'USD') markets.push(...['XAUUSD','XAGUSD'].map(asset => ({ asset, direction:up ? 'down' : 'up' })));
+    return { comparison, markets };
+  });
+  return { note:kind === 'inflation' ? 'rate_expectations' : kind === 'policy' ? 'policy_expectations' : 'conditional', cases };
+}
