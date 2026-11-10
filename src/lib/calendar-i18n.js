@@ -1,5 +1,6 @@
 const dictionary = {
   ku: {
+    beforeRelease:'تێبینی پێش دەرچوونی ئەنجام', ifHigher:'ئەگەر Actual لە Forecast بەرزتر بێت', ifLower:'ئەگەر Actual لە Forecast کەمتر بێت', ifEqual:'ئەگەر یەکسان بن: لەم بەراوردەوە ئاراستەیەکی ڕوون نییە؛ وردەکاری و پێداچوونەوەکان هەر دەتوانن بازاڕ بجوڵێنن.',
     reset:'پاککردنەوەی فلتەرەکان', next:'نزیکترین هەواڵ', upcoming:'هەواڵی داهاتوو', released:'ئەنجام بڵاوکراوەتەوە', awaiting:'چاوەڕوانی ئەنجام', minutes:'خولەک', noUpcoming:'هەواڵی داهاتوو بۆ ئەم فلتەرە نییە', stale:'نوێکردنەوە سەرکەوتوو نەبوو؛ داتای پێشوو پیشان دەدرێت.',
     title:'کاڵەندەری ئابووری', lead:'هەواڵە کاریگەرەکانی بازاڕ بە کاتی هەولێر',
     date:'کات', event:'هەواڵ', currency:'دراو', impact:'کاریگەری',
@@ -31,6 +32,7 @@ const dictionary = {
     ratesDisclaimer:'بۆ زێڕ و زیو، فشاری دۆلار تەنها یەک فاکتەرە؛ بازاڕ دەتوانێت بەپێچەوانە بجوڵێت.'
   },
   ar: {
+    beforeRelease:'ملاحظة قبل صدور النتيجة', ifHigher:'إذا كان الفعلي أعلى من المتوقع', ifLower:'إذا كان الفعلي أقل من المتوقع', ifEqual:'إذا تطابقا: لا اتجاه واضح من هذه المقارنة وحدها؛ التفاصيل والمراجعات قد تحرك السوق.',
     reset:'مسح الفلاتر', next:'الحدث التالي', upcoming:'أحداث قادمة', released:'صدرت النتيجة', awaiting:'بانتظار النتيجة', minutes:'دقيقة', noUpcoming:'لا أحداث قادمة بهذه الفلاتر', stale:'فشل التحديث؛ يتم عرض البيانات السابقة.',
     title:'التقويم الاقتصادي',lead:'أحداث الأسواق بتوقيت أربيل',
     date:'الوقت',event:'الحدث',currency:'العملة',impact:'التأثير',forecast:'المتوقع',previous:'السابق',actual:'الفعلي',
@@ -54,6 +56,7 @@ const dictionary = {
     ratesDisclaimer:'تأثير الدولار عامل واحد فقط للذهب والفضة؛ الأسعار قد تتحرك عكس ذلك.'
   },
   en: {
+    beforeRelease:'Before the release · possible scenarios', ifHigher:'If Actual is above Forecast', ifLower:'If Actual is below Forecast', ifEqual:'If they match: this comparison alone gives no clear direction; details and revisions can still move markets.',
     reset:'Clear filters', next:'Next release', upcoming:'Upcoming', released:'Result published', awaiting:'Awaiting result', minutes:'min', noUpcoming:'No upcoming events for these filters', stale:'Refresh failed; showing previously loaded data.',
     title:'Economic calendar',lead:'Market-moving events in Erbil time',
     date:'Time',event:'Event',currency:'Currency',impact:'Impact',forecast:'Forecast',previous:'Previous',actual:'Actual',
