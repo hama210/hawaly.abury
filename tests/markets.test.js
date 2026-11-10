@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { onRequest } from '../functions/api/markets.js'
+import { onRequest, parseShafaqRateFeed } from '../functions/api/markets.js'
+import fs from 'node:fs'
 import { MemoryCache, replaceGlobal, requestContext, silenceWarnings } from './helpers.js'
 
 function yahooPayload(){
@@ -73,3 +74,45 @@ test('markets return unavailable values instead of invented prices when no verif
     restoreCaches()
   }
 })
+
+
+function shafaqItem(title, description, publishedAt, path='USD-IQD-prices') {
+  return '<item><title>'+title+'</title><link>https://shafaq.com/en/Economy/'+path+'</link>'+
+    '<description><![CDATA['+description+']]></description><pubDate>'+publishedAt.toUTCString()+'</pubDate></item>';
+}
+
+test('Shafaq feed selects the most recent verified city price report, not the first dollar headline', () => {
+  const now = Date.now();
+  const realDescription =
+    'According to a Shafaq News market survey, the dollar traded in Baghdad’s Al-Kifah and Al-Harithiya exchanges at 169,050 dinars per 100 dollars, up from the morning session’s 168,900 dinars. '+
+    'In the Iraqi capital, exchange shops sold the dollar at 169,500 dinars and bought it at 168,500 dinars, while in Erbil, selling prices stood at 168,900 dinars and buying prices at 168,800 dinars.';
+  const oldDescription =
+    'Baghdad exchanges at 168,000 dinars. In the Iraqi capital, exchange shops sold the dollar at 168,500 dinars and bought it at 167,500 dinars. In Erbil, selling prices stood at 168,200 dinars and buying prices at 168,100 dinars.';
+  const xml = '<rss><channel>'+
+    shafaqItem('Dollar policy briefing, not cash exchange quotes','Central bank officials discussed trade policy without publishing a local cash-market quote.',new Date(now-60*1000),'dollar-policy')+
+    shafaqItem('Dollar prices in Baghdad and Erbil',oldDescription,new Date(now-2*60*60*1000),'old-market')+
+    shafaqItem('Dollar rises in Baghdad, slips in Erbil',realDescription,new Date(now-30*60*1000),'latest-market')+
+    '</channel></rss>';
+  const rate=parseShafaqRateFeed(xml,now);
+  assert.equal(rate.price,168900);
+  assert.equal(rate.quoteCity,'erbil');
+  assert.equal(rate.erbil.sell,168900);
+  assert.equal(rate.erbil.buy,168800);
+  assert.equal(rate.baghdad.sell,169500);
+  assert.equal(rate.baghdad.buy,168500);
+  assert.equal(rate.baghdad.market,169050);
+  assert.equal(rate.sulaymaniyah,null);
+  assert.equal(rate.sourceUrl,'https://shafaq.com/en/Economy/latest-market');
+  assert.ok(Date.parse(rate.updatedAt)>now-60*60*1000);
+});
+
+test('Shafaq feed rejects stale and unrelated headlines rather than fabricating city quotes',()=>{
+  const now=Date.now();
+  const noQuote=shafaqItem('Dollar deposits in Iraq','Banks discussed dollar settlements in the budget.',new Date(now));
+  const oldQuote=shafaqItem('Dollar rates in Erbil','In Erbil, selling prices stood at 170,000 dinars and buying prices at 169,900 dinars.',new Date(now-5*86400000));
+  const futureQuote=shafaqItem('Dollar rates in Erbil','In Erbil, selling prices stood at 170,000 dinars.',new Date(now+10*60*1000));
+  assert.throws(()=>parseShafaqRateFeed('<rss>'+noQuote+oldQuote+futureQuote+'</rss>',now),/no recent verifiable/);
+  const main=fs.readFileSync('src/main.jsx','utf8');
+  assert.match(main,/localCopy\[market\.quoteCity\] \|\| localCopy\.iraq/);
+  assert.doesNotMatch(main,/\{localCopy\.erbil\}<\/small>/);
+});
