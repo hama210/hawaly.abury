@@ -37,9 +37,19 @@ export function normalizeCalendarPayload(payload) {
 }
 
 export async function fetchEconomicCalendar(signal) {
-  const response = await fetch(CALENDAR_API_URL, {
-    signal, headers: { Accept: 'application/json' }, cache: 'no-store'
-  });
-  if (!response.ok) throw new Error('Calendar API HTTP ' + response.status);
-  return normalizeCalendarPayload(await response.json());
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (signal?.aborted) abort();
+  signal?.addEventListener('abort', abort, { once:true });
+  const timeout = setTimeout(abort, 12000);
+  try {
+    const response = await fetch(CALENDAR_API_URL, {
+      signal:controller.signal, headers: { Accept: 'application/json' }, cache: 'no-store'
+    });
+    if (!response.ok) throw new Error('Calendar API HTTP ' + response.status);
+    return normalizeCalendarPayload(await response.json());
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', abort);
+  }
 }

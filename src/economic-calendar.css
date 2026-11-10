@@ -69,3 +69,28 @@
  .ec-metal-toggle{grid-column:auto}
  .ec-header{flex-direction:column}
 }
+
+/* Calendar desk: a compact overview, clear hierarchy and touch-friendly controls. */
+.ec-header{padding:28px;background:radial-gradient(ellipse at top right,color-mix(in srgb,var(--primary) 13%,transparent),transparent 65%),var(--card);border-top:3px solid var(--primary)}
+.ec-header h1{letter-spacing:-.025em}.ec-eyebrow{margin-bottom:12px}
+.ec-overview{display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px}
+.ec-stat,.ec-next{border:1px solid var(--line);border-radius:16px;background:var(--card);padding:18px 20px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.ec-stat>span,.ec-next>span{font-size:12px;color:var(--muted)}
+.ec-stat>strong{font:700 32px/1.2 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.ec-stat-high>strong{color:var(--red)}.ec-next{border-color:color-mix(in srgb,var(--primary) 40%,var(--line))}
+.ec-next>strong{font-size:15px;line-height:1.7;overflow-wrap:anywhere}.ec-next>small{color:var(--muted);font-size:11px}
+.ec-filter-bottom{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:12px}
+.ec-reset{background:transparent;border:1px solid var(--line);border-radius:9px;color:var(--text);min-height:44px;padding:8px 12px;font:inherit;font-size:12px;cursor:pointer}
+.ec-page button:focus-visible,.ec-page a:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+.ec-filter-bar select,.ec-filter-bar input[type="search"]{min-height:46px;font-size:16px}
+.ec-day>h2{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid var(--line);font-size:16px}
+.ec-day>h2 small{font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap}
+.ec-event{padding:18px 20px;border-radius:14px}.ec-event-heading strong{font-size:15px}.ec-original{font-size:11px}
+.ec-time{background:var(--bg-soft);padding:6px;border-radius:8px;text-align:center;font-variant-numeric:tabular-nums}
+.ec-release-state{color:var(--muted);font-size:11px;margin:10px 0 0}
+.ec-values{gap:10px;margin-top:10px}.ec-values>div{padding:10px}.ec-values>div:last-child{border-color:color-mix(in srgb,var(--primary) 40%,var(--line))}
+.ec-values span{font-size:11px}.ec-values strong{font-size:16px;font-variant-numeric:tabular-nums}
+.ec-result-above{color:var(--primary)}.ec-result-below{color:#d795f4}.ec-result-neutral{color:var(--text)}
+.ec-comparison{font-size:12px;margin:8px 0 12px}.ec-details summary{padding:10px 0;min-height:44px;font-size:12px}
+@media(min-width:1000px){.ec-event{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,1fr);column-gap:24px}.ec-event-summary{grid-column:1;grid-row:1;grid-template-columns:65px minmax(0,1fr) 55px 75px}.ec-values{grid-column:2;grid-row:1/3;margin:0;align-self:start}.ec-release-state{grid-column:1}.ec-comparison,.ec-details{grid-column:1/-1}}
+@media(max-width:720px){.ec-header{padding:20px 16px;flex-wrap:wrap}.ec-overview{grid-template-columns:1fr 1fr;gap:10px}.ec-next{grid-column:1/-1}.ec-stat,.ec-next{padding:14px 16px}.ec-stat>strong{font-size:28px}.ec-event{padding:14px 12px}.ec-event-heading strong{font-size:14px}.ec-time{font-size:13px;padding:5px 2px}.ec-filter-bottom{align-items:flex-start;flex-direction:column}.ec-day>h2{align-items:flex-start;font-size:14px}.ec-values>div{padding:8px 3px}.ec-values strong{font-size:14px}.ec-values span{font-size:10px}}

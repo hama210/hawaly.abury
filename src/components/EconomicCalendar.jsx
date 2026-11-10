@@ -19,7 +19,15 @@ function releaseTime(iso) {
   }).format(new Date(iso));
 }
 function releaseDate(iso, lang) {
-  const language = lang === 'ku' ? 'ckb-IQ' : lang === 'ar' ? 'ar-IQ' : 'en-GB';
+  if (lang === 'ku') {
+    const date = new Date(iso);
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone:BAGHDAD_TZ, day:'numeric', month:'numeric', year:'numeric', weekday:'long' }).formatToParts(date);
+    const part = type => parts.find(value => value.type === type)?.value;
+    const weekdays = {Sunday:'یەکشەممە',Monday:'دووشەممە',Tuesday:'سێشەممە',Wednesday:'چوارشەممە',Thursday:'پێنجشەممە',Friday:'هەینی',Saturday:'شەممە'};
+    const months = ['کانوونی دووەم','شوبات','ئازار','نیسان','ئایار','حوزەیران','تەمووز','ئاب','ئەیلوول','تشرینی یەکەم','تشرینی دووەم','کانوونی یەکەم'];
+    return weekdays[part('weekday')] + '، ' + part('day') + ' ' + months[Number(part('month'))-1] + ' ' + part('year');
+  }
+  const language = lang === 'ar' ? 'ar-IQ' : 'en-GB';
   return new Intl.DateTimeFormat(language, {
     timeZone:BAGHDAD_TZ,weekday:'long',year:'numeric',month:'long',day:'numeric'
   }).format(new Date(iso));
@@ -50,7 +58,9 @@ function ImpactContext({ event, lang, c }) {
   </div>;
 }
 
-function EventCard({ event, lang, c }) {
+function EventCard({ event, lang, c, now }) {
+  const comparison = analyzeCalendarEvent(event);
+  const resultClass = comparison.status === "surprise" ? (comparison.difference > 0 ? "above" : "below") : "neutral";
   const translated = calendarEventTitle(event.title, lang);
   const translationAvailable = translated !== event.title;
   return <article className={'ec-event ec-impact-'+event.impact}>
@@ -65,11 +75,13 @@ function EventCard({ event, lang, c }) {
       <span className="ec-currency" dir="ltr">{event.currency}</span>
       <span className={'ec-impact-pill ec-'+event.impact}>{c[event.impact === 'high' ? 'major' : event.impact] || event.impact}</span>
     </div>
+    <p className="ec-release-state">{event.actual ? c.released : Date.parse(event.time) > now ? c.upcoming : c.awaiting}</p>
     <div className="ec-values">
       <div><span>{c.previous}</span><strong dir="ltr">{event.previous || c.notAvailable}</strong></div>
       <div><span>{c.forecast}</span><strong dir="ltr">{event.forecast || c.notAvailable}</strong></div>
-      <div><span>{c.actual}</span><strong className={event.actual ? 'ec-released' : ''} dir="ltr">{event.actual || c.notAvailable}</strong></div>
+      <div><span>{c.actual}</span><strong className={event.actual ? 'ec-result-' + resultClass : ''} dir="ltr">{event.actual || c.notAvailable}</strong></div>
     </div>
+    {comparison.status === 'surprise' && <p className={'ec-comparison ec-result-' + resultClass}>{comparison.difference > 0 ? '↑ ' + c.actualHigher : '↓ ' + c.actualLower}</p>}
     <details className="ec-details">
       <summary>{c.showDetails}</summary>
       <div className="ec-detail-inner">
@@ -142,14 +154,21 @@ export default function EconomicCalendar({ lang='ku' }) {
       && (metalsOnly ? event.currency === 'USD' : currency === 'all' || event.currency === currency);
   });
 
+  const next = visible.find(event => Date.parse(event.time) > now && event.impact !== 'holiday');
+  const resetFilters = () => { setCurrency('all'); setImpact('all'); setWindowDays('week'); setSearch(''); setMetalsOnly(false); };
   return <main className="ec-page" dir={lang === 'en' ? 'ltr' : 'rtl'}>
     <section className="ec-header">
       <div>
         <p className="ec-eyebrow">HAWAL · ECONOMIC CALENDAR</p>
-        <h1>📅 {c.title}</h1>
+        <h1>{c.title}</h1>
         <p>{c.lead} · Asia/Baghdad (UTC+3)</p>
       </div>
       <button type="button" onClick={() => setRevision(number => number + 1)} disabled={state === 'loading'} className="ec-refresh">{c.refresh} ↻</button>
+    </section>
+    <section className="ec-overview" aria-label={c.count}>
+      <div className="ec-stat"><span>{c.count}</span><strong>{state === 'loading' && !data.events.length ? '—' : visible.length}</strong></div>
+      <div className="ec-stat ec-stat-high"><span>{c.impact} · {c.major}</span><strong>{state === 'loading' && !data.events.length ? '—' : visible.filter(event => event.impact === 'high').length}</strong></div>
+      <div className="ec-next"><span>{c.next}</span><strong>{next ? calendarEventTitle(next.title, lang) : state === 'loading' ? c.loading : c.noUpcoming}</strong>{next && <small><b dir="ltr">{next.currency} · {releaseTime(next.time)}</b> · {Math.ceil((Date.parse(next.time)-now)/60000)} {c.minutes}</small>}</div>
     </section>
     {soon.length > 0 && <div className="ec-warning-soon" role="status">🔴 {c.soon}: {soon.map(event => calendarEventTitle(event.title,lang)).join(' · ')}</div>}
     <section className="ec-filter-bar" aria-label={c.title}>
@@ -168,19 +187,19 @@ export default function EconomicCalendar({ lang='ku' }) {
         <option value="today">{c.today}</option><option value="week">{c.week}</option>
       </select></label>
       <label>{c.event}<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder={c.event}/></label>
-      <label className="ec-metal-toggle"><input type="checkbox" checked={metalsOnly} onChange={e=>setMetalsOnly(e.target.checked)}/>{c.metals}</label>
+      <div className="ec-filter-bottom"><label className="ec-metal-toggle"><input type="checkbox" checked={metalsOnly} onChange={e=>setMetalsOnly(e.target.checked)}/>{c.metals}</label><button type="button" className="ec-reset" onClick={resetFilters}>{c.reset} ↺</button></div>
     </section>
     <div className="ec-status" role="status" aria-live="polite">
       <strong>{c.count}: {visible.length}</strong>
       <span>{c.updated}: {data.publishedAt ? releaseDate(data.publishedAt,lang) + ' · ' + releaseTime(data.publishedAt) : '—'} (UTC+3)</span>
       <a href={CALENDAR_SOURCE_URL} target="_blank" rel="noreferrer">{c.source}: ShowMyTrades ↗</a>
     </div>
-    {state === 'error' && <div role="alert" className="ec-error">{c.error} <button type="button" onClick={()=>setRevision(x=>x+1)}>{c.retry}</button></div>}
+    {state === 'error' && <div role="alert" className="ec-error">{data.events.length ? c.stale : c.error} <button type="button" onClick={()=>setRevision(x=>x+1)}>{c.retry}</button></div>}
     {state === 'loading' && !data.events.length && <p className="ec-message" role="status">{c.loading}</p>}
-    {state !== 'loading' && !visible.length && <p className="ec-message">{c.empty}</p>}
+    {state === 'ready' && !visible.length && <p className="ec-message">{c.empty}</p>}
     {grouped.map(group => <section className="ec-day" key={group.key}>
-      <h2>{releaseDate(group.date,lang)}</h2>
-      <div className="ec-event-list">{group.events.map(event => <EventCard key={event.id} event={event} lang={lang} c={c}/>)}</div>
+      <h2><span>{releaseDate(group.date,lang)}</span><small>{group.events.length} {c.count}</small></h2>
+      <div className="ec-event-list">{group.events.map(event => <EventCard key={event.id} event={event} lang={lang} c={c} now={now}/>)}</div>
     </section>)}
     <section className="ec-notes"><p>{c.delay}</p><p>{c.recentWindow}</p><p>{c.warning}</p></section>
   </main>;

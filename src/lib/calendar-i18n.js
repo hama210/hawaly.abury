@@ -1,5 +1,6 @@
 const dictionary = {
   ku: {
+    reset:'پاککردنەوەی فلتەرەکان', next:'نزیکترین هەواڵ', upcoming:'هەواڵی داهاتوو', released:'ئەنجام بڵاوکراوەتەوە', awaiting:'چاوەڕوانی ئەنجام', minutes:'خولەک', noUpcoming:'هەواڵی داهاتوو بۆ ئەم فلتەرە نییە', stale:'نوێکردنەوە سەرکەوتوو نەبوو؛ داتای پێشوو پیشان دەدرێت.',
     title:'کاڵەندەری ئابووری', lead:'هەواڵە کاریگەرەکانی بازاڕ بە کاتی هەولێر',
     date:'کات', event:'هەواڵ', currency:'دراو', impact:'کاریگەری',
     forecast:'پێشبینی', previous:'پێشوو', actual:'ئەنجامی ڕاستەقینە',
@@ -30,6 +31,7 @@ const dictionary = {
     ratesDisclaimer:'بۆ زێڕ و زیو، فشاری دۆلار تەنها یەک فاکتەرە؛ بازاڕ دەتوانێت بەپێچەوانە بجوڵێت.'
   },
   ar: {
+    reset:'مسح الفلاتر', next:'الحدث التالي', upcoming:'أحداث قادمة', released:'صدرت النتيجة', awaiting:'بانتظار النتيجة', minutes:'دقيقة', noUpcoming:'لا أحداث قادمة بهذه الفلاتر', stale:'فشل التحديث؛ يتم عرض البيانات السابقة.',
     title:'التقويم الاقتصادي',lead:'أحداث الأسواق بتوقيت أربيل',
     date:'الوقت',event:'الحدث',currency:'العملة',impact:'التأثير',forecast:'المتوقع',previous:'السابق',actual:'الفعلي',
     all:'الكل',allCurrency:'كل العملات',major:'مرتفع',medium:'متوسط',low:'منخفض',holiday:'عطلة',today:'اليوم',week:'7 أيام',
@@ -52,6 +54,7 @@ const dictionary = {
     ratesDisclaimer:'تأثير الدولار عامل واحد فقط للذهب والفضة؛ الأسعار قد تتحرك عكس ذلك.'
   },
   en: {
+    reset:'Clear filters', next:'Next release', upcoming:'Upcoming', released:'Result published', awaiting:'Awaiting result', minutes:'min', noUpcoming:'No upcoming events for these filters', stale:'Refresh failed; showing previously loaded data.',
     title:'Economic calendar',lead:'Market-moving events in Erbil time',
     date:'Time',event:'Event',currency:'Currency',impact:'Impact',forecast:'Forecast',previous:'Previous',actual:'Actual',
     all:'All',allCurrency:'All currencies',major:'High',medium:'Medium',low:'Low',holiday:'Holiday',today:'Today',week:'7 days',
