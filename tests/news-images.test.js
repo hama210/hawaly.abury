@@ -14,12 +14,12 @@ test('publisher images are extracted from RSS thumbnails, enclosures, Atom and H
   assert.equal(extractNewsImage('<media:content url="https://cdn.example.com/very-small.jpg" type="image/jpeg" width="1" height="1"/><media:thumbnail url="https://cdn.example.com/big.jpg"/>',feed),'https://cdn.example.com/big.jpg');
   assert.equal(extractNewsImage('<media:content type="image/jpeg" url="https://cdn.example.com/good.jpg"/>',feed),'https://cdn.example.com/good.jpg');
 });
-test('malformed and unsafe image links fall back to local category covers',()=>{
+test('malformed and unsafe images do not pretend to be publisher photos',()=>{
   assert.equal(verifiedImageUrl('javascript:alert(1)','https://news.example.com/rss'),'');
   assert.equal(verifiedImageUrl('data:image/png;base64,ABC'),'');
   assert.equal(verifiedImageUrl('https://bad.example.com/favicon.ico'),'');
   assert.equal(extractNewsImage('<enclosure url="https://cdn.example.com/audio.mp3" type="audio/mpeg"/>','https://example.com/rss'),'');
-  assert.equal(imageForNews({image:'javascript:alert(1)',category:'oil'}),'/news-covers/oil.svg');
+  assert.equal(imageForNews({image:'javascript:alert(1)',category:'oil'}),'');
   assert.equal(imageForNews({image:'https://cdn.example.com/photo.jpg',category:'markets'}),'https://cdn.example.com/photo.jpg');
   assert.equal(coverForCategory('unknown'),'/news-covers/markets.svg');
   for(const category of ['iraq','kurdistan','forex','metals','oil','crypto','indices','geopolitics','markets']) {
@@ -28,7 +28,7 @@ test('malformed and unsafe image links fall back to local category covers',()=>{
     assert.match(fs.readFileSync(path,'utf8'),/<svg[^>]+xmlns="http:\/\/www.w3.org\/2000\/svg"/);
   }
 });
-test('the news API sends real publisher media URLs, otherwise an always-available local cover',async()=>{
+test('news API labels publisher photos versus illustrations so the UI can avoid repeats',async()=>{
   const rss='<rss><channel>'+
     '<item><title>Iraq banking and dinar policy changes in Baghdad</title><link>https://example.com/first</link><description>Authorities reported banking reforms affecting Iraq dollar trading.</description><media:thumbnail url="https://cdn.example.com/iraq-photo.jpg"/><pubDate>'+new Date().toUTCString()+'</pubDate></item>'+
     '<item><title>Erbil dollar market reports new banking measures</title><link>https://example.com/second</link><description>Iraq currency traders discussed the latest banking and budget measures.</description><pubDate>'+new Date().toUTCString()+'</pubDate></item>'+
@@ -47,16 +47,34 @@ test('the news API sends real publisher media URLs, otherwise an always-availabl
     assert.equal(photo.imageSource,'publisher');
     assert.equal(fallback.image,'/news-covers/iraq.svg');
     assert.equal(fallback.imageSource,'illustration');
+    assert.equal(imageForNews(fallback),'');
   }finally{restoreCache();restoreWarn();restoreFetch();}
 });
 test('mobile news cards, lead story and modal use safe fallbacks, not raw broken links',()=>{
   const main=fs.readFileSync('src/main.jsx','utf8');
   const styles=fs.readFileSync('src/styles.css','utf8');
-  assert.equal((main.match(/src=\{imageForNews\(item\)\}/g)||[]).length,3);
+  assert.equal((main.match(/src=\{imageForNews\(item\) \|\| undefined\}/g)||[]).length,3);
   assert.match(main,/data-news-category=\{item\.category/);
   assert.match(main,/imageFallback\(event\)/);
-  assert.match(main,/coverForCategory\(element\.dataset\.newsCategory\)/);
+  assert.match(main,/parentElement\?\.classList\.add\('img-failed'\)/);
+  assert.doesNotMatch(main,/element\.src=coverForCategory/);
+  assert.match(main,/data-image-state=\{noPhotoLabel\[lang\]\}/);
   assert.match(main,/referrerPolicy="no-referrer"/);
   assert.match(styles,/\.story-image img \{ width:100%; height:100%; object-fit:cover;/);
   assert.match(fs.readFileSync('public/_routes.json','utf8'),/news-covers\/\*/);
+});
+
+
+test('publisher cover art is not silently reused for unrelated articles',()=>{
+  const original='https://www.bbc.com/news/real-story';
+  const cover='/news-covers/markets.svg';
+  const item={category:'markets',image:cover,imageSource:'illustration',link:original};
+  assert.equal(imageForNews(item),'/api/article-image?article='+encodeURIComponent(original)+'&category=markets');
+  assert.equal(imageForNews({...item,link:'https://untrusted.example.com/story'}),'');
+  assert.equal(imageForNews({image:cover,imageSource:'illustration'}),'');
+  assert.equal(imageForNews({image:'https://cdn.example.com/story.jpg',imageSource:'illustration'}),'');
+  assert.equal(imageForNews({image:'https://cdn.example.com/story.jpg',imageSource:'publisher'}),'https://cdn.example.com/story.jpg');
+  const css=fs.readFileSync('src/redesign.css','utf8');
+  assert.match(css,/\.story-image\.img-failed::after/);
+  assert.match(css,/\.lead-story\.img-failed::before/);
 });
