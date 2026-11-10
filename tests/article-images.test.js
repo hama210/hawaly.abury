@@ -91,3 +91,21 @@ test('encoded Google News RSS link resolves to a trusted publisher before readin
     assert.equal(rpcCalls,1);
   }finally{restore();}
 });
+
+
+test('unavailable publisher image is never redirected to reused cover or stored in cache',async()=>{
+  const memory=new MemoryCache();
+  const restoreCache=replaceGlobal('caches',{default:memory});
+  const restoreFetch=replaceGlobal('fetch',async()=>new Response('publisher blocked',{status:403}));
+  const article='https://www.bbc.com/news/real-story';
+  const url='https://hawal.example/api/article-image?article='+encodeURIComponent(article);
+  try{
+    const request=requestContext(url);
+    const response=await articlePicture(request.context);
+    await request.settle();
+    assert.equal(response.status,404);
+    assert.equal(response.headers.get('location'),null);
+    assert.equal(response.headers.get('cache-control'),'no-store');
+    assert.equal(memory.entries.size,0,'failed publisher requests should never be cached as photos');
+  }finally{restoreFetch();restoreCache();}
+});
