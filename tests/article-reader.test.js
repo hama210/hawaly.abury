@@ -119,3 +119,12 @@ test('translated card snippets appear only when verified while original reader s
   assert.equal(original.original,item.summary);
   assert.equal(storyExcerpt({...item,_hawalInlineVerified:true,summaryKu:''},'ku'),'');
 });
+
+
+test('Middle East conflict brief never bypasses localized excerpt verification',()=>{
+  const main=fs.readFileSync('src/main.jsx','utf8');
+  const brief=main.split('function MiddleEastBrief({ items, lang, onOpen }) {')[1]?.split('function focusedIntelligence')[0] || '';
+  assert.ok(brief);
+  assert.match(brief,/storyExcerpt\\(item,lang\\) && <p dir="auto">\\{shorten\\(storyExcerpt\\(item,lang\\)\\)\\}<\\/p>/);
+  assert.doesNotMatch(brief,/shorten\\(sourceSummary\\(item,lang\\)\\)/);
+});
