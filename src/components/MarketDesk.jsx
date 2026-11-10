@@ -1,17 +1,45 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { dashboardCopy } from '../lib/dashboard-copy.js';
-import { positive, cityQuote, currencyValue, goldValue, quoteState, timestamp, baghdadDate, safeUrl, pagePath } from '../lib/market-tools.js';
+import { positive, cityQuote, currencyValue, goldValue, quoteState, timestamp, baghdadDate, safeUrl, pagePath, displayCityQuote } from '../lib/market-tools.js';
 import { getTitle } from '../utils/news.js';
 const fmt = value => typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString('en-US', { maximumFractionDigits:2 }) : '—';
 export function QuoteMeta({ item, lang }) {
  const c = dashboardCopy[lang];
  return <div className="quote-meta"><span className={`quote-status ${quoteState(item)}`}>{c[quoteState(item)]}</span>{item?.updatedAt && <time dateTime={item.updatedAt}>{c.asof}: {timestamp(item.updatedAt, lang)}</time>}{item?.fetchedAt && <small>{c.checked}: {timestamp(item.fetchedAt, lang)}</small>}{safeUrl(item?.sourceUrl) && <a href={safeUrl(item.sourceUrl)} target="_blank" rel="noreferrer">{item.source} ↗</a>}</div>;
 }
-export function DollarRates({ markets, lang }) {
+export function DollarRates({ markets, lang, loading=false }) {
  const c = dashboardCopy[lang];
  const local = markets.find(q => q.symbol === 'USD/IQD');
  const official = markets.find(q => q.marketKind === 'official');
- return <section className="desk-panel dollar-panel" aria-labelledby="dollar-title"><div className="desk-heading"><div><p className="desk-eyebrow">USD / IQD</p><h2 id="dollar-title">{c.rates}</h2></div><span>{c.unit}</span></div><div className="dollar-grid"><article className="dollar-card official-card"><h3>{c.official}</h3><strong dir="ltr">{fmt(positive(official?.price) ? official.price * 100 : null)}</strong><p>{c.reference}</p><QuoteMeta item={official} lang={lang}/></article>{['erbil','sulaymaniyah','baghdad'].map(city => <article className="dollar-card" key={city}><h3>{c[city]}</h3><dl><div><dt>{c.buy}</dt><dd dir="ltr">{fmt(local?.[city]?.buy)}</dd></div><div><dt>{c.sell}</dt><dd dir="ltr">{fmt(local?.[city]?.sell)}</dd></div></dl>{positive(local?.[city]?.buy) || positive(local?.[city]?.sell) ? <QuoteMeta item={local} lang={lang}/> : <span className="quote-status unavailable">{c.unavailable}</span>}</article>)}</div><p className="desk-note">{c.disclaimer}</p></section>;
+ const lastCloseLabel = lang === 'ku' ? 'دوایین نرخی تۆمارکراو (نەک نرخی ئەمڕۆ)' :
+   lang === 'ar' ? 'آخر سعر مسجل (ليس سعر اليوم)' : 'Last recorded close (not today’s quote)';
+ if (loading && !markets.length) return <section className="desk-panel dollar-panel" aria-labelledby="dollar-title" aria-busy="true">
+   <div className="desk-heading"><div><p className="desk-eyebrow">USD / IQD</p><h2 id="dollar-title">{c.rates}</h2></div><span>{c.unit}</span></div>
+   <div className="dollar-grid" role="status" aria-label={lang==='ku'?'نرخەکان بار دەکرێن':lang==='ar'?'جارٍ تحميل الأسعار':'Loading exchange rates'}>
+     {['official','erbil','sulaymaniyah','baghdad'].map(city => <article className="dollar-card" key={city}>
+       <h3>{c[city]}</h3><div className="rate-skeleton-line"/><div className="rate-skeleton-line short"/>
+     </article>)}
+   </div>
+ </section>;
+ return <section className="desk-panel dollar-panel" aria-labelledby="dollar-title">
+   <div className="desk-heading"><div><p className="desk-eyebrow">USD / IQD</p><h2 id="dollar-title">{c.rates}</h2></div><span>{c.unit}</span></div>
+   <div className="dollar-grid">
+     <article className="dollar-card official-card"><h3>{c.official}</h3><strong dir="ltr">{fmt(positive(official?.price) ? official.price * 100 : null)}</strong><p>{c.reference}</p><QuoteMeta item={official} lang={lang}/></article>
+     {['erbil','sulaymaniyah','baghdad'].map(city => {
+       const selected = displayCityQuote(local, city);
+       const quote = selected.quote;
+       return <article className="dollar-card" key={city}>
+         <h3>{c[city]}</h3>
+         <dl><div><dt>{c.buy}</dt><dd dir="ltr">{fmt(quote?.buy)}</dd></div><div><dt>{c.sell}</dt><dd dir="ltr">{fmt(quote?.sell)}</dd></div></dl>
+         {selected.lastClose ? <div className="quote-meta last-close" role="note">
+           <span className="quote-status stale">{lastCloseLabel}</span>
+           <time dateTime={selected.metadata.updatedAt}>{timestamp(selected.metadata.updatedAt,lang)}</time>
+           {safeUrl(selected.metadata.sourceUrl) && <a href={safeUrl(selected.metadata.sourceUrl)} target="_blank" rel="noreferrer">{selected.metadata.source} ↗</a>}
+         </div> : quote ? <QuoteMeta item={local} lang={lang}/> : <span className="quote-status unavailable">{c.unavailable}</span>}
+       </article>;
+     })}
+   </div><p className="desk-note">{c.disclaimer}</p>
+ </section>;
 }
 export function MarketDesk({ markets, lang }) {
  const c = dashboardCopy[lang];

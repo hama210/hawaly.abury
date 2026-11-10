@@ -16,7 +16,7 @@ export function serverContent({ lang, page, news = [], markets = [] }) {
  const meta = item=>`<small>${e(c[quoteState(item)])}${item?.updatedAt?' · '+e(timestamp(item.updatedAt,lang)):''}${safeUrl(item?.sourceUrl)?` · <a href="${e(safeUrl(item.sourceUrl))}">${e(item.source)}</a>`:''}</small>`;
  const rates = `<section class="desk-panel"><h2>${e(c.rates)} — ${e(c.unit)}</h2><p>${e(c.official)}: <b>${number(positive(official?.price)?official.price*100:null)}</b> ${meta(official)}</p>${['erbil','sulaymaniyah','baghdad'].map(city=>`<p>${e(c[city])}: ${e(c.buy)} <b>${number(local?.[city]?.buy)}</b> · ${e(c.sell)} <b>${number(local?.[city]?.sell)}</b> ${meta(local?.[city]?local:null)}</p>`).join('')}</section>`;
  const stories = news.filter(n=>safeUrl(n.link)).slice(0,12).map(item=>`<article><h3><a href="${e(safeUrl(item.link))}">${e(getTitle(item,lang))}</a></h3><p>${e(item.source)} · <time datetime="${e(item.publishedAt)}">${e(timestamp(item.publishedAt,lang))}</time></p></article>`).join('');
- return `<main class="shell server-summary">${intro}${rates}<section class="desk-panel"><h2>${e(c.five)}</h2>${stories || `<p>${e(c.noBrief)}</p>`}</section><p>${e(c.disclaimer)}</p></main>`;
+ return `<main class="shell server-summary">${intro}${rates}<section class="desk-panel"><h2>${e(lang==='ku'?'دوایین هەواڵەکان':lang==='ar'?'آخر الأخبار':'Latest news')}</h2>${stories || `<p>${e(c.noBrief)}</p>`}</section><p>${e(c.disclaimer)}</p></main>`;
 }
 export function renderPage(template, data) {
  const {lang,page} = data;

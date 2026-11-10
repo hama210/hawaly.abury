@@ -262,6 +262,33 @@ function staleItem(item) {
   return { ...item, dataStatus: 'stale' };
 }
 
+// Keep independently sourced last city quotes only for 24h. A quote from Erbil
+// must never fill Sulaymaniyah, and past quotes must never be marked live.
+export function retainCityHistory(item, previous, at = Date.now()) {
+  if (!item || item.symbol !== 'USD/IQD') return item;
+  const lastCityQuotes = {};
+  for (const city of ['erbil', 'sulaymaniyah', 'baghdad']) {
+    const quote = item[city];
+    const quoteTime = Date.parse(item.updatedAt || '');
+    const previousQuote = previous?.lastCityQuotes?.[city] ||
+      (previous?.[city]?.updatedAt ? previous[city] : (
+        previous?.[city] && previous.updatedAt
+          ? { ...previous[city], updatedAt:previous.updatedAt, source:previous.source, sourceUrl:previous.sourceUrl }
+          : null
+      ));
+    const hasQuote = value => value && ((Number.isFinite(value.buy) && value.buy > 0) || (Number.isFinite(value.sell) && value.sell > 0));
+    const fresh = hasQuote(quote) && Number.isFinite(quoteTime) && quoteTime <= at && at-quoteTime <= 86400000
+      ? { ...quote, updatedAt:item.updatedAt, source:item.source, sourceUrl:item.sourceUrl }
+      : null;
+    const saved = fresh || previousQuote;
+    const savedTime = Date.parse(saved?.updatedAt || '');
+    if (hasQuote(saved) && Number.isFinite(savedTime) && savedTime <= at && at-savedTime <= 86400000) {
+      lastCityQuotes[city] = saved;
+    }
+  }
+  return { ...item, lastCityQuotes };
+}
+
 function cacheKeyFor(url, kind) {
   const cacheUrl = new URL(url.origin + url.pathname);
   cacheUrl.searchParams.set('__hawali_cache', `markets-${kind}-v4`);
@@ -335,7 +362,7 @@ export async function onRequest(context) {
   }));
 
   const [usdIqd, cbi] = await Promise.all([localPromise, cbiPromise]);
-  const descriptors = [...SYMBOLS.map((descriptor, index) => ({ descriptor, item: yahooResults[index] })), { descriptor: USD_IQD, item: usdIqd ? liveItem(usdIqd, now) : null }];
+  const descriptors = [...SYMBOLS.map((descriptor, index) => ({ descriptor, item: yahooResults[index] })), { descriptor: USD_IQD, item: usdIqd ? liveItem(retainCityHistory(usdIqd, previousItems.get(USD_IQD.symbol)), now) : null }];
   const items = descriptors.map(({ descriptor, item }) => {
     if (item) return item;
     const symbol = descriptor.pair || descriptor.symbol;
