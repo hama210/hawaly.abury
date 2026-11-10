@@ -24,6 +24,9 @@ export function storyExcerpt(item,lang='en') {
   const translatedHeadline=lang==='ku'?item.titleKu:lang==='ar'?item.titleAr:'';
   const local=meaningfulArticleText(translated,translatedHeadline||headline);
   if(local)return local;
+  // A missing verified translation must not show English excerpts on localized cards.
+  // Publisher text remains available in the article reader and original source link.
+  if(lang==='ku'||lang==='ar')return '';
   const summary=meaningfulArticleText(item.summaryEn || item.summary,headline);
   if(summary)return summary;
   return meaningfulArticleText(item.contentEn || item.content,headline);
