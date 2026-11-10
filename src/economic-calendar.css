@@ -1,0 +1,71 @@
+/* Scoped economic calendar styles; inherits Hawal theme tokens. */
+.ec-page{display:grid;gap:18px;width:100%;min-width:0;direction:inherit}
+.ec-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px;border-radius:18px;border:1px solid var(--line);background:var(--card)}
+.ec-eyebrow{margin:0 0 6px;font:800 11px Inter,system-ui,sans-serif;letter-spacing:.1em;color:var(--primary);direction:ltr}
+.ec-header h1{font-size:clamp(22px,3.5vw,34px);line-height:1.45;margin:0}
+.ec-header p:not(.ec-eyebrow){color:var(--muted);font-size:12px;margin:5px 0 0}
+.ec-refresh,.ec-error button{border:1px solid var(--primary);background:var(--primary);color:var(--primary-ink);border-radius:10px;padding:10px 16px;font-weight:800;white-space:nowrap}
+.ec-refresh:disabled{opacity:.5;cursor:wait}
+.ec-warning-soon{padding:14px;border:1px solid var(--red);border-radius:12px;background:color-mix(in srgb,var(--red) 9%,var(--card));font-weight:700;font-size:13px}
+.ec-filter-bar{display:grid;grid-template-columns:1.05fr 1fr 1fr minmax(140px,1.5fr);gap:12px;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:16px}
+.ec-filter-bar label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:11px;min-width:0}
+.ec-filter-bar select,.ec-filter-bar input[type="search"]{width:100%;min-width:0;min-height:42px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg-soft);color:var(--text);font-size:13px}
+.ec-filter-bar :is(select,input):focus-visible,.ec-refresh:focus-visible,.ec-details summary:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.ec-metal-toggle{grid-column:1 / -1;flex-direction:row!important;align-items:center;gap:9px!important;font-weight:700;color:var(--text)!important}
+.ec-metal-toggle input{width:18px;height:18px;accent-color:var(--primary)}
+.ec-status{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted);padding:4px 6px}
+.ec-status strong{color:var(--text)}.ec-status a{color:var(--primary);text-decoration:underline;text-underline-offset:3px}
+.ec-day{display:grid;gap:10px;min-width:0}
+.ec-day>h2{font-size:16px;font-weight:800;margin:8px 0 0;padding-inline:3px}
+.ec-event-list{display:grid;gap:9px}
+.ec-event{background:var(--card);border:1px solid var(--line);border-inline-start:4px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+.ec-impact-high{border-inline-start-color:var(--red)}.ec-impact-medium{border-inline-start-color:#e9a742}.ec-impact-low{border-inline-start-color:var(--primary)}
+.ec-event-summary{display:grid;grid-template-columns:65px minmax(0,1fr) 58px 84px;align-items:start;gap:12px}
+.ec-time{font:800 16px/1.5 Inter,system-ui,sans-serif;color:var(--text)}
+.ec-event-heading{display:grid;gap:4px;min-width:0}
+.ec-event-heading strong{font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.ec-original,.ec-tentative{color:var(--muted);font:500 10px/1.6 Inter,system-ui,sans-serif;overflow-wrap:anywhere}
+.ec-tentative{color:#ecb65a;font-family:inherit}
+.ec-currency{font:750 12px Inter,system-ui,sans-serif;background:var(--bg-soft);border-radius:7px;padding:6px 8px;text-align:center}
+.ec-impact-pill{font-size:11px;border-radius:7px;padding:5px;text-align:center;font-weight:800;white-space:nowrap}
+.ec-high{color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent)}
+.ec-medium{color:#efb44b;background:rgba(239,180,75,.13)}
+.ec-low,.ec-holiday{color:var(--muted);background:var(--bg-soft)}
+.ec-values{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:13px 0 9px}
+.ec-values>div{background:var(--bg-soft);border:1px solid var(--line);border-radius:9px;padding:8px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.ec-values span{color:var(--muted);font-size:10px}
+.ec-values strong{font:800 13px/1.7 Inter,system-ui,sans-serif;overflow-wrap:anywhere}
+.ec-values strong.ec-released{color:var(--green)}
+.ec-details{border-top:1px solid var(--line);padding-top:8px}
+.ec-details summary{cursor:pointer;color:var(--primary);font-size:11px;font-weight:800}
+.ec-detail-inner{padding:14px 0 2px;display:grid;gap:12px}
+.ec-context{display:grid;gap:9px}.ec-context h4{font-size:14px;margin:0}
+.ec-surprise{font-size:12px;font-weight:800;margin:0}
+.ec-market-effects{display:grid;gap:6px}
+.ec-market{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:9px;background:var(--bg-soft);font-size:11px}
+.ec-market b{font-size:12px}.ec-bias{font-weight:800}
+.ec-bias-up{color:var(--green)}.ec-bias-down{color:var(--red)}
+.ec-muted{color:var(--muted);font-size:12px;line-height:1.8;margin:0}
+.ec-disclaimer{font-size:11px;color:var(--muted);line-height:1.8;margin:0;border-top:1px dashed var(--line);padding-top:9px}
+.ec-error{padding:15px;border:1px solid var(--red);background:var(--card);border-radius:12px;display:flex;align-items:center;flex-wrap:wrap;gap:14px;font-size:12px}
+.ec-message{color:var(--muted);text-align:center;padding:50px 12px;border:1px dashed var(--line);border-radius:14px}
+.ec-notes{color:var(--muted);background:var(--card);border:1px solid var(--line);padding:14px 16px;border-radius:14px;font-size:11px;line-height:1.9}
+.ec-notes p{margin:0 0 4px}.ec-notes p:last-child{margin:0}
+@media(max-width:720px){
+ .ec-header{padding:16px;align-items:flex-start}
+ .ec-filter-bar{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px;gap:10px}
+ .ec-event{padding:11px}
+ .ec-event-summary{grid-template-columns:55px minmax(0,1fr) 49px;gap:6px}
+ .ec-impact-pill{grid-column:2 / 4;justify-self:start}
+ .ec-time{font-size:13px}
+ .ec-event-heading strong{font-size:12px}
+ .ec-status{flex-direction:column;align-items:start}
+ .ec-values>div{padding:7px 3px}
+ .ec-values strong{font-size:12px}
+ .ec-market{align-items:start;gap:4px}
+}
+@media(max-width:370px){
+ .ec-filter-bar{grid-template-columns:minmax(0,1fr)}
+ .ec-metal-toggle{grid-column:auto}
+ .ec-header{flex-direction:column}
+}
