@@ -474,7 +474,6 @@ function App() {
   const [homeVisibleCount, setHomeVisibleCount] = useState(24);
   const [newsVisibleCount, setNewsVisibleCount] = useState(36);
   const [markets, setMarkets] = useState(bootstrap.markets || []);
-  const [marketLoading, setMarketLoading] = useState(!bootstrap.markets?.length);
   const [selected, setSelected] = useState(null);
   // Keep the page in place while reading an article on iOS and Android.
   useEffect(() => {
@@ -496,7 +495,7 @@ function App() {
   const dict = t[lang] || t.ku;
   const copy = uiCopy[lang] || uiCopy.ku;
   // Source wording remains the fallback whenever translation is unavailable.
-  const {translatedNews,translationIssue,retryTranslations}=useClientTranslator(news,lang,activeView==='news'?newsVisibleCount:homeVisibleCount+1);
+  const {translatedNews,translating,translationIssue,retryTranslations}=useClientTranslator(news,lang,activeView==='news'?newsVisibleCount:homeVisibleCount+1);
   const displayNews=translatedNews;
   const designCopy = navigationCopy[lang] || navigationCopy.ku;
   const navigate = view => {
@@ -548,7 +547,7 @@ function App() {
 
   useEffect(() => {
     let alive = true;
-    const load = () => fetchMarkets().then(items => { if (alive) setMarkets(items); }).finally(() => { if (alive) setMarketLoading(false); });
+    const load = () => fetchMarkets().then(items => { if (alive) setMarkets(items); });
     load();
     const interval = setInterval(load, 60000);
     return () => { alive = false; clearInterval(interval); };
@@ -592,7 +591,7 @@ function App() {
           </div>
         </div>
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
-        
+        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':''}</p>}
         {translationIssue && !translating && lang!=='en' && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.': 'تعذرت الترجمة؛ يظهر النص الأصلي.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':'إعادة المحاولة'}</button></div>}
         <section className="latest-section home-news" id="latest-home">
           <div className="home-headerline"><h2>{designCopy.latest}</h2><button type="button" onClick={()=>navigate('news')}>{designCopy.allNews} →</button></div>
@@ -607,7 +606,7 @@ function App() {
       <section className={'hawal-screen markets-screen '+(activeView==='markets'?'':'is-hidden-view')} aria-label={designCopy.markets}>
         <ScreenIntro page="markets" lang={lang}/>
         {activeView==='markets' && <MarketIntelligence markets={markets} news={displayNews} lang={lang}/>}
-        <DollarRates markets={markets} lang={lang} loading={marketLoading}/>
+        <DollarRates markets={markets} lang={lang}/>
         <div className="section-heading"><h2>{designCopy.latestRates}</h2><span>{dashboardCopy[lang].disclaimer}</span></div>
         <MarketStrip markets={markets} lang={lang}/>
         <DailyBrief items={displayNews} lang={lang}/>
@@ -618,7 +617,7 @@ function App() {
         {activeView==='news' && <VerificationDesk news={displayNews} lang={lang}/>}
         {Boolean(displayNews.length) && <BreakingBar items={displayNews} lang={lang} dict={dict}/>}
         <CategoryTabs active={active} setActive={setActive} lang={lang}/>
-        
+        {translating && <p className="translation-inline-status" role="status">{lang==='ku'?'وەرگێڕانی هەواڵەکان بۆ سۆرانی...':lang==='ar'?'جاري ترجمة الأخبار...':''}</p>}
         {translationIssue && !translating && lang!=='en' && <div className="translation-inline-status translation-retry" role="status"><span>{lang==='ku'?'وەرگێڕان سەرکەوتوو نەبوو؛ دەقی سەرچاوە پارێزراوە.': 'تعذرت الترجمة؛ يظهر النص الأصلي.'}</span><button type="button" onClick={retryTranslations}>{lang==='ku'?'دووبارە هەوڵ بدەوە':'إعادة المحاولة'}</button></div>}
         <div className="topic-shortcuts" aria-label="News topics">
           {[
@@ -648,10 +647,10 @@ function App() {
         <InstallPanel lang={lang}/>
       </section>
       </>}
-      <SourcesDisclosure lang={lang} news={displayNews} sourceHealth={sourceHealth}/>
       <SiteFooter lang={lang}/>
     </div>
     {route.page==='home' && <Navigation mobile active={activeView} onNavigate={navigate} lang={lang}/>}
+    <SourcesDisclosure lang={lang} news={displayNews} sourceHealth={sourceHealth}/>
     <ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/>
   </div>;
 }

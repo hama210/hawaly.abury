@@ -32,27 +32,7 @@ export function baghdadDate(value = Date.now()) {
 export function timestamp(value, lang = 'en') {
   const date = new Date(value || NaN);
   if (!Number.isFinite(date.getTime())) return '—';
-  if (lang === 'ku') {
-    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
-      timeZone:'Asia/Baghdad', year:'numeric', month:'numeric', day:'numeric',
-      hour:'2-digit', minute:'2-digit', hour12:false
-    }).formatToParts(date).filter(part => part.type !== 'literal').map(part => [part.type,part.value]));
-    const months = ['کانوونی دووەم','شوبات','ئازار','نیسان','ئایار','حوزەیران','تەممووز','ئاب','ئەیلوول','تشرینی یەکەم','تشرینی دووەم','کانوونی یەکەم'];
-    return `${parts.day}ی ${months[Number(parts.month)-1]} ${parts.year}، ${parts.hour}:${parts.minute} (بەغدا)`;
-  }
-  return new Intl.DateTimeFormat(lang, { timeZone:'Asia/Baghdad', year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false }).format(date) + ' (Baghdad)';
-}
-
-// The last dated quote is not a current city price. The caller must label it as old.
-export function displayCityQuote(local, city, now = Date.now()) {
-  const current = local?.[city];
-  if (positive(current?.buy) || positive(current?.sell)) return {quote:current, lastClose:false, metadata:local};
-  const previous = local?.lastCityQuotes?.[city];
-  const at = Date.parse(previous?.updatedAt || '');
-  if ((positive(previous?.buy) || positive(previous?.sell)) && Number.isFinite(at) && at <= now && now-at <= 86400000) {
-    return {quote:previous, lastClose:true, metadata:previous};
-  }
-  return {quote:null, lastClose:false, metadata:null};
+  return new Intl.DateTimeFormat(lang === 'ku' ? 'ar-IQ' : lang, { timeZone:'Asia/Baghdad', year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false }).format(date) + ' (Baghdad)';
 }
 export function safeUrl(value, fallback = '') {
   try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) ? url.href : fallback; } catch { return fallback; }

@@ -23,8 +23,7 @@ test('genuine publisher excerpts and richer syndicated text show up on article c
     summaryKu:'بانکەکانی عێراق نوێکارییەکیان لەسەر سیاسەتی دراو بڵاوکردەوە.',
     content:'Banks in Iraq published an update about foreign currency policy. Officials described implementation steps, noted the effects of compliance rules, and set out the dates that financial institutions should consider in their operations.'
   };
-  assert.equal(storyExcerpt(item,'ku'),'');
-  assert.equal(storyExcerpt({...item,_hawalInlineVerified:true},'ku'),item.summaryKu);
+  assert.equal(storyExcerpt(item,'ku'),item.summary);
   assert.equal(storyExcerpt(item,'en'),item.summary);
   const en=articleSelection(item,'en');
   assert.equal(en.isAvailable,true);
@@ -93,7 +92,7 @@ test('original publisher content is unchanged in every interface language',()=>{
     summaryKu:'وەرگێڕانێکی هەڵەی کۆن',
     content:'Officials say no change is planned for foreign exchange operations.'};
   for(const lang of ['ku','ar','en']){
-    assert.equal(storyExcerpt(item,lang),lang==='en'?item.summary:'');
+    assert.equal(storyExcerpt(item,lang),item.summary);
     const selected=articleSelection(item,lang);
     assert.equal(selected.text,item.summary);
     assert.equal(selected.original,item.summary);

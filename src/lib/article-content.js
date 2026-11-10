@@ -24,9 +24,6 @@ export function storyExcerpt(item,lang='en') {
   const translatedHeadline=lang==='ku'?item.titleKu:lang==='ar'?item.titleAr:'';
   const local=meaningfulArticleText(translated,translatedHeadline||headline);
   if(local)return local;
-  // Don't mix untranslated English publisher excerpts with Sorani/Arabic cards.
-  // The original article remains available in the reader and at its source link.
-  if(lang !== 'en')return '';
   const summary=meaningfulArticleText(item.summaryEn || item.summary,headline);
   if(summary)return summary;
   return meaningfulArticleText(item.contentEn || item.content,headline);

@@ -506,34 +506,3 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
     min-width: 0;
   }
 }
-
-/* Audit fixes: source disclosure belongs to the document, never over the mobile nav. */
-.sources-corner,
-.sources-corner:not(.is-open) {
-  position:relative;
-  inset:auto;
-  width:100%;
-  max-width:100%;
-  z-index:auto;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  direction:inherit;
-  text-align:start;
-  pointer-events:auto;
-}
-.sources-corner .sources-toggle { align-self:start; }
-.sources-corner .sources-panel { order:2; margin:0; width:100%; }
-.rate-skeleton-line {
-  height:18px;
-  width:82%;
-  margin:12px 0;
-  border-radius:7px;
-  background:linear-gradient(100deg,var(--muted-card) 25%,var(--card-strong) 50%,var(--muted-card) 75%);
-  background-size:200% 100%;
-  animation:hawal-rate-loading 1.4s ease-in-out infinite;
-}
-.rate-skeleton-line.short { width:58%; }
-@keyframes hawal-rate-loading { to { background-position:-200% 0; } }
-@media(prefers-reduced-motion:reduce) { .rate-skeleton-line { animation:none; } }
-.last-close { padding-top:5px; border-top:1px dashed var(--line); }
