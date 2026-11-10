@@ -120,6 +120,62 @@ async function fetchYahoo(symbol) {
   });
 }
 
+// Choose a dated, actually quoted USD/IQD report, not simply the first
+// headline containing the word "dollar" (which may be unrelated to prices).
+export function parseShafaqRateFeed(xml, nowMs = Date.now()) {
+  const blocks = String(xml || '').match(/<item>[\s\S]*?<\/item>/gi) || [];
+  const reports = [];
+
+  for (const block of blocks) {
+    const title = xmlValue(block, 'title');
+    if (!/(?:dollar|USD[\s/.-]*IQD)/i.test(title)) continue;
+
+    const publishedTime = Date.parse(xmlValue(block, 'pubDate'));
+    if (!Number.isFinite(publishedTime) ||
+        publishedTime > nowMs + 5 * 60 * 1000 ||
+        nowMs - publishedTime > 4 * 24 * 60 * 60 * 1000) continue;
+
+    const description = xmlValue(block, 'description');
+    if (!description) continue;
+
+    const baghdad = parseCityRate(description, 'baghdad');
+    const erbil = parseCityRate(description, 'erbil');
+    const sulaymaniyah = parseCityRate(description, 'sulaymaniyah');
+    const baghdadMarket = extractNumber(description, /Baghdad(?:['’]s)?[^.]{0,260}?exchanges?\s+at\s*([\d,]{5,})\s*dinars/i)
+      || extractNumber(description, /(?:Al-Kifah|Al-Harithiya)[^.]{0,200}?(?:at|recorded|reached)\s*([\d,]{5,})\s*dinars/i);
+    const erbilSell = erbil?.sell || null;
+    const baghdadSell = baghdad?.sell || null;
+    const price = erbilSell || baghdadSell || baghdadMarket;
+    if (!price) continue;
+
+    const previous = extractNumber(description, /(?:down|up)\s+from[^0-9]{0,100}([\d,]{5,})\s*dinars/i);
+    const benchmark = baghdadMarket || price;
+    const changePct = previous ? round(((benchmark - previous) / previous) * 100, 2) : null;
+    reports.push({
+      ...USD_IQD,
+      price,
+      buyPrice: erbilSell ? erbil?.buy || null : baghdad?.buy || null,
+      sellPrice: erbilSell || baghdadSell || null,
+      quoteCity: erbilSell ? 'erbil' : 'baghdad',
+      sulaymaniyah,
+      baghdad: baghdadSell || baghdad?.buy || baghdadMarket
+        ? { market: baghdadMarket, sell: baghdadSell, buy: baghdad?.buy || null } : null,
+      erbil: erbilSell || erbil?.buy ? { sell: erbilSell, buy: erbil?.buy || null } : null,
+      changePct,
+      status: rateStatus(changePct),
+      source: 'Shafaq News local market',
+      sourceUrl: xmlValue(block, 'link'),
+      updatedAt: new Date(publishedTime).toISOString()
+    });
+  }
+
+  // RSS feeds should be newest first, but sort by the actual publication time
+  // to avoid displaying an older market session after an unrelated headline.
+  reports.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  if (!reports.length) throw new Error('no recent verifiable USD/IQD market report');
+  return reports[0];
+}
+
 async function fetchShafaqUsdIqd() {
   return withTimeout(async signal => {
     const sourceUrl = 'https://shafaq.com/rss/en/Economy';
@@ -128,54 +184,12 @@ async function fetchShafaqUsdIqd() {
       headers: { 'user-agent': 'Mozilla/5.0 HawaliAburi/2.0' },
       cf: { cacheTtl: 300 }
     });
-    if (!res.ok) throw new Error(`Shafaq ${res.status}`);
-
-    const xml = await readTextLimited(
-      res,
-      text => /<item>[\s\S]*?<title>[\s\S]*?(?:dollar|USD\/IQD)[\s\S]*?<\/title>[\s\S]*?<\/item>/i.test(text)
-    );
-    const blocks = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
-    const block = blocks.find(item => /(?:dollar|USD\/IQD)/i.test(xmlValue(item, 'title')));
-    if (!block) throw new Error('no recent USD/IQD local-market report');
-
-    const description = xmlValue(block, 'description');
-    const publishedTime = Date.parse(xmlValue(block, 'pubDate'));
-    if (!Number.isFinite(publishedTime) || Date.now() - publishedTime > 4 * 24 * 60 * 60 * 1000) {
-      throw new Error('USD/IQD local-market report is stale');
-    }
-
-    const baghdadMarket = extractNumber(description, /Baghdad(?:'s)?[^.]{0,260}?exchanges?\s+at\s*([\d,]{5,})\s*dinars/i);
-    const baghdad = parseCityRate(description, 'baghdad');
-    const erbil = parseCityRate(description, 'erbil');
-    const baghdadSell = baghdad?.sell || null;
-    const baghdadBuy = baghdad?.buy || null;
-    const erbilSell = erbil?.sell || null;
-    const erbilBuy = erbil?.buy || null;
-    const sulaymaniyah = parseCityRate(description, 'sulaymaniyah');
-    const previous = extractNumber(description, /(?:down|up)\s+from[^0-9]{0,100}([\d,]{5,})\s*dinars/i);
-    const price = erbilSell || baghdadSell || baghdadMarket;
-    if (!price) throw new Error('could not parse local USD/IQD price');
-
-    const benchmark = baghdadMarket || price;
-    const changePct = previous ? round(((benchmark - previous) / previous) * 100, 2) : null;
-    return {
-      ...USD_IQD,
-      price,
-      buyPrice: erbilSell ? erbilBuy : baghdadBuy,
-      sellPrice: erbilSell || baghdadSell || null,
-      quoteCity: erbilSell ? 'erbil' : 'baghdad',
-      sulaymaniyah,
-      baghdad: baghdadSell || baghdadBuy || baghdadMarket
-        ? { market: baghdadMarket, sell: baghdadSell, buy: baghdadBuy }
-        : null,
-      erbil: erbilSell || erbilBuy ? { sell: erbilSell, buy: erbilBuy } : null,
-      changePct,
-      status: rateStatus(changePct),
-      source: 'Shafaq News local market',
-      sourceUrl: xmlValue(block, 'link'),
-      updatedAt: new Date(publishedTime).toISOString()
-    };
-  });
+    if (!res.ok) throw new Error('Shafaq ' + res.status);
+    // Read the bounded feed, so a non-price dollar headline cannot prevent
+    // a later genuine exchange report from being considered.
+    const xml = await readTextLimited(res);
+    return parseShafaqRateFeed(xml);
+  }, 5500);
 }
 
 async function fetchAlanChandUsdIqd() {
@@ -201,6 +215,7 @@ async function fetchAlanChandUsdIqd() {
     return {
       ...USD_IQD,
       price: round(perDollar * 100, 0),
+      quoteCity: null, // Source is not city-specific; never label this as Erbil.
       buyPrice: null,
       sellPrice: null,
       baghdad: null,
