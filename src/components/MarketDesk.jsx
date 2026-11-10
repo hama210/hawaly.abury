@@ -41,7 +41,7 @@ export function DailyBrief({ items, lang }) {
 }
 export function CalendarLinks({ lang }) {
  const c = dashboardCopy[lang];
- return <section className="desk-panel"><h2>{c.calendar}</h2><p className="desk-note">{c.calendarNote}</p><div className="official-links">{[['cbi','https://cbi.iq/'],['opec','https://www.opec.org/'],['krg','https://gov.krd/'],['fed','https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm']].map(([key,url]) => <a key={key} href={url} target="_blank" rel="noreferrer">{c[key]} ↗</a>)}</div></section>;
+ return <section className="desk-panel"><h2>{c.calendar}</h2><p className="desk-note">{c.calendarNote}</p><a className="primary-button" style={{display:'inline-flex',marginBottom:14}} href={pagePath(lang,'calendar')}>{lang==='ku'?'📅 کردنەوەی کاڵەندەری ئابووری بە کوردی':lang==='ar'?'📅 فتح التقويم الاقتصادي':'📅 Open economic calendar'} ↗</a><div className="official-links">{[['cbi','https://cbi.iq/'],['opec','https://www.opec.org/'],['krg','https://gov.krd/'],['fed','https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm']].map(([key,url]) => <a key={key} href={url} target="_blank" rel="noreferrer">{c[key]} ↗</a>)}</div></section>;
 }
 export function AboutPage({ lang, page }) {
  const c = dashboardCopy[lang];
