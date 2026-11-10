@@ -71,9 +71,9 @@ const uiCopy = {
   }
 };
 const localRateText = {
-  ku: { erbil:'هەولێر', baghdad:'بەغدا' },
-  ar: { erbil:'أربيل', baghdad:'بغداد' },
-  en: { erbil:'Erbil', baghdad:'Baghdad' }
+  ku: { erbil:'هەولێر', baghdad:'بەغدا', iraq:'بازاڕی عێراق' },
+  ar: { erbil:'أربيل', baghdad:'بغداد', iraq:'سوق العراق' },
+  en: { erbil:'Erbil', baghdad:'Baghdad', iraq:'Iraq market' }
 };
 const sourceTierCopy = {
   ku: { official:'فەرمی', major:'جیهانی', local:'ناوخۆیی', specialist:'پسپۆڕ', curated:'هەڵبژێردراو' },
@@ -300,7 +300,7 @@ function MarketStrip({ markets, lang }) {
         </div>
         <strong className="market-price" dir="ltr">{formatPrice(market.price)}</strong>
         <small className={`market-state ${state}`}>{dashboardCopy[lang][state] || state}</small>
-        {market.marketKind === 'local' && <small className="market-city">{localCopy.erbil}</small>}
+        {market.marketKind === 'local' && <small className="market-city">{localCopy[market.quoteCity] || localCopy.iraq}</small>}
         <time className="market-updated" dateTime={market.updatedAt || undefined} title={reportedAt}>{reportedAt}</time>
         {sourceUrl && <a className="market-source" href={sourceUrl} target="_blank" rel="noopener noreferrer" title={market.source || ''}><span dir="auto">{market.source || 'Source'}</span><span aria-hidden="true">↗</span></a>}
       </article>;
