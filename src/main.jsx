@@ -648,11 +648,10 @@ function App() {
         <InstallPanel lang={lang}/>
       </section>
       </>}
-  
+      <SourcesDisclosure lang={lang} news={displayNews} sourceHealth={sourceHealth}/>
       <SiteFooter lang={lang}/>
     </div>
     {route.page==='home' && <Navigation mobile active={activeView} onNavigate={navigate} lang={lang}/>}
-    <SourcesDisclosure lang={lang} news={displayNews} sourceHealth={sourceHealth}/>
     <ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/>
   </div>;
 }
