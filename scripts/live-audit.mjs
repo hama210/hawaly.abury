@@ -128,6 +128,15 @@ if (process.env.GITHUB_REF === 'refs/heads/master') {
     if (published) break;
     if (attempt<8) await new Promise(resolve=>setTimeout(resolve,12000));
   }
+  // A 500 during edge rollout can be transient even when the later, explicitly
+  // verified worker is healthy. Recheck, record recovery, and keep any genuine
+  // unresolved failure red.
+  const workerIndex=checks.findIndex(([path])=>path==='/sw.js');
+  if(published && workerIndex>=0 && !results[workerIndex].ok) {
+    const recovered=await inspect(checks[workerIndex]);
+    console.log(JSON.stringify({deploymentRecoveryOf:'/sw.js',...recovered}));
+    if(recovered.ok)results[workerIndex]={...recovered,recoveredAfterDeploy:true};
+  }
   results.push({path:'deployment-revision',kind:'deploy',ok:published,...(!published?{reason:'Updated Cloudflare edge and service worker could not be verified'}:{})});
 }
 
