@@ -94,6 +94,7 @@ const FAST_FEED_SOURCES = [
   'CNBC Markets'
 ];
 const FAST_FEED_TIMEOUT_MS = 9000;
+const FAST_BATCH_BUDGET_MS = 10000; // Overall budget; never wait for serial publisher fallbacks.
 const FULL_FEED_TIMEOUT_MS = 8000;
 const FAST_CACHE_TTL = 60;
 const FULL_CACHE_TTL = 120;
@@ -349,10 +350,13 @@ function treasuryHtmlToFeedXml(html, feedUrl){
   return `<rss><channel>${items.join('')}</channel></rss>`;
 }
 
-async function fetchFeedAttempt(feed, timeoutMs){
+async function fetchFeedAttempt(feed, timeoutMs, batchSignal){
   const startedAt = Date.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(()=>controller.abort('feed timeout'), Math.max(timeoutMs, Number(feed.timeoutMs) || 0));
+  const onBatchAbort = () => controller.abort('news batch budget exceeded');
+  if (batchSignal?.aborted) onBatchAbort();
+  else batchSignal?.addEventListener('abort', onBatchAbort, { once:true });
   try{
     const res = await fetch(feed.url, {
       signal: controller.signal,
@@ -398,6 +402,7 @@ async function fetchFeedAttempt(feed, timeoutMs){
     return { source: feed.source, ok: false, items: [], durationMs: Date.now() - startedAt, error: message || 'feed request failed' };
   }finally{
     clearTimeout(timeoutId);
+    batchSignal?.removeEventListener('abort', onBatchAbort);
   }
 }
 
@@ -418,16 +423,17 @@ function publisherDomain(feed){
     return FALLBACK_DOMAINS[hostname] || hostname;
   }catch{return '';}
 }
-async function fetchFeed(feed, timeoutMs){
-  const primary = await fetchFeedAttempt(feed, timeoutMs);
+async function fetchFeed(feed, timeoutMs, batchSignal){
+  const primary = await fetchFeedAttempt(feed, timeoutMs, batchSignal);
   if(primary.ok) return { ...primary, via:'direct' };
+  if(batchSignal?.aborted) return primary;
   const domain = publisherDomain(feed);
   if(!domain) return primary;
   const backup = await fetchFeedAttempt({
     ...feed,
     url:googleNewsFeed('site:' + domain + ' when:7d'),
     format:'fallback-google'
-  }, Math.min(7000, timeoutMs));
+  }, Math.min(7000, timeoutMs), batchSignal);
   if(!backup.ok) return primary;
   return {
     ...backup,
@@ -437,22 +443,33 @@ async function fetchFeed(feed, timeoutMs){
   };
 }
 
-async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
+export async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY, overallBudgetMs = 0){
   const results = new Array(feeds.length);
+  const controller = new AbortController();
+  const deadline = overallBudgetMs > 0
+    ? setTimeout(() => controller.abort('news batch deadline exceeded'), overallBudgetMs)
+    : null;
   let cursor = 0;
   async function run(){
-    while(cursor < feeds.length){
+    while(cursor < feeds.length && !controller.signal.aborted){
       const index = cursor++;
-      results[index] = await fetchFeed(feeds[index], timeoutMs);
+      results[index] = await fetchFeed(feeds[index], timeoutMs, controller.signal);
     }
   }
-  await Promise.all(Array.from({ length: Math.min(concurrency, feeds.length) }, run));
-  return results;
+  try {
+    await Promise.all(Array.from({ length: Math.min(concurrency, feeds.length) }, run));
+  } finally {
+    if(deadline) clearTimeout(deadline);
+  }
+  // Missing publishers are disclosed as failures; they never become fabricated articles.
+  return results.map((result,index) => result || {
+    source:feeds[index].source,ok:false,items:[],durationMs:overallBudgetMs,error:'news batch deadline exceeded'
+  });
 }
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'more-news-v16-limit-fix');
+  cacheUrl.searchParams.set('version', 'more-news-v17-fast-budget');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
@@ -516,7 +533,8 @@ export async function onRequest(context) {
   const feedResults = await fetchFeeds(
     selectedFeeds,
     mode === 'fast' ? FAST_FEED_TIMEOUT_MS : FULL_FEED_TIMEOUT_MS,
-    mode === 'fast' ? selectedFeeds.length : FETCH_CONCURRENCY
+    mode === 'fast' ? selectedFeeds.length : FETCH_CONCURRENCY,
+    mode === 'fast' ? FAST_BATCH_BUDGET_MS : 0
   );
   const raw = feedResults.flatMap(result => result.items);
   const items = selectPrioritizedNews(raw,limit);
@@ -563,7 +581,8 @@ export async function onRequest(context) {
     'Server-Timing': `news;dur=${Date.now() - startedAt}`
   }});
 
-  if(cacheKey){
+  // All-source failures should be retried on the next request, not cached as news.
+  if(cacheKey && succeeded > 0){
     const cacheWrite = cache.put(cacheKey, response.clone()).catch(error => {
       console.warn(JSON.stringify({ event:'news_cache_write_failed', message:error instanceof Error ? error.message : String(error) }));
     });
