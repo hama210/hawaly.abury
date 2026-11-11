@@ -73,6 +73,13 @@ const storageRead = (key, fallback) => {
   catch { return fallback; }
 };
 const storageWrite = (key,value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} };
+const readRecent = () => {
+  const saved=storageRead(LOG_KEY,[]);
+  return (Array.isArray(saved)?saved:[])
+    .filter(item=>item && typeof item.key==='string' && typeof item.title==='string'
+      && Number.isFinite(item.when) && Date.now()-item.when<86400000)
+    .slice(0,8);
+};
 
 function notifyInBrowser(title,body,key) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
@@ -96,7 +103,7 @@ export default function EconomicEventAlerts({lang='ku',events,visible=true}) {
   const [settings,setSettings] = useState(()=>normalizeEconomicAlertSettings(storageRead(ECONOMIC_ALERTS_SETTINGS_KEY,{})));
   const [loaded,setLoaded] = useState({events:[],status:'loading'});
   const [now,setNow] = useState(Date.now());
-  const [recent,setRecent] = useState(() => storageRead(LOG_KEY,[]).filter(item=>item && typeof item.key==='string' && Number.isFinite(item.when) && Date.now()-item.when<86400000).slice(0,8));
+  const [recent,setRecent] = useState(readRecent);
   const [toast,setToast] = useState(null);
   const [permissionText,setPermissionText] = useState('');
   const deliveredRef = useRef(pruneEconomicAlertDelivery(storageRead(ECONOMIC_ALERTS_SENT_KEY,{})));
