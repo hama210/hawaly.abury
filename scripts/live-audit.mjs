@@ -85,6 +85,23 @@ for (const index of results.map((value,index)=>({value,index})).filter(({value})
   console.log(JSON.stringify({retryOf:checks[index][0],...retry}));
 }
 
+// Cloudflare Pages can deploy after the GitHub smoke workflow starts.
+// Allow new pages and their history endpoint to become available before
+// judging the actual production deployment. Do not conceal failed checks.
+if (process.env.GITHUB_REF === 'refs/heads/master') {
+  const indexes=checks.map((check,index)=>({check,index}))
+    .filter(({check,index})=>(check[1]==='metals' || check[1]==='metals-history') && !results[index].ok)
+    .map(({index})=>index);
+  for (let attempt=1;attempt<=9 && indexes.some(index=>!results[index].ok);attempt++) {
+    await new Promise(resolve=>setTimeout(resolve,10000));
+    await Promise.all(indexes.filter(index=>!results[index].ok).map(async index=>{
+      const result=await inspect(checks[index]);
+      if(result.ok)results[index]={...result,recoveredAfterDeploy:true};
+      console.log(JSON.stringify({deployRetry:attempt,retryOf:checks[index][0],...result}));
+    }));
+  }
+}
+
 // The master-branch audit also checks whether Cloudflare has actually
 // published the changed edge function AND the refreshed service worker.
 if (process.env.GITHUB_REF === 'refs/heads/master') {
