@@ -6,9 +6,12 @@ import './hawal-features.css';
 import './redesign.css';
 import './economic-calendar.css';
 import './economic-event-alerts.css';
+import './metals-center.css';
 import { DollarRates, MarketDesk, DailyBrief, CalendarLinks, AboutPage, InstallPanel } from './components/MarketDesk.jsx';
 import EconomicCalendar from './components/EconomicCalendar.jsx';
 import EconomicEventAlerts from './components/EconomicEventAlerts.jsx';
+import GoldSilverCenter from './components/GoldSilverCenter.jsx';
+import { metalsPageCopy } from './lib/metals-copy.js';
 import { MarketIntelligence, VerificationDesk, DollarHistory, MarketAlerts } from './components/HawalFeatures.jsx';
 import { Navigation, NavIcon, HomeMarkets, FeatureShortcuts, ScreenIntro, navigationCopy } from './components/HawalDashboard.jsx';
 import { dashboardCopy } from './lib/dashboard-copy.js';
@@ -494,7 +497,7 @@ function SourcesDisclosure({ lang, news, sourceHealth = {} }) {
 
 function SiteFooter({ lang }) {
   const copy = developerCopy[lang] || developerCopy.en;
-  return <footer className="site-footer"><nav>{['home','calendar','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{dashboardCopy[lang][page]}</a>)}</nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong></div></footer>;
+  return <footer className="site-footer"><nav>{['home','metals','calendar','about','contact'].map(page => <a key={page} href={pagePath(lang,page)}>{page==='metals'?metalsPageCopy[lang].title:dashboardCopy[lang][page]}</a>)}</nav><p>{dashboardCopy[lang].disclaimer}</p><div><span>{copy.developedBy}</span><strong>{developer.name}</strong></div></footer>;
 }
 
 
@@ -620,7 +623,7 @@ function App() {
       <Header lang={lang} setLang={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}} theme={theme} setTheme={setTheme}
         query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} onSearch={()=>{if(activeView!=='news') navigate('news');}}/>
       <LanguagePills lang={lang} onLanguage={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}}/>
-      {route.page !== 'home' ? (route.page === 'calendar' ? <EconomicCalendar lang={lang}/> : <AboutPage lang={lang} page={route.page}/>) : <>
+      {route.page !== 'home' ? (route.page === 'calendar' ? <EconomicCalendar lang={lang}/> : route.page === 'metals' ? <GoldSilverCenter lang={lang} markets={markets} news={displayNews}/> : <AboutPage lang={lang} page={route.page}/>) : <>
       <Navigation active={activeView} onNavigate={navigate} lang={lang}/>
       <section className={'hawal-screen home-screen '+(activeView==='home'?'':'is-hidden-view')} aria-label={designCopy.home}>
         <div className="home-stage">
@@ -648,6 +651,7 @@ function App() {
 
       <section className={'hawal-screen markets-screen '+(activeView==='markets'?'':'is-hidden-view')} aria-label={designCopy.markets}>
         <ScreenIntro page="markets" lang={lang}/>
+        <a className="mc-entry-link" href={pagePath(lang,'metals')}>◉ {metalsPageCopy[lang].title} · XAU/USD / XAG/USD ↗</a>
         {activeView==='markets' && <MarketIntelligence markets={markets} news={displayNews} lang={lang}/>}
         <DollarRates markets={markets} lang={lang}/>
         <div className="section-heading"><h2>{designCopy.latestRates}</h2><span>{dashboardCopy[lang].disclaimer}</span></div>
