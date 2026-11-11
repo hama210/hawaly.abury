@@ -17,6 +17,10 @@ on:
       - 'src/lib/metals-center.js'
       - 'src/lib/metals-copy.js'
       - 'functions/api/metals-history.js'
+      - 'functions/owner-health/api.js'
+      - 'functions/lib/owner-auth.js'
+      - 'src/lib/source-health.js'
+      - 'src/components/OwnerHealth.jsx'
       - 'public/sitemap.xml'
 
 permissions:

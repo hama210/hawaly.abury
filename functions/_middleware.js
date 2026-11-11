@@ -5,6 +5,7 @@ import { onRequest as loadNews } from './api/news.js';
 import { onRequest as loadMarkets } from './api/markets.js';
 import { pageRoute, pagePath } from '../src/lib/market-tools.js';
 import { renderPage } from '../src/lib/server-page.js';
+import { ownerAuthorized, accessDenied, ownerResponseHeaders } from './lib/owner-auth.js';
 
 const EDGE_VERSION = '2026-11-11-ssr-budget-v3';
 const SNAPSHOT_WAIT_MS = 4000;
@@ -76,16 +77,25 @@ function htmlHeaders(headers, status) {
   return next;
 }
 
+function privateHtmlHeaders(headers,status) {
+  const value=htmlHeaders(headers,status);
+  for(const [key,content] of Object.entries(ownerResponseHeaders)) value.set(key,content);
+  return value;
+}
+
 export async function onRequest(context) {
   const url = new URL(context.request.url);
   // The API must remain JSON; hashed JS/CSS, feeds and static files must pass through.
   if (!['GET','HEAD'].includes(context.request.method)
       || url.pathname.startsWith('/api/')
+      || url.pathname === '/owner-health/api'
       || /\.[a-z0-9]+$/i.test(url.pathname)) return context.next();
   const route = pageRoute(url.pathname);
   if (!route.valid) return new Response('Not found', {
     status:404, headers:{ 'Content-Type':'text/plain; charset=utf-8' }
   });
+  // Fail closed even on direct/alternate-host requests. Access policy alone is not trusted.
+  if (route.page === 'owner-health' && !await ownerAuthorized(context.request,context.env)) return accessDenied();
   const canonical = pagePath(route.lang, route.page);
   if (url.pathname !== canonical) return Response.redirect(url.origin + canonical + url.search, 308);
 
@@ -112,14 +122,18 @@ export async function onRequest(context) {
     return new Response(context.request.method === 'HEAD' ? null : rendered, {
       status:response.status,
       statusText:response.statusText,
-      headers:htmlHeaders(response.headers,status)
+      headers:route.page === 'owner-health'
+        ? privateHtmlHeaders(response.headers,status)
+        : htmlHeaders(response.headers,status)
     });
   } catch(error) {
     console.warn('Hawall edge SSR failed; serving original HTML', error?.message || 'unknown error');
     return new Response(context.request.method === 'HEAD' ? null : fallback.body, {
       status:fallback.status,
       statusText:fallback.statusText,
-      headers:htmlHeaders(fallback.headers,'error')
+      headers:route.page === 'owner-health'
+        ? privateHtmlHeaders(fallback.headers,'error')
+        : htmlHeaders(fallback.headers,'error')
     });
   }
 }
