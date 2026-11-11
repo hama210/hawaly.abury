@@ -41,7 +41,8 @@ export function matchesCalendarView(time, view, now = Date.now(), { historyDays 
     }
     case 'history': {
       const days = [7,30,90].includes(Number(historyDays)) ? Number(historyDays) : 7;
-      return day < today && day >= shiftCalendarDay(today,-days)
+      return day <= today && Date.parse(time) <= new Date(now).getTime()
+        && day >= shiftCalendarDay(today,1-days)
         && (!historyDate || day === historyDate);
     }
     default: return false;
