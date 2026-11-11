@@ -61,13 +61,6 @@ const oldHome = `      <section className={'hawal-screen home-screen '+(activeVi
         </div>`;
 
 const newHome = `      <section className={'hawal-screen home-screen '+(activeView==='home'?'':'is-hidden-view')} aria-label={designCopy.home}>
-        <div className="update-ribbon" role="status">
-          <div>
-            <strong>{lang==='en' ? 'Iraq Market Desk is live' : lang==='ar' ? 'مكتب سوق العراق مباشر' : 'مێزی بازاڕی عێراق چالاکە'}</strong>
-            <span>{lang==='en' ? 'City USD rates first · clearer empty states · reliable news covers' : lang==='ar' ? 'أسعار الدولار حسب المدينة أولاً · حالات فارغة أوضح · صور أخبار موثوقة' : 'نرخی دۆلاری شارەکان لە پێشەوە · دۆخی بەتاڵ ڕوونتر · وێنەی هەواڵی باوەڕپێکراو'}</span>
-          </div>
-          <div className="badge">v6.1</div>
-        </div>
         <div className="home-rate-board">
           <DollarRates markets={markets} lang={lang}/>
         </div>
@@ -86,7 +79,7 @@ if (src.includes('home-market-aside') && !src.includes('update-ribbon')) {
   } else {
     src = src.replace(oldHome, newHome);
     changed = true;
-    console.log('patch-main: homepage rate board + update ribbon');
+    console.log('patch-main: homepage rate board');
   }
 }
 
