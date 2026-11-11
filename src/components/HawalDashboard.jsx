@@ -1,5 +1,5 @@
 import React from 'react';
-import { quoteState, safeUrl, timestamp } from '../lib/market-tools.js';
+import { quoteState, safeUrl, timestamp, pagePath } from '../lib/market-tools.js';
 
 export const tabs = ['home','markets','news','more'];
 export const navigationCopy = {
@@ -49,7 +49,7 @@ export function HomeMarkets({ markets=[], lang, onNavigate }) {
      const fresh=state==='reported'&&typeof value==='number'&&Number.isFinite(value)&&value>0;
      const change=Number.isFinite(q?.changePct) && item.type!=='local' ? q.changePct : null;
      const amount=fresh?value.toLocaleString('en-US',{minimumFractionDigits:value<10?2:0,maximumFractionDigits:2}):'—';
-     return <button type="button" key={item.symbol} className="pulse-card" onClick={()=>onNavigate('markets')} aria-label={item.title + ', ' + (fresh?amount:c.noQuote)}>
+     return <button type="button" key={item.symbol} className="pulse-card" onClick={()=>item.symbol==='XAU/USD'?window.location.assign(pagePath(lang,'metals')+'#gold'):onNavigate('markets')} aria-label={item.title + ', ' + (fresh?amount:c.noQuote)}>
        <div className="pulse-label"><span className={'pulse-symbol pulse-'+item.symbol.split('/')[0].toLowerCase()}>{item.label}</span><span dir="ltr">{item.title}</span></div>
        <strong dir="ltr">{amount}</strong>
        <span className={'pulse-change '+(change>0?'up':change<0?'down':'')}>{change===null?(state==='reported'?c.tracked:c.noQuote):(change>0?'+':'')+change.toFixed(2)+'% '+(change>0?'▲':change<0?'▼':'')}</span>

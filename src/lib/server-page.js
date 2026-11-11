@@ -3,15 +3,18 @@ import { pagePath, quoteState, positive, safeUrl, timestamp } from './market-too
 import { getTitle } from '../utils/news.js';
 import { calendarText } from './calendar-i18n.js';
 import { CALENDAR_SOURCE_URL } from '../services/economic-calendar.js';
+import { metalsPageCopy } from './metals-copy.js';
 export const SITE_URL = 'https://hawaly-aburyy.pages.dev';
 export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 export const scriptJson = value => JSON.stringify(value).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
 export function serverContent({ lang, page, news = [], markets = [] }) {
  const c = dashboardCopy[lang];
  const cal = calendarText(lang);
+ const met = metalsPageCopy[lang];
  const e = escapeHtml;
- const nav = `<nav>${['home','calendar','about','contact'].map(p=>`<a href="${pagePath(lang,p)}">${e(p === 'calendar' ? cal.title : c[p])}</a>`).join(' · ')} · ${['ku','ar','en'].map(l=>`<a href="${pagePath(l,page)}">${{ku:'کوردی',ar:'العربية',en:'English'}[l]}</a>`).join(' · ')}</nav>`;
- const intro = `<header><h1>${e(page === 'home' ? 'هەواڵی ئابوری · Hawall' : page === 'calendar' ? cal.title : c[page])}</h1>${nav}</header>`;
+ const nav = `<nav>${['home','metals','calendar','about','contact'].map(p=>`<a href="${pagePath(lang,p)}">${e(p === 'calendar' ? cal.title : p === 'metals' ? met.title : c[p])}</a>`).join(' · ')} · ${['ku','ar','en'].map(l=>`<a href="${pagePath(l,page)}">${{ku:'کوردی',ar:'العربية',en:'English'}[l]}</a>`).join(' · ')}</nav>`;
+ const intro = `<header><h1>${e(page === 'home' ? 'هەواڵی ئابوری · Hawall' : page === 'calendar' ? cal.title : page === 'metals' ? met.title : c[page])}</h1>${nav}</header>`;
+ if (page === 'metals') return `<main class="shell information-page">${intro}<p>${e(met.description)}</p><p>${e(met.disclaimer)}</p><p><a href="https://finance.yahoo.com/quote/GC%3DF/">Yahoo Gold Futures (GC=F)</a> · <a href="https://finance.yahoo.com/quote/SI%3DF/">Yahoo Silver Futures (SI=F)</a></p></main>`;
  if (page === 'calendar') return `<main class="shell information-page">${intro}<p>${e(cal.lead)}</p><p>${e(cal.recentWindow)}</p><p><a href="${CALENDAR_SOURCE_URL}" rel="noreferrer">${e(cal.source)}</a></p><p>${e(cal.warning)}</p></main>`;
  if (page !== 'home') return `<main class="shell information-page">${intro}<p>${e(page==='about'?c.aboutText:c.contactText)}</p>${page==='about'?`<h2>${e(c.methodology)}</h2><p>${e(c.methodologyText)}</p>`:'<a href="https://github.com/hama210/hawaly.abury/issues">GitHub</a>'}<p>${e(c.disclaimer)}</p></main>`;
  const local = markets.find(q=>q.symbol==='USD/IQD');
@@ -26,9 +29,10 @@ export function renderPage(template, data) {
  const {lang,page} = data;
  const c = dashboardCopy[lang];
  const cal = calendarText(lang);
+ const met = metalsPageCopy[lang];
  const url = SITE_URL + pagePath(lang,page);
- const title = `${page==='home'?c.title:page==='calendar'?cal.title:c[page]} | Hawall · هەواڵی ئابوری`;
- const description = page==='home'?c.subtitle:page==='calendar'?cal.lead:page==='about'?c.aboutText:c.contactText;
+ const title = `${page==='home'?c.title:page==='calendar'?cal.title:page==='metals'?met.title:c[page]} | Hawall · هەواڵی ئابوری`;
+ const description = page==='home'?c.subtitle:page==='calendar'?cal.lead:page==='metals'?met.description:page==='about'?c.aboutText:c.contactText;
  let html = template.replace(/<html\b[^>]*>/i,`<html lang="${lang==='ku'?'ckb':lang}" dir="${lang==='en'?'ltr':'rtl'}">`).replace(/<title>[\s\S]*?<\/title>/i,`<title>${escapeHtml(title)}</title>`);
  html=html.replace(/<meta\b[^>]*(?:name="description"|property="og:(?:title|description|url|locale)"|name="twitter:(?:title|description)")[^>]*>/gi,'').replace(/<link\b[^>]*rel="(?:canonical|alternate)"[^>]*>/gi,'');
  const tags=`<meta name="description" content="${escapeHtml(description)}"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${url}"><meta property="og:locale" content="${lang==='ku'?'ckb_IQ':lang==='ar'?'ar_IQ':'en_US'}"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:description" content="${escapeHtml(description)}"><link rel="canonical" href="${url}">${['ku','ar','en'].map(l=>`<link rel="alternate" hreflang="${l}" href="${SITE_URL+pagePath(l,page)}">`).join('')}<link rel="alternate" hreflang="x-default" href="${SITE_URL+pagePath('ku',page)}">`;

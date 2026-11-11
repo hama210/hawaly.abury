@@ -41,6 +41,6 @@ export function pageRoute(pathname) {
   const segments = pathname.split('/').filter(Boolean);
   const lang = ['ar','en'].includes(segments[0]) ? segments.shift() : 'ku';
   if (segments[0] === 'ckb') segments.shift();
-  return { lang, page:segments[0] || 'home', valid:segments.length <= 1 && (!segments[0] || ['about','contact','calendar'].includes(segments[0])) };
+  return { lang, page:segments[0] || 'home', valid:segments.length <= 1 && (!segments[0] || ['about','contact','calendar','metals'].includes(segments[0])) };
 }
 export function pagePath(lang, page = 'home') { return `${lang === 'ku' ? '' : '/' + lang}${page === 'home' ? '/' : '/' + page}`; }
