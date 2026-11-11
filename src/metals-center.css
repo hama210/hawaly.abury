@@ -80,3 +80,8 @@
  .mc-quote .mc-price{margin:8px 0;font-size:27px}
  .mc-quote-top,.mc-quote-bottom{gap:6px}
 }
+
+/* Native in-app entry point; does not alter existing market screen layout. */
+.mc-entry-link{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;padding:11px 15px;border:1px solid color-mix(in srgb,var(--primary) 46%,var(--line));border-radius:12px;background:color-mix(in srgb,var(--primary) 10%,var(--card));color:var(--primary-strong);font-size:13px;font-weight:800;text-align:center;line-height:1.65;overflow-wrap:anywhere}
+.mc-entry-link:hover{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 18%,var(--card))}
+@media(max-width:390px){.mc-entry-link{font-size:12px}}
