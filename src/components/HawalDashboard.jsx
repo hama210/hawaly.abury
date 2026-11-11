@@ -19,6 +19,7 @@ export function NavIcon({ name, size = 22 }) {
   refresh:<><path d="M20 6v6h-6M4 18v-6h6"/><path d="M5.5 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.5-3"/></>,
   shield:<><path d="m12 2 8 4v6c0 5-3.8 8.1-8 10-4.2-1.9-8-5-8-10V6z"/><path d="m8 12 3 3 5-6"/></>,
   bell:<><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9M10 21h4"/></>,
+  calendar:<><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M7 14h3M13 14h3"/></>,
   history:<><path d="M3 3v6h6M4 9a9 9 0 1 1-1 5M12 7v5l4 2"/></>,
   chart:<><path d="M3 20h18M4 15l5-6 4 3 7-9"/></>
  };

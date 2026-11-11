@@ -20,6 +20,9 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
 .brand-copy .brand-accent{color:#ffb727}
 .brand-copy small{font-size:10px;margin-top:4px;letter-spacing:0}
 .header-tools{gap:7px}
+.header-calendar-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 13px;border:1px solid color-mix(in srgb,var(--primary) 55%,var(--line));border-radius:10px;background:color-mix(in srgb,var(--primary) 13%,var(--card));color:var(--text);text-decoration:none;white-space:nowrap;font-size:11px;font-weight:800;transition:background .2s,border-color .2s}
+.header-calendar-button:hover,.header-calendar-button[aria-current="page"]{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+.header-calendar-button:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
 .search-wrap{background:var(--bg-soft);height:42px;border-radius:10px}
 .language-control{display:none}
 .header-search-toggle{display:none}
@@ -126,6 +129,8 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
  .brand-copy strong{font-size:28px}
  .brand-copy small{font-size:8px}
  .header-tools{gap:5px}
+ .header-calendar-button{width:36px;min-width:36px;height:36px;min-height:36px;padding:0;border-radius:8px}
+ .header-calendar-button span{display:none}
  .header-search-toggle{display:grid}
  .header-tools .refresh-button{display:none}
  .icon-button{height:36px;width:36px;border-radius:8px}
