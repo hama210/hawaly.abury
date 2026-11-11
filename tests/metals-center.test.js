@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseYahooMetalChart,fetchYahooMetalHistory } from '../functions/api/metals-history.js';
 import { pageRoute,pagePath } from '../src/lib/market-tools.js';
-import { renderPage } from '../src/lib/server-page.js';
+import { renderPage,escapeHtml } from '../src/lib/server-page.js';
 import { marketStories } from '../src/lib/hawal-features.js';
 import {
   METALS,metalQuote,cleanMetalHistory,recentMetalHistory,metalChartPoints,selectMetalEvents
@@ -113,8 +113,8 @@ test('new route and multilingual metadata are crawlable without changing existin
     const url=pagePath(lang,'metals');
     assert.deepEqual(pageRoute(url),{lang,page:'metals',valid:true});
     const output=renderPage(html,{lang,page:'metals',news:[],markets:[]});
-    assert.ok(output.includes(metalsPageCopy[lang].title));
-    assert.ok(output.includes(metalsPageCopy[lang].description));
+    assert.ok(output.includes(escapeHtml(metalsPageCopy[lang].title)));
+    assert.ok(output.includes(escapeHtml(metalsPageCopy[lang].description)));
     assert.match(output,/<meta name="description" content="[^"]+"/);
     assert.match(output,/GC=F/);
     assert.match(output,/SI=F/);
