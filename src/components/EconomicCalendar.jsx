@@ -200,7 +200,7 @@ export default function EconomicCalendar({ lang='ku' }) {
     <nav className="ec-date-tabs" aria-label={c.dateTabs}>
       {tabs.map(tab => <button key={tab} type="button" className={windowDays===tab ? 'active' : ''}
         aria-current={windowDays===tab ? 'date' : undefined} aria-pressed={windowDays===tab}
-        onClick={() => { setWindowDays(tab); setHistoryDate(''); }}>{tabLabels[tab]}</button>)}
+        onClick={() => { setWindowDays(tab); setHistoryDate(''); if (tab === 'history') setCurrency('all'); }}>{tabLabels[tab]}</button>)}
     </nav>
     {windowDays === 'history' && <section className="ec-history-tools" aria-label={c.history}>
       <label>{c.historyPeriod}<select value={historyDays} onChange={event => { setHistoryDays(event.target.value); setHistoryDate(''); }}>
