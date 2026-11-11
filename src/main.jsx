@@ -268,6 +268,7 @@ function Header({ lang, setLang, theme, setTheme, query, setQuery, dict, refresh
       <input type="search" value={query} onChange={event => {setQuery(event.target.value);if(event.target.value)onSearch();}} placeholder={dict.search} />
     </label>
     <div className="header-tools">
+      <a className="header-calendar-button" href={pagePath(lang,'calendar')} aria-label={copy.calendar} aria-current={route.page==='calendar' ? 'page' : undefined} title={copy.calendar}><NavIcon name="calendar" size={18}/><span>{copy.calendar}</span></a>
       <button className="icon-button header-search-toggle" type="button" aria-label={copy.search} aria-expanded={searchOpen || Boolean(query)} onClick={()=>{setSearchOpen(open=>!open);onSearch();}}><NavIcon name="search" size={19}/></button>
       <button className="icon-button" type="button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={copy.theme}><NavIcon name={theme === 'dark' ? 'sun':'moon'} size={20}/></button>
       <button className={'icon-button refresh-button '+(refreshing ? 'is-loading' : '')} type="button" onClick={onRefresh} disabled={refreshing} aria-label={copy.refresh}><NavIcon name="refresh" size={19}/></button>
