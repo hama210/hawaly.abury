@@ -223,48 +223,7 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
 .reader-source-link:hover{background:var(--primary-strong)}
 @media(max-width:680px){.article-reader{padding:13px;margin:12px 0}.article-reader .article-body{font-size:13px;line-height:2.05}.story-excerpt{-webkit-line-clamp:2;font-size:10px}.story-copy{gap:5px}}
 
-/* ===== VISIBLE UPDATE: Market Desk 6.1 ===== */
-.update-ribbon {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0 0 14px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, #f0c14b 55%, var(--line));
-  background: linear-gradient(90deg,
-    color-mix(in srgb, #0ea5e9 22%, #08111f),
-    color-mix(in srgb, #f0c14b 18%, #0b1628) 55%,
-    color-mix(in srgb, #22c55e 14%, #08111f));
-  box-shadow: 0 0 0 1px color-mix(in srgb, #f0c14b 20%, transparent),
-              0 12px 40px color-mix(in srgb, #0ea5e9 18%, transparent);
-}
-.update-ribbon strong {
-  display: block;
-  color: #f8fafc;
-  font-size: clamp(14px, 2.2vw, 18px);
-  font-weight: 900;
-  letter-spacing: 0.02em;
-}
-.update-ribbon span {
-  display: block;
-  margin-top: 3px;
-  color: color-mix(in srgb, #f0c14b 85%, #fff);
-  font-size: 11px;
-  font-weight: 700;
-}
-.update-ribbon .badge {
-  flex: 0 0 auto;
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: #f0c14b;
-  color: #0b1220;
-  font: 900 11px/1 Inter, sans-serif;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
+/* Home market rate board */
 .home-rate-board {
   margin: 0 0 16px;
   padding: 14px;
@@ -364,11 +323,6 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
 }
 
 @media (max-width: 680px) {
-  .update-ribbon {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 12px;
-  }
   /* This large multi-row panel must scroll away on phones.
      Keeping it sticky covered most of the news feed when browsing. */
   .home-rate-board {
