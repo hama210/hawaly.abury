@@ -3,6 +3,7 @@ import { fetchEconomicCalendar, fetchCalendarHistory, CALENDAR_SOURCE_URL } from
 import { calendarDayKey, shiftCalendarDay, matchesCalendarView, mergeCalendarEvents } from '../lib/calendar-history.js';
 import { analyzeCalendarEvent, calendarScenarios } from '../lib/economic-impact.js';
 import { calendarText, calendarEventTitle } from '../lib/calendar-i18n.js';
+import EconomicEventAlerts from './EconomicEventAlerts.jsx';
 
 const CURRENCIES = ['USD','EUR','GBP','JPY','CAD','AUD','NZD','CHF','CNY'];
 const BAGHDAD_TZ = 'Asia/Baghdad';
@@ -215,6 +216,7 @@ export default function EconomicCalendar({ lang='ku' }) {
       </div>
       <button type="button" onClick={() => setRevision(number => number + 1)} disabled={state === 'loading'} className="ec-refresh">{c.refresh} ↻</button>
     </section>
+    <EconomicEventAlerts lang={lang} events={data.events}/>
     <nav className="ec-date-tabs" aria-label={c.dateTabs}>
       {tabs.map(tab => <button key={tab} type="button" className={windowDays===tab ? 'active' : ''}
         aria-current={windowDays===tab ? 'date' : undefined} aria-pressed={windowDays===tab}
