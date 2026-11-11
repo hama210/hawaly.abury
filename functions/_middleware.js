@@ -77,6 +77,12 @@ function htmlHeaders(headers, status) {
   return next;
 }
 
+function privateHtmlHeaders(headers,status) {
+  const value=htmlHeaders(headers,status);
+  for(const [key,content] of Object.entries(ownerResponseHeaders)) value.set(key,content);
+  return value;
+}
+
 export async function onRequest(context) {
   const url = new URL(context.request.url);
   // The API must remain JSON; hashed JS/CSS, feeds and static files must pass through.
@@ -117,7 +123,7 @@ export async function onRequest(context) {
       status:response.status,
       statusText:response.statusText,
       headers:route.page === 'owner-health'
-        ? new Headers([...htmlHeaders(response.headers,status),...Object.entries(ownerResponseHeaders)])
+        ? privateHtmlHeaders(response.headers,status)
         : htmlHeaders(response.headers,status)
     });
   } catch(error) {
@@ -126,7 +132,7 @@ export async function onRequest(context) {
       status:fallback.status,
       statusText:fallback.statusText,
       headers:route.page === 'owner-health'
-        ? new Headers([...htmlHeaders(fallback.headers,'error'),...Object.entries(ownerResponseHeaders)])
+        ? privateHtmlHeaders(fallback.headers,'error')
         : htmlHeaders(fallback.headers,'error')
     });
   }
