@@ -1,5 +1,13 @@
 // Rule-based, deliberately cautious context: never an automated trade signal.
-const EMPTY = new Set(['', '-', '—', 'n/a', 'na', 'null', 'pending']);
+const EMPTY = new Set(['', '-', '--', '—', 'n/a', 'na', 'null', 'pending', 'tba', 'not available', 'not released', 'awaiting', '?']);
+
+// Zero is a legitimate published result. Placeholders must not be mistaken
+// for actual numbers when the provider has not yet released the figure.
+export function hasPublishedActual(raw) {
+  if (raw === undefined || raw === null) return false;
+  const value = String(raw).trim().toLowerCase();
+  return !EMPTY.has(value);
+}
 const NEGATIVE_GOOD = /unemployment rate|jobless claims|unemployment claims|continuing claims|initial claims|claimant count|layoffs|redundanc|unemployed persons/i;
 const INFLATION = /\bcpi\b|\bpce\b|\bppi\b|consumer price|producer price|inflation|price index|import prices|wage growth|average hourly earnings/i;
 const POLICY = /rate decision|interest rate decision|federal funds rate|fed funds|policy rate|official bank rate|cash rate target|deposit facility rate|main refinancing rate|overnight rate/i;
@@ -34,7 +42,8 @@ export function analyzeCalendarEvent(event) {
   const kind = indicatorKind(event?.title);
   const currency = String(event?.currency || '').toUpperCase();
   const base = { status: 'unknown', direction: 'unknown', kind, currency, difference: null, note: 'not_comparable', markets: [] };
-  if (!actual) return { ...base, status: 'pending', note: 'awaiting_actual' };
+  if (!hasPublishedActual(event?.actual)) return { ...base, status: 'pending', note: 'awaiting_actual' };
+  if (!actual) return { ...base, note: 'not_comparable' };
   if (!forecast) return { ...base, status: 'unknown', note: 'no_forecast' };
   if (actual.unit !== forecast.unit) return { ...base, status: 'unknown', note: 'incompatible_units' };
   const difference = actual.value - forecast.value;
@@ -55,7 +64,7 @@ export function analyzeCalendarEvent(event) {
 
 // Hypothetical cases only: never populate the event's actual or forecast fields.
 export function calendarScenarios(event) {
-  if (parseEconomicValue(event?.actual) !== null) return null;
+  if (hasPublishedActual(event?.actual)) return null;
   if (indicatorKind(event?.title) === 'unknown') return { note:'unsupported_indicator', cases:[] };
   if (parseEconomicValue(event?.forecast) === null) return { note:'no_forecast', cases:[] };
   const kind = indicatorKind(event.title);
