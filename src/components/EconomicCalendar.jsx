@@ -200,14 +200,14 @@ export default function EconomicCalendar({ lang='ku' }) {
     <nav className="ec-date-tabs" aria-label={c.dateTabs}>
       {tabs.map(tab => <button key={tab} type="button" className={windowDays===tab ? 'active' : ''}
         aria-current={windowDays===tab ? 'date' : undefined} aria-pressed={windowDays===tab}
-        onClick={() => { setWindowDays(tab); setHistoryDate(''); }}>{tabLabels[tab]}</button>)}
+        onClick={() => { setWindowDays(tab); setHistoryDate(''); if (tab === 'history') setCurrency('all'); }}>{tabLabels[tab]}</button>)}
     </nav>
     {windowDays === 'history' && <section className="ec-history-tools" aria-label={c.history}>
       <label>{c.historyPeriod}<select value={historyDays} onChange={event => { setHistoryDays(event.target.value); setHistoryDate(''); }}>
         <option value="7">{c.past7}</option><option value="30">{c.past30}</option><option value="90">{c.past90}</option>
       </select></label>
-      <label>{c.historyDate}<input type="date" value={historyDate} min={shiftCalendarDay(todayKey,-Number(historyDays))}
-        max={shiftCalendarDay(todayKey,-1)} onChange={event=>setHistoryDate(event.target.value)} /></label>
+      <label>{c.historyDate}<input type="date" value={historyDate} min={shiftCalendarDay(todayKey,1-Number(historyDays))}
+        max={todayKey} onChange={event=>setHistoryDate(event.target.value)} /></label>
       {historyDate && <button className="ec-clear-history" type="button" onClick={()=>setHistoryDate('')}>{c.allHistoryDates}</button>}
       <p>{c.archiveNote}</p>
     </section>}

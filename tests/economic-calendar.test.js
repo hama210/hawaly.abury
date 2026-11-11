@@ -132,7 +132,8 @@ test('history date windows include only past Baghdad dates and support a specifi
   const now = Date.parse('2026-11-11T18:30:00Z');
   const yesterday = '2026-11-10T13:30:00Z';
   assert.ok(matchesCalendarView(yesterday,'history',now,{historyDays:7}));
-  assert.equal(matchesCalendarView('2026-11-11T13:30:00Z','history',now,{historyDays:7}),false);
+  assert.equal(matchesCalendarView('2026-11-11T13:30:00Z','history',now,{historyDays:7}),true);
+  assert.equal(matchesCalendarView('2026-11-11T21:30:00Z','history',now,{historyDays:7}),false);
   assert.equal(matchesCalendarView('2026-11-03T13:30:00Z','history',now,{historyDays:7}),false);
   assert.ok(matchesCalendarView('2026-10-25T13:30:00Z','history',now,{historyDays:30}));
   assert.equal(matchesCalendarView(yesterday,'history',now,{historyDays:30,historyDate:'2026-11-09'}),false);
