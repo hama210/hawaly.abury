@@ -481,7 +481,7 @@ export async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURREN
     if(deadline) clearTimeout(deadline);
   }
   // Missing publishers are disclosed as failures; they never become fabricated articles.
-  return results.map((result,index) => result || {
+  return Array.from({length:feeds.length},(_,index) => results[index] || {
     source:feeds[index].source,ok:false,items:[],durationMs:overallBudgetMs,error:'news batch deadline exceeded'
   });
 }
