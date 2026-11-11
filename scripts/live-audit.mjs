@@ -37,8 +37,13 @@ async function inspect([path, kind]) {
     const type = res.headers.get('content-type') || '';
     if (kind==='private') {
       const redirect=res.headers.get('location')||'';
-      const ok=status===403 || (status>=300 && status<400 &&
-        (/\\.cloudflareaccess\\.com\\//.test(redirect)||/\\/cdn-cgi\\/access\\//.test(redirect)));
+      let loginRedirect=false;
+      try {
+        const destination=new URL(redirect,url);
+        loginRedirect=destination.hostname.endsWith('.cloudflareaccess.com')
+          || (destination.origin===url.origin && destination.pathname.startsWith('/cdn-cgi/access/'));
+      } catch { /* Invalid redirect is never accepted as authentication. */ }
+      const ok=status===403 || (status>=300 && status<400 && loginRedirect);
       return {path,kind,status,ok,...(!ok?{reason:'Private owner route reachable without authentication or redirects unexpectedly'}:{})};
     }
     const body = await res.text();
