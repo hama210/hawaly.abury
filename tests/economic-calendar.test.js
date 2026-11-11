@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { analyzeCalendarEvent, parseEconomicValue, indicatorKind, calendarScenarios } from '../src/lib/economic-impact.js';
-import { normalizeCalendarPayload } from '../src/services/economic-calendar.js';
+import fs from 'node:fs';
+import { analyzeCalendarEvent, parseEconomicValue, indicatorKind, calendarScenarios, hasPublishedActual } from '../src/lib/economic-impact.js';
+import { normalizeCalendarPayload, isCalendarSourceDelayed } from '../src/services/economic-calendar.js';
 import { calendarEventTitle, calendarText } from '../src/lib/calendar-i18n.js';
 import { pageRoute, pagePath } from '../src/lib/market-tools.js';
 
@@ -111,4 +112,51 @@ test('no speculative cases after release, without forecast, or for unsupported e
   assert.equal(calendarScenarios({title:'CPI',actual:'—',forecast:''}).cases.length,0);
   assert.equal(calendarScenarios({title:'Fed speech',forecast:'1'}).note,'unsupported_indicator');
   assert.equal(calendarScenarios({title:'Retail Sales',currency:'USD',actual:'—',forecast:'0'}).cases.length,2);
+});
+
+
+test('missing Actual placeholders do not masquerade as published results', () => {
+  for (const value of ['', '—', '-', '--', 'N/A', 'pending', 'TBA', 'not released', 'awaiting']) {
+    assert.equal(hasPublishedActual(value), false, 'placeholder should not release: '+value);
+    assert.equal(analyzeCalendarEvent({ title:'CPI MoM', currency:'USD', actual:value, forecast:'0.3%' }).status,'pending');
+  }
+  for (const value of [0, '0', '0%', '-0.2%', '(250K)']) {
+    assert.equal(hasPublishedActual(value), true, 'real zero/negative must be preserved: '+value);
+  }
+  assert.equal(analyzeCalendarEvent({ title:'CPI MoM', currency:'USD', actual:'0%', forecast:'0.3%' }).status,'surprise');
+  assert.equal(calendarScenarios({title:'CPI MoM', currency:'USD', actual:'Held', forecast:'0.3%'}), null);
+  assert.equal(analyzeCalendarEvent({title:'CPI MoM', currency:'USD', actual:'Held', forecast:'0.3%'}).status,'unknown');
+});
+
+test('stale calendar timestamps are flagged rather than silently passing as fresh data', () => {
+  const now=Date.parse('2026-11-11T04:00:00Z');
+  assert.equal(isCalendarSourceDelayed('2026-11-11T03:45:00Z',now),false);
+  assert.equal(isCalendarSourceDelayed('2026-11-11T03:14:00Z',now),true);
+  assert.equal(isCalendarSourceDelayed('2026-11-11T04:07:00Z',now),true);
+  assert.equal(isCalendarSourceDelayed(null,now),true);
+  assert.equal(isCalendarSourceDelayed('not-a-date',now),true);
+});
+
+test('calendar UI does not show a pre-release scenario after release time', () => {
+  const main=fs.readFileSync('src/components/EconomicCalendar.jsx','utf8');
+  assert.match(main,/Date\.parse\(event\.time\) <= now \|\| hasPublishedActual\(event\.actual\)/);
+  assert.match(main,/<BeforeRelease event=\{event\} lang=\{lang\} c=\{c\} now=\{now\}\/>/);
+  assert.match(main,/hasPublishedActual\(event\.actual\) \? c\.released/);
+  assert.match(main,/providerDelayed && <div role="alert"/);
+  const translations=fs.readFileSync('src/lib/calendar-i18n.js','utf8');
+  assert.match(translations,/sourceDelayed:'ئاگاداری/);
+  assert.match(translations,/sourceDelayed:'تنبيه/);
+  assert.match(translations,/sourceDelayed:'Notice/);
+});
+
+test('Actual Forecast and Previous fields are preserved exactly as supplied',()=>{
+  const payload=normalizeCalendarPayload({generated_at:'2026-11-11T04:00:00Z',events:[
+    {id:'usd-cpi',time:'2026-11-11T13:30:00Z',currency:'USD',title:'CPI MoM',
+      actual:'0%',forecast:'0.3%',previous:'-0.1%',impact:'high'},
+    {id:'usd-jobs',time:'2026-11-11T14:30:00Z',currency:'USD',title:'Initial Jobless Claims',
+      actual:'',forecast:'250K',previous:'275K',impact:'medium'}
+  ]});
+  assert.deepEqual(payload.events.map(e=>[e.actual,e.forecast,e.previous]),[['0%','0.3%','-0.1%'],['','250K','275K']]);
+  assert.equal(analyzeCalendarEvent(payload.events[0]).status,'surprise');
+  assert.equal(analyzeCalendarEvent(payload.events[1]).status,'pending');
 });
