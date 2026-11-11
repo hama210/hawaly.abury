@@ -123,6 +123,7 @@ export default function EconomicCalendar({ lang='ku' }) {
   const [visibleLimit,setVisibleLimit] = useState(60);
   const [archive,setArchive] = useState({events:[],updatedAt:null});
   const [archiveFailed,setArchiveFailed] = useState(false);
+  const [archiveLoading,setArchiveLoading] = useState(true);
   const [metalsOnly,setMetalsOnly] = useState(false);
   const [search,setSearch] = useState('');
   const [now,setNow] = useState(Date.now());
@@ -135,18 +136,31 @@ export default function EconomicCalendar({ lang='ku' }) {
   useEffect(() => {
     const controller = new AbortController();
     setState('loading');
-    Promise.allSettled([fetchEconomicCalendar(controller.signal),fetchCalendarHistory(controller.signal)])
-      .then(([live,stored]) => {
+    setArchiveLoading(true);
+    // These are independent requests: a slow or unavailable historical archive
+    // must never block today's live calendar results (or vice versa).
+    fetchEconomicCalendar(controller.signal)
+      .then(result => {
         if (controller.signal.aborted) return;
-        if (live.status === 'fulfilled') {
-          setData(live.value);
-          setState('ready');
-        } else setState('error');
-        if (stored.status === 'fulfilled') {
-          setArchive(stored.value);
-          setArchiveFailed(false);
-        } else setArchiveFailed(true);
+        setData(result);
+        setState('ready');
         setNow(Date.now());
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setState('error');
+      });
+    fetchCalendarHistory(controller.signal)
+      .then(result => {
+        if (controller.signal.aborted) return;
+        setArchive(result);
+        setArchiveFailed(false);
+        setNow(Date.now());
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setArchiveFailed(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setArchiveLoading(false);
       });
     return () => controller.abort();
   },[revision]);
@@ -163,6 +177,10 @@ export default function EconomicCalendar({ lang='ku' }) {
     return true;
   }),[combined,now,windowDays,historyDays,historyDate,metalsOnly,currency,impact,search,lang]);
 
+  const selectedDataPending = windowDays === 'history'
+    ? archiveLoading && !archive.events.length
+    : state === 'loading' && !data.events.length;
+  const selectedDataSettled = windowDays === 'history' ? !archiveLoading : state !== 'loading';
   const pageEvents = windowDays === 'history' ? visible.slice(0,visibleLimit) : visible;
   const grouped = useMemo(() => {
     const list = [];
@@ -240,8 +258,9 @@ export default function EconomicCalendar({ lang='ku' }) {
     {windowDays === 'history' && archive.updatedAt && <p className="ec-archive-date">{c.archiveUpdated}: {releaseDate(archive.updatedAt,lang)} · {releaseTime(archive.updatedAt)} (UTC+3)</p>}
     {windowDays === 'history' && archiveFailed && <p className="ec-archive-warning" role="status">{c.archiveUnavailable}</p>}
     {state === 'error' && <div role="alert" className="ec-error">{data.events.length ? c.stale : c.error} <button type="button" onClick={()=>setRevision(x=>x+1)}>{c.retry}</button></div>}
-    {state === 'loading' && !data.events.length && <p className="ec-message" role="status">{c.loading}</p>}
-    {state !== 'loading' && !visible.length && <p className="ec-message">{windowDays === 'history' ? c.historyEmpty : c.empty}</p>}
+    {selectedDataPending && !visible.length && <p className="ec-message" role="status">{c.loading}</p>}
+    {selectedDataSettled && !visible.length && !(state === 'error' && windowDays !== 'history') &&
+      <p className="ec-message">{windowDays === 'history' ? c.historyEmpty : c.empty}</p>}
     {grouped.map(group => <section className="ec-day" key={group.key}>
       <h2><span>{releaseDate(group.date,lang)}</span><small>{group.events.length} {c.count}</small></h2>
       <div className="ec-event-list">{group.events.map(event => <EventCard key={event.id} event={event} lang={lang} c={c} now={now}/>)}</div>
