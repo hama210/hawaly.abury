@@ -5,8 +5,10 @@ import './styles.css';
 import './hawal-features.css';
 import './redesign.css';
 import './economic-calendar.css';
+import './economic-event-alerts.css';
 import { DollarRates, MarketDesk, DailyBrief, CalendarLinks, AboutPage, InstallPanel } from './components/MarketDesk.jsx';
 import EconomicCalendar from './components/EconomicCalendar.jsx';
+import EconomicEventAlerts from './components/EconomicEventAlerts.jsx';
 import { MarketIntelligence, VerificationDesk, DollarHistory, MarketAlerts } from './components/HawalFeatures.jsx';
 import { Navigation, NavIcon, HomeMarkets, FeatureShortcuts, ScreenIntro, navigationCopy } from './components/HawalDashboard.jsx';
 import { dashboardCopy } from './lib/dashboard-copy.js';
@@ -679,6 +681,7 @@ function App() {
 
       <section className={'hawal-screen more-screen '+(activeView==='more'?'':'is-hidden-view')} aria-label={designCopy.more}>
         <ScreenIntro page="more" lang={lang}/>
+        <EconomicEventAlerts lang={lang} visible={activeView==='more'}/>
         <div className="hawal-feature-grid">
           <DollarHistory markets={markets} lang={lang}/>
           <MarketAlerts markets={markets} news={displayNews} lang={lang}/>
@@ -705,6 +708,6 @@ if ('serviceWorker' in navigator) {
       window.caches?.keys?.().then(keys => Promise.all(keys.filter(key => key.startsWith('hawali-aburi')).map(key => caches.delete(key)))).catch(() => {});
       return;
     }
-    navigator.serviceWorker.register('/sw.js?v=20261111-calendar-freshness-v3', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=20261111-event-alerts-v4', { updateViaCache:'none' }).then(registration => registration.update()).catch(() => {});
   });
 }
