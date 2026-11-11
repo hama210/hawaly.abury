@@ -452,7 +452,7 @@ async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY){
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'more-news-v15');
+  cacheUrl.searchParams.set('version', 'more-news-v16-limit-fix');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
@@ -463,6 +463,20 @@ function withHeader(response, name, value){
   const headers = new Headers(response.headers);
   headers.set(name, value);
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
+// Preserve the Iraq-market focus without exceeding the caller's requested
+// count. Previously the minimum 12 reserved Iraq articles overrode limit=5.
+export function selectPrioritizedNews(raw, requestedLimit) {
+  const limit = Math.max(1, Math.min(180, Math.floor(Number(requestedLimit) || 48)));
+  const iraq = latestFirst(dedupeItems(raw.filter(isIraqEconomy)));
+  const reserved = Math.min(iraq.length, limit, Math.max(12, Math.ceil(limit * 0.28)));
+  const seen = new Set(iraq.slice(0, reserved).map(itemKey));
+  const others = latestFirst(dedupeItems(raw.filter(item => !seen.has(itemKey(item))), seen));
+  return latestFirst([
+    ...iraq.slice(0, reserved),
+    ...others.slice(0, Math.max(0, limit - reserved))
+  ]).slice(0,limit);
 }
 
 export async function onRequest(context) {
@@ -505,11 +519,7 @@ export async function onRequest(context) {
     mode === 'fast' ? selectedFeeds.length : FETCH_CONCURRENCY
   );
   const raw = feedResults.flatMap(result => result.items);
-  const iraq = latestFirst(dedupeItems(raw.filter(isIraqEconomy)));
-  const reserved = Math.min(iraq.length, Math.max(12, Math.ceil(limit * 0.28)));
-  const seen = new Set(iraq.slice(0, reserved).map(itemKey));
-  const others = latestFirst(dedupeItems(raw.filter(item => !seen.has(itemKey(item))), seen));
-  const items = latestFirst([...iraq.slice(0, reserved), ...others.slice(0, Math.max(0, limit - reserved))]);
+  const items = selectPrioritizedNews(raw,limit);
   const succeeded = feedResults.filter(result => result.ok).length;
   const failures = feedResults
     .filter(result => !result.ok)

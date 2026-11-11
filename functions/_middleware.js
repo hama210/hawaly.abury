@@ -6,7 +6,8 @@ import { onRequest as loadMarkets } from './api/markets.js';
 import { pageRoute, pagePath } from '../src/lib/market-tools.js';
 import { renderPage } from '../src/lib/server-page.js';
 
-const EDGE_VERSION = '2026-10-ssr-routes-v2';
+const EDGE_VERSION = '2026-11-11-ssr-budget-v3';
+const SNAPSHOT_WAIT_MS = 4000;
 const SNAPSHOT_SECONDS = 120;
 
 async function snapshot(context) {
@@ -44,12 +45,30 @@ async function snapshot(context) {
   return data;
 }
 
+// When the edge's RSS or exchange-rate sources have a cold cache, serve the
+// real React shell promptly and finish collecting a snapshot in the background.
+// Never fabricate news or exchange-rate values when the deadline expires.
+export async function snapshotWithinBudget(pending, budgetMs = SNAPSHOT_WAIT_MS) {
+  let timer;
+  const deadline = new Promise(resolve => {
+    timer = setTimeout(() => resolve({data:{news:[],markets:[]},deferred:true}),budgetMs);
+  });
+  try {
+    return await Promise.race([
+      Promise.resolve(pending).then(data => ({data,deferred:false})),
+      deadline
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function htmlHeaders(headers, status) {
   const next = new Headers(headers);
   next.set('Content-Type', 'text/html; charset=utf-8');
   next.set('X-Hawall-Version', EDGE_VERSION);
   next.set('X-SSR', status);
-  next.set('Cache-Control', status === 'error'
+  next.set('Cache-Control', ['error','empty','deferred'].includes(status)
     ? 'no-store'
     : 'public, max-age=0, s-maxage=120, must-revalidate');
   next.delete('Content-Length');
@@ -76,10 +95,20 @@ export async function onRequest(context) {
   const fallback = response.clone();
   try {
     const originalHtml = await response.text();
-    const data = route.page === 'home' ? await snapshot(context) : { news:[], markets:[] };
+    let data = { news:[], markets:[] };
+    let deferred = false;
+    if (route.page === 'home') {
+      const pending = snapshot(context);
+      const result = await snapshotWithinBudget(pending);
+      data = result.data;
+      deferred = result.deferred;
+      if (deferred && typeof context.waitUntil === 'function') {
+        context.waitUntil(pending.catch(() => {}));
+      }
+    }
     const rendered = renderPage(originalHtml, { ...route, ...data });
     const hasSnapshot = data.news.length || data.markets.some(item=>typeof item?.price==='number' && item.price > 0);
-    const status = route.page !== 'home' || hasSnapshot ? 'ok' : 'empty';
+    const status = deferred ? 'deferred' : route.page !== 'home' || hasSnapshot ? 'ok' : 'empty';
     return new Response(context.request.method === 'HEAD' ? null : rendered, {
       status:response.status,
       statusText:response.statusText,

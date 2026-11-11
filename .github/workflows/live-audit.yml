@@ -1,0 +1,26 @@
+name: Public Hawal website smoke audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - fix/hawal-audit-reliability-20261111
+    paths:
+      - 'scripts/live-audit.mjs'
+      - '.github/workflows/live-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live-site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Audit public HTML pages and JSON endpoints
+        run: node scripts/live-audit.mjs

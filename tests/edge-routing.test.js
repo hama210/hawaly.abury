@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { onRequest } from '../functions/_middleware.js';
+import { onRequest, snapshotWithinBudget } from '../functions/_middleware.js';
 import { replaceGlobal } from './helpers.js';
 
 const html = fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
@@ -35,7 +35,7 @@ test('edge uses cached real news and quotes, escapes them, and advertises SSR st
     const response=await onRequest(page('https://example.com/en/'));
     assert.equal(response.status,200);
     assert.equal(response.headers.get('X-SSR'),'ok');
-    assert.equal(response.headers.get('X-Hawall-Version'),'2026-10-ssr-routes-v2');
+    assert.equal(response.headers.get('X-Hawall-Version'),'2026-11-11-ssr-budget-v3');
     const rendered=await response.text();
     assert.match(rendered,/lang="en" dir="ltr"/);
     assert.match(rendered,/153,000/);
@@ -50,6 +50,7 @@ test('empty feeds are not filled with invented headlines or market values',async
   try {
     const response=await onRequest(page('https://example.com/'));
     assert.equal(response.headers.get('x-ssr'),'empty');
+    assert.equal(response.headers.get('Cache-Control'),'no-store');
     const body=await response.text();
     assert.match(body,/lang="ckb" dir="rtl"/);
     assert.match(body,/hawall-bootstrap/);
@@ -81,4 +82,24 @@ test('assets and API payload pass through middleware without rewriting',async()=
   const head=await onRequest(page('https://example.com/en/','HEAD'));
   assert.equal(head.status,200);
   assert.equal(await head.text(),'');
+});
+
+test('slow cold-cache snapshots return an empty, explicitly deferred SSR payload promptly',async()=>{
+  const pending = new Promise(()=>{}); // Simulate a stalled external RSS source.
+  const started = Date.now();
+  const result = await snapshotWithinBudget(pending, 10);
+  assert.equal(result.deferred,true);
+  assert.deepEqual(result.data,{news:[],markets:[]});
+  assert.ok(Date.now()-started < 2000);
+});
+
+test('cached snapshots never wait for the deferred fallback',async()=>{
+  const payload = {news:[{title:'Real story'}],markets:[]};
+  const result = await snapshotWithinBudget(Promise.resolve(payload), 250);
+  assert.equal(result.deferred,false);
+  assert.equal(result.data,payload);
+});
+
+test('rejecting snapshot still follows the existing error fallback rather than inventing data',async()=>{
+  await assert.rejects(() => snapshotWithinBudget(Promise.reject(new Error('RSS unavailable')), 100), /RSS unavailable/);
 });
