@@ -35,7 +35,7 @@ async function inspect([path, kind]) {
         return {path,kind,status,ok:false,reason:'Expected React HTML shell'};
       const locale = path.startsWith('/ar/') ? 'ar' : path.startsWith('/en/') ? 'en' : 'ckb';
       const langOk = body.includes('lang="'+locale+'"');
-      return {path,kind,status,ok:true,bytes:body.length,locale:langOk?'verified':'not verifiable from response'};
+      return {path,kind,status,ok:true,bytes:body.length,locale:langOk?'verified':'not verifiable from response',edgeVersion:res.headers.get('X-Hawall-Version')};
     }
     if (kind === 'worker') {
       return {path,kind,status,ok:true,cacheFix:body.includes("url.pathname.startsWith('/data/')")?'present':'not published'};
@@ -47,6 +47,9 @@ async function inspect([path, kind]) {
     }
     if (kind === 'news'||kind === 'markets') {
       if (!Array.isArray(data.items)) throw new Error(kind+' API missing items array');
+      if (kind === 'news' && path.includes('limit=5') && data.items.length > 5) {
+        return {path,kind,status,ok:false,itemCount:data.items.length,reason:'News API exceeded the requested 5-item limit'};
+      }
       return {path,kind,status,ok:true,itemCount:data.items.length};
     }
     return {path,kind,status,ok:true,provider:data?.provider??null,configured:data?.configured??null};
@@ -61,6 +64,30 @@ for (const check of checks) {
   results.push(result);
   console.log(JSON.stringify(result));
 }
+// Cold starts can produce an initial timeout while subsequent requests work.
+// Retry once and retain that fact in the published evidence instead of claiming
+// the site is permanently unavailable or silently ignoring a timeout.
+for (const index of results.map((value,index)=>({value,index})).filter(({value})=>!value.ok && (value.path==='/' || value.path==='/ar/')).map(({index})=>index)) {
+  const retry = await inspect(checks[index]);
+  if (retry.ok) results[index] = {...retry,recoveredAfterInitialTimeout:true};
+  console.log(JSON.stringify({retryOf:checks[index][0],...retry}));
+}
+
+// The master-branch audit also checks whether Cloudflare has actually
+// published the changed edge function AND the refreshed service worker.
+if (process.env.GITHUB_REF === 'refs/heads/master') {
+  let published = false;
+  for (let attempt=1;attempt<=8;attempt++) {
+    const worker = await inspect(['/sw.js','worker']);
+    const home = await inspect(['/','html']);
+    published = worker.cacheFix === 'present' && home.edgeVersion === '2026-11-11-ssr-budget-v3';
+    console.log(JSON.stringify({deployAttempt:attempt,cacheFix:worker.cacheFix||null,edgeVersion:home.edgeVersion||null,published}));
+    if (published) break;
+    if (attempt<8) await new Promise(resolve=>setTimeout(resolve,12000));
+  }
+  results.push({path:'deployment-revision',kind:'deploy',ok:published,...(!published?{reason:'Updated Cloudflare edge and service worker could not be verified'}:{})});
+}
+
 const failures=results.filter(result=>!result.ok);
 console.log(JSON.stringify({total:results.length,passed:results.length-failures.length,failed:failures.length}));
 if (failures.length) process.exitCode=1;
