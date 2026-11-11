@@ -33,8 +33,8 @@ test('installed mobile app fetches new JS and CSS rather than caching old bundle
   const main = readFileSync(new URL('../src/main.jsx', import.meta.url), 'utf8');
   assert.match(sw, /request\.destination === 'script'/);
   assert.match(sw, /request\.destination === 'style'/);
-  assert.match(sw, /hawali-aburi-v33-calendar-freshness/);
-  assert.match(main, /sw\.js\?v=20261111-calendar-freshness-v3/);
+  assert.match(sw, /hawali-aburi-v34-event-alerts/);
+  assert.match(main, /sw\.js\?v=20261111-event-alerts-v4/);
 });
 
 
