@@ -1,6 +1,7 @@
 // Public no-key endpoint. Provider documentation says CORS is enabled and responses are cached ~15m.
 export const CALENDAR_SOURCE_URL = 'https://showmytrades.com/tools/economic-calendar';
 export const CALENDAR_API_URL = 'https://showmytrades.com/api/public/calendar/v1?days=7&impact=all';
+export const CALENDAR_HISTORY_URL = '/data/economic-calendar-history.json';
 
 function cleanEvent(raw) {
   if (!raw || typeof raw !== 'object') return null;
@@ -52,4 +53,23 @@ export async function fetchEconomicCalendar(signal) {
     clearTimeout(timeout);
     signal?.removeEventListener('abort', abort);
   }
+}
+
+
+// Static, shared, source-backed archive. GitHub Actions updates this JSON
+// several times a day. The provider itself has no older-events endpoint.
+export function normalizeCalendarHistory(payload) {
+  if (!payload || !Array.isArray(payload.events)) throw new Error('Invalid calendar history');
+  const events = normalizeCalendarPayload({events:payload.events}).events;
+  const updatedAt = typeof payload.updatedAt === 'string'
+    && Number.isFinite(Date.parse(payload.updatedAt)) ? payload.updatedAt : null;
+  return { events, updatedAt };
+}
+
+export async function fetchCalendarHistory(signal) {
+  const response = await fetch(CALENDAR_HISTORY_URL, {
+    signal, headers:{ Accept:'application/json' }, cache:'no-store'
+  });
+  if (!response.ok) throw new Error('Calendar history HTTP ' + response.status);
+  return normalizeCalendarHistory(await response.json());
 }

@@ -82,3 +82,32 @@ confirmed. There is no Tradukka link or redirect in the actual UI.
 
 Publisher images use approved media and verified OpenGraph photos when possible.
 Missing photos remain clearly labelled illustrations, not invented images.
+
+## Economic Calendar history (November 2026)
+
+The economic calendar uses the public ShowMyTrades release feed. Its API provides
+only the previous **six hours**, so historic Actual/Forecast/Previous figures
+cannot be fetched from the source on demand. Hawal **never invents** results or
+labels an empty Actual as published.
+
+The calendar now has Baghdad-local tabs for **Yesterday, Today, Tomorrow,
+This Week (Monday-Sunday) and Past Results**. Past Results supports 7/30/90-day
+ranges and a date picker. The shared archive begins collecting real releases
+when the capture workflow first runs; it **cannot backfill** older dates.
+
+The GitHub Actions workflow `.github/workflows/archive-calendar.yml` runs
+approximately every four hours and on initial deployment. It collects released
+events from ShowMyTrades using `scripts/archive-calendar.mjs`, merges by the
+provider's stable event ID, preserves the last nonblank reported values, prunes
+data older than 90 days, and commits only real archive changes into
+`public/data/economic-calendar-history.json`. Scheduled GitHub Actions can
+be delayed; gaps are shown as missing data rather than estimated. The calendar
+loads the archive as a static asset in addition to the live source. The normal
+Cloudflare Pages GitHub integration is expected to publish the archive commits.
+
+For the manual archive workflow, use GitHub Actions → Archive economic
+calendar results → Run workflow. It needs the repo's `contents: write`
+permission and a deployment setup that publishes GitHub commits. A repo with
+branch protection preventing GitHub Actions from pushing will need a separate
+approved archival write path. This does not change the market rates, news,
+translation or impact analysis logic.

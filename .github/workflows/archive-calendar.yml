@@ -1,0 +1,48 @@
+name: Archive economic calendar results
+
+on:
+  schedule:
+    # Every four hours: the provider only retains six hours of past releases.
+    - cron: '17 */4 * * *'
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/archive-calendar.yml'
+      - 'scripts/archive-calendar.mjs'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: economic-calendar-history
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Check out production branch
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          persist-credentials: true
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Capture actual and forecast values from source
+        run: node scripts/archive-calendar.mjs
+      - name: Commit archive only if changed
+        run: |
+          if git diff --quiet -- public/data/economic-calendar-history.json; then
+            echo "No new published calendar results"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/economic-calendar-history.json
+          git commit -m "data: archive economic calendar releases [skip ci]"
+          git push origin HEAD:master
