@@ -8,6 +8,8 @@ const checks = [
   ['/metals', 'metals'],
   ['/ar/metals', 'metals'],
   ['/en/metals', 'metals'],
+  ['/owner-health', 'private'],
+  ['/owner-health/api', 'private'],
   ['/calendar', 'calendar'],
   ['/ar/calendar', 'calendar'],
   ['/en/calendar', 'calendar'],
@@ -27,11 +29,18 @@ async function inspect([path, kind]) {
   try {
     const res = await fetch(url,{
       cache:'no-store',
+      redirect:kind==='private'?'manual':'follow',
       headers:{ Accept: kind==='html'||kind==='calendar'||kind==='metals' ? 'text/html' : '*/*', 'User-Agent':'HawalWebsiteAudit/1.0' },
       signal:AbortSignal.timeout(15000)
     });
     status = res.status;
     const type = res.headers.get('content-type') || '';
+    if (kind==='private') {
+      const redirect=res.headers.get('location')||'';
+      const ok=status===403 || (status>=300 && status<400 &&
+        (/\\.cloudflareaccess\\.com\\//.test(redirect)||/\\/cdn-cgi\\/access\\//.test(redirect)));
+      return {path,kind,status,ok,...(!ok?{reason:'Private owner route reachable without authentication or redirects unexpectedly'}:{})};
+    }
     const body = await res.text();
     if (!res.ok) return {path,kind,status,ok:false,reason:'HTTP '+status};
     if (kind === 'html' || kind === 'calendar' || kind === 'metals') {
