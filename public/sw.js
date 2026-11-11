@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hawali-aburi-v33-calendar-freshness';
+const CACHE_NAME = 'hawali-aburi-v34-event-alerts';
 // Never precache the HTML document. A cached index can keep pointing at an
 // old JavaScript bundle after a new Cloudflare Pages deployment.
 const APP_SHELL = ['/offline.html', '/manifest.webmanifest', '/hawali-logo-96.webp', '/hawali-logo-192.png'];
@@ -45,4 +45,23 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(cached => cached || network.then(response => response || new Response('Offline', { status: 503 })))
   );
+});
+
+
+// Only notifications explicitly requested while HAWAL is open are displayed.
+// Clicking a notification opens the official calendar; no background scheduler.
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const destination = new URL('/calendar', self.location.origin).href;
+  event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async windows => {
+    const open = windows.find(client => {
+      try { return new URL(client.url).origin === self.location.origin; } catch { return false; }
+    });
+    if (open) {
+      await open.focus();
+      if (typeof open.navigate === 'function') return open.navigate(destination);
+      return open;
+    }
+    return self.clients.openWindow(destination);
+  }));
 });
