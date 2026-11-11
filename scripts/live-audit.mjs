@@ -5,6 +5,9 @@ const checks = [
   ['/', 'html'],
   ['/ar/', 'html'],
   ['/en/', 'html'],
+  ['/metals', 'metals'],
+  ['/ar/metals', 'metals'],
+  ['/en/metals', 'metals'],
   ['/calendar', 'calendar'],
   ['/ar/calendar', 'calendar'],
   ['/en/calendar', 'calendar'],
@@ -13,6 +16,7 @@ const checks = [
   ['/data/economic-calendar-history.json', 'archive'],
   ['/api/news?mode=fast&limit=5', 'news'],
   ['/api/markets', 'markets'],
+  ['/api/metals-history', 'metals-history'],
   ['/api/translation-status', 'translation'],
   ['/sw.js', 'worker']
 ];
@@ -23,18 +27,20 @@ async function inspect([path, kind]) {
   try {
     const res = await fetch(url,{
       cache:'no-store',
-      headers:{ Accept: kind==='html'||kind==='calendar' ? 'text/html' : '*/*', 'User-Agent':'HawalWebsiteAudit/1.0' },
+      headers:{ Accept: kind==='html'||kind==='calendar'||kind==='metals' ? 'text/html' : '*/*', 'User-Agent':'HawalWebsiteAudit/1.0' },
       signal:AbortSignal.timeout(15000)
     });
     status = res.status;
     const type = res.headers.get('content-type') || '';
     const body = await res.text();
     if (!res.ok) return {path,kind,status,ok:false,reason:'HTTP '+status};
-    if (kind === 'html' || kind === 'calendar') {
+    if (kind === 'html' || kind === 'calendar' || kind === 'metals') {
       if (!type.includes('text/html') || !body.includes('id="root"'))
         return {path,kind,status,ok:false,reason:'Expected React HTML shell'};
       const locale = path.startsWith('/ar/') ? 'ar' : path.startsWith('/en/') ? 'en' : 'ckb';
       const langOk = body.includes('lang="'+locale+'"');
+      const metalsOk = kind !== 'metals' || (body.includes('GC=F') && body.includes('SI=F'));
+      if (!metalsOk) return {path,kind,status,ok:false,reason:'Metals metadata not deployed'};
       return {path,kind,status,ok:true,bytes:body.length,locale:langOk?'verified':'not verifiable from response',edgeVersion:res.headers.get('X-Hawall-Version')};
     }
     if (kind === 'worker') {
@@ -44,6 +50,12 @@ async function inspect([path, kind]) {
     if (kind === 'archive') {
       if (!Array.isArray(data.events)) throw new Error('Archive missing events array');
       return {path,kind,status,ok:true,eventCount:data.events.length,updatedAt:data.updatedAt||null};
+    }
+    if (kind === 'metals-history') {
+      if (!Array.isArray(data.items)) throw new Error('Metals history missing items');
+      const counts=Object.fromEntries(data.items.map(item=>[item.symbol,Array.isArray(item.points)?item.points.length:0]));
+      const found=counts['XAU/USD']>=2 && counts['XAG/USD']>=2;
+      return {path,kind,status,ok:found,counts,...(!found?{reason:'Real gold or silver history missing'}:{})};
     }
     if (kind === 'news'||kind === 'markets') {
       if (!Array.isArray(data.items)) throw new Error(kind+' API missing items array');
@@ -67,7 +79,7 @@ for (const check of checks) {
 // Cold starts can produce an initial timeout while subsequent requests work.
 // Retry once and retain that fact in the published evidence instead of claiming
 // the site is permanently unavailable or silently ignoring a timeout.
-for (const index of results.map((value,index)=>({value,index})).filter(({value})=>!value.ok && (value.path==='/' || value.path==='/ar/')).map(({index})=>index)) {
+for (const index of results.map((value,index)=>({value,index})).filter(({value})=>!value.ok && (value.path==='/' || value.path==='/ar/' || value.kind==='metals' || value.kind==='metals-history')).map(({index})=>index)) {
   const retry = await inspect(checks[index]);
   if (retry.ok) results[index] = {...retry,recoveredAfterInitialTimeout:true};
   console.log(JSON.stringify({retryOf:checks[index][0],...retry}));
