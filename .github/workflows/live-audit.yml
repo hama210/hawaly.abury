@@ -9,6 +9,10 @@ on:
     paths:
       - 'scripts/live-audit.mjs'
       - '.github/workflows/live-audit.yml'
+      - 'functions/api/news.js'
+      - 'functions/_middleware.js'
+      - 'public/sw.js'
+      - 'src/components/EconomicCalendar.jsx'
 
 permissions:
   contents: read
