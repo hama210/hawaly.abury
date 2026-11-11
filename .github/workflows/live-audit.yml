@@ -13,6 +13,11 @@ on:
       - 'functions/_middleware.js'
       - 'public/sw.js'
       - 'src/components/EconomicCalendar.jsx'
+      - 'src/components/GoldSilverCenter.jsx'
+      - 'src/lib/metals-center.js'
+      - 'src/lib/metals-copy.js'
+      - 'functions/api/metals-history.js'
+      - 'public/sitemap.xml'
 
 permissions:
   contents: read
