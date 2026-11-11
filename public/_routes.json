@@ -1,7 +1,10 @@
 {
   "version": 1,
-  "include": ["/*"],
+  "include": [
+    "/*"
+  ],
   "exclude": [
+    "/data/*",
     "/assets/*",
     "/news-covers/*",
     "/hawali-logo-96.webp",
