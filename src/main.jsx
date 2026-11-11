@@ -11,6 +11,7 @@ import { DollarRates, MarketDesk, DailyBrief, CalendarLinks, AboutPage, InstallP
 import EconomicCalendar from './components/EconomicCalendar.jsx';
 import EconomicEventAlerts from './components/EconomicEventAlerts.jsx';
 import GoldSilverCenter from './components/GoldSilverCenter.jsx';
+import OwnerHealth from './components/OwnerHealth.jsx';
 import { metalsPageCopy } from './lib/metals-copy.js';
 import { MarketIntelligence, VerificationDesk, DollarHistory, MarketAlerts } from './components/HawalFeatures.jsx';
 import { Navigation, NavIcon, HomeMarkets, FeatureShortcuts, ScreenIntro, navigationCopy } from './components/HawalDashboard.jsx';
@@ -623,7 +624,7 @@ function App() {
       <Header lang={lang} setLang={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}} theme={theme} setTheme={setTheme}
         query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} onSearch={()=>{if(activeView!=='news') navigate('news');}}/>
       <LanguagePills lang={lang} onLanguage={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}}/>
-      {route.page !== 'home' ? (route.page === 'calendar' ? <EconomicCalendar lang={lang}/> : route.page === 'metals' ? <GoldSilverCenter lang={lang} markets={markets} news={displayNews}/> : <AboutPage lang={lang} page={route.page}/>) : <>
+      {route.page !== 'home' ? (route.page === 'calendar' ? <EconomicCalendar lang={lang}/> : route.page === 'metals' ? <GoldSilverCenter lang={lang} markets={markets} news={displayNews}/> : route.page === 'owner-health' ? <OwnerHealth/> : <AboutPage lang={lang} page={route.page}/>) : <>
       <Navigation active={activeView} onNavigate={navigate} lang={lang}/>
       <section className={'hawal-screen home-screen '+(activeView==='home'?'':'is-hidden-view')} aria-label={designCopy.home}>
         <div className="home-stage">
