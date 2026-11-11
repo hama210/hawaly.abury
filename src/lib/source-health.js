@@ -10,13 +10,14 @@ export const healthStatus=(statuses=[])=>statuses.some(s=>s==='failed')?'failed'
 export function assessNews(batches=[],now=Date.now()){
   const feeds=new Map();
   const failures=[];
-  let latest=null,articles=0,expected=0;
+  let latest=null,articles=0,expected=0,observed=0;
   for(const batch of batches){
     if(!batch || !Array.isArray(batch.feedStats?.sources)){
       failures.push('Batch unavailable');continue;
     }
     const list=batch.feedStats.sources;
-    expected=Math.max(expected,Number(batch.feedStats.total)||0);
+    expected+=Number(batch.feedStats.requested)||list.length;
+    observed+=list.length;
     for(const raw of list){
       if(!raw||typeof raw.source!=='string')continue;
       const status=['active','failed','quiet'].includes(raw.status)?raw.status:'unchecked';
@@ -33,11 +34,11 @@ export function assessNews(batches=[],now=Date.now()){
     }
   }
   const sources=[...feeds.values()].sort((a,b)=>(statusScore[b.status]||0)-(statusScore[a.status]||0)||a.name.localeCompare(b.name));
-  const incomplete=failures.length>0 || (expected>0&&sources.length<expected);
+  const incomplete=failures.length>0 || (expected>0&&observed<expected);
   const overall=!sources.length?'failed':incomplete?'stale':healthStatus(sources.map(s=>s.status));
   const staleness=latest&&now-Date.parse(latest)>MAX_NEWS_AGE_MS;
   return {status:staleness&&overall==='healthy'?'stale':overall,
-    latest,sourceCount:sources.length,expectedSourceCount:expected,
+    latest,sourceCount:observed,uniqueSourceCount:sources.length,expectedSourceCount:expected,
     checkedBatches:batches.length,articles,sources,partial:incomplete||Boolean(staleness),error:failures.length?'Some news batches unavailable':null};
 }
 
