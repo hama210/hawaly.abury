@@ -26,3 +26,18 @@ test('fast news batch cancels stalled publishers by its overall budget',async()=
 test('fast news selection still honors caller limits when no sources succeed',()=>{
   assert.deepEqual(selectPrioritizedNews([],5),[]);
 });
+
+test('hard batch deadline returns even when publisher fetch ignores AbortSignal',async()=>{
+  const original=globalThis.fetch;
+  globalThis.fetch=()=>new Promise(()=>{});
+  try{
+    const started=Date.now();
+    const result=await fetchFeeds([
+      {source:'Hung publisher',url:'https://slow-publisher.example/rss',category:'forex'}
+    ],20000,1,40);
+    assert.equal(result.length,1);
+    assert.equal(result[0].ok,false);
+    assert.match(result[0].error,/deadline/);
+    assert.ok(Date.now()-started<1500,'hard deadline should not wait on a non-abortable fetch');
+  } finally { globalThis.fetch=original; }
+});
