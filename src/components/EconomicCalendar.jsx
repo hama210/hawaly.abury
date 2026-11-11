@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { fetchEconomicCalendar, CALENDAR_SOURCE_URL } from '../services/economic-calendar.js';
-import { analyzeCalendarEvent, calendarScenarios } from '../lib/economic-impact.js';
+import { fetchEconomicCalendar, CALENDAR_SOURCE_URL, isCalendarSourceDelayed } from '../services/economic-calendar.js';
+import { analyzeCalendarEvent, calendarScenarios, hasPublishedActual } from '../lib/economic-impact.js';
 import { calendarText, calendarEventTitle } from '../lib/calendar-i18n.js';
 
 const CURRENCIES = ['USD','EUR','GBP','JPY','CAD','AUD','NZD','CHF','CNY'];
@@ -58,7 +58,9 @@ function ImpactContext({ event, lang, c }) {
   </div>;
 }
 
-function BeforeRelease({ event, lang, c }) {
+function BeforeRelease({ event, lang, c, now }) {
+  // Never present 'before release' scenarios after the scheduled release time.
+  if (Date.parse(event.time) <= now || hasPublishedActual(event.actual)) return null;
   const scenarios = calendarScenarios(event);
   if (!scenarios || event.impact === 'holiday') return null;
   return <aside className="ec-before-release" aria-label={c.beforeRelease}>
@@ -96,14 +98,14 @@ function EventCard({ event, lang, c, now }) {
       <span className="ec-currency" dir="ltr">{event.currency}</span>
       <span className={'ec-impact-pill ec-'+event.impact}>{c[event.impact === 'high' ? 'major' : event.impact] || event.impact}</span>
     </div>
-    <p className="ec-release-state">{event.actual ? c.released : Date.parse(event.time) > now ? c.upcoming : c.awaiting}</p>
+    <p className="ec-release-state">{hasPublishedActual(event.actual) ? c.released : Date.parse(event.time) > now ? c.upcoming : c.awaiting}</p>
     <div className="ec-values">
       <div><span>{c.previous}</span><strong dir="ltr">{event.previous || c.notAvailable}</strong></div>
       <div><span>{c.forecast}</span><strong dir="ltr">{event.forecast || c.notAvailable}</strong></div>
-      <div><span>{c.actual}</span><strong className={event.actual ? 'ec-result-' + resultClass : ''} dir="ltr">{event.actual || c.notAvailable}</strong></div>
+      <div><span>{c.actual}</span><strong className={hasPublishedActual(event.actual) ? 'ec-result-' + resultClass : ''} dir="ltr">{hasPublishedActual(event.actual) ? event.actual : c.notAvailable}</strong></div>
     </div>
     {comparison.status === 'surprise' && <p className={'ec-comparison ec-result-' + resultClass}>{comparison.difference > 0 ? '↑ ' + c.actualHigher : '↓ ' + c.actualLower}</p>}
-    <BeforeRelease event={event} lang={lang} c={c}/>
+    <BeforeRelease event={event} lang={lang} c={c} now={now}/>
     <details className="ec-details">
       <summary>{c.showDetails}</summary>
       <div className="ec-detail-inner">
@@ -177,6 +179,7 @@ export default function EconomicCalendar({ lang='ku' }) {
   });
 
   const next = visible.find(event => Date.parse(event.time) > now && event.impact !== 'holiday');
+  const providerDelayed = state === 'ready' && isCalendarSourceDelayed(data.publishedAt, now);
   const resetFilters = () => { setCurrency('all'); setImpact('all'); setWindowDays('week'); setSearch(''); setMetalsOnly(false); };
   return <main className="ec-page" dir={lang === 'en' ? 'ltr' : 'rtl'}>
     <section className="ec-header">
@@ -216,6 +219,7 @@ export default function EconomicCalendar({ lang='ku' }) {
       <span>{c.updated}: {data.publishedAt ? releaseDate(data.publishedAt,lang) + ' · ' + releaseTime(data.publishedAt) : '—'} (UTC+3)</span>
       <a href={CALENDAR_SOURCE_URL} target="_blank" rel="noreferrer">{c.source}: ShowMyTrades ↗</a>
     </div>
+    {providerDelayed && <div role="alert" className="ec-error">{c.sourceDelayed} <button type="button" onClick={()=>setRevision(x=>x+1)}>{c.refresh}</button></div>}
     {state === 'error' && <div role="alert" className="ec-error">{data.events.length ? c.stale : c.error} <button type="button" onClick={()=>setRevision(x=>x+1)}>{c.retry}</button></div>}
     {state === 'loading' && !data.events.length && <p className="ec-message" role="status">{c.loading}</p>}
     {state === 'ready' && !visible.length && <p className="ec-message">{c.empty}</p>}
