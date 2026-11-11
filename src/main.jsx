@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import './hawal-features.css';
@@ -258,18 +259,37 @@ function focusedIntelligence(item) {
 function Header({ lang, setLang, theme, setTheme, query, setQuery, dict, refreshing, onRefresh, onSearch }) {
   const copy = uiCopy[lang] || uiCopy.ku;
   const [searchOpen,setSearchOpen] = useState(false);
-  return <header className="site-header">
+  const searchInputRef = useRef(null);
+  const showSearch = route.page === 'home';
+  const toggleSearch = () => {
+    if (searchOpen) {
+      setSearchOpen(false);
+      setQuery('');
+      searchInputRef.current?.blur();
+    } else {
+      // Keep iOS Safari's focus inside the tap gesture so the keyboard opens.
+      flushSync(() => setSearchOpen(true));
+      searchInputRef.current?.focus({ preventScroll:true });
+    }
+  };
+  return <header className={'site-header'+(searchOpen?' mobile-search-open':'')+(showSearch?'':' no-search')}>
     <a className="brand" href={pagePath(lang)} aria-label={dict.site}>
       <span className="brand-copy"><strong className="hawal-wordmark" dir="ltr">H<span className="brand-accent">Λ</span>WAL</strong><small>{copy.brandTagline}</small></span>
     </a>
-    <label className={'search-wrap '+(searchOpen || query ? 'is-open' : '')}>
+    {showSearch && <label className={'search-wrap '+(searchOpen ? 'is-open' : '')} htmlFor="hawal-news-search">
       <NavIcon name="search" size={17}/>
       <span className="sr-only">{copy.search}</span>
-      <input type="search" value={query} onChange={event => {setQuery(event.target.value);if(event.target.value)onSearch();}} placeholder={dict.search} />
-    </label>
+      <input ref={searchInputRef} id="hawal-news-search" type="search" value={query}
+        onChange={event => {setQuery(event.target.value);if(event.target.value)onSearch();}}
+        onKeyDown={event => {if(event.key==='Escape' && searchOpen) toggleSearch();}}
+        placeholder={dict.search} />
+    </label>}
     <div className="header-tools">
       <a className="header-calendar-button" href={pagePath(lang,'calendar')} aria-label={copy.calendar} aria-current={route.page==='calendar' ? 'page' : undefined} title={copy.calendar}><NavIcon name="calendar" size={18}/><span>{copy.calendar}</span></a>
-      <button className="icon-button header-search-toggle" type="button" aria-label={copy.search} aria-expanded={searchOpen || Boolean(query)} onClick={()=>{setSearchOpen(open=>!open);onSearch();}}><NavIcon name="search" size={19}/></button>
+      {showSearch
+        ? <button className="icon-button header-search-toggle" type="button" aria-label={copy.search}
+            aria-controls="hawal-news-search" aria-expanded={searchOpen} onClick={toggleSearch}><NavIcon name="search" size={19}/></button>
+        : <a className="icon-button header-search-toggle" href={pagePath(lang)+'#news'} aria-label={copy.search}><NavIcon name="search" size={19}/></a>}
       <button className="icon-button" type="button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={copy.theme}><NavIcon name={theme === 'dark' ? 'sun':'moon'} size={20}/></button>
       <button className={'icon-button refresh-button '+(refreshing ? 'is-loading' : '')} type="button" onClick={onRefresh} disabled={refreshing} aria-label={copy.refresh}><NavIcon name="refresh" size={19}/></button>
     </div>
@@ -329,7 +349,7 @@ function CategoryTabs({ active, setActive, lang }) {
 function Hero({ item, lang, dict, onOpen }) {
   if (!item) return null;
   const intel = focusedIntelligence(item);
-  return <article className={'lead-story'+(imageForNews(item)?'':' img-failed')} data-image-state={noPhotoLabel[lang]} role="button" tabIndex="0" onClick={() => onOpen(item)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') onOpen(item); }}>
+  return <article className={'lead-story'+(imageForNews(item)?'':' img-failed')} data-image-state={noPhotoLabel[lang]} role="button" tabIndex="0" onClick={() => onOpen(item)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen(item); } }}>
     <img src={imageForNews(item) || undefined} data-news-category={item.category || "markets"} alt="" decoding="async" fetchPriority="high" referrerPolicy="no-referrer" onError={imageFallback} />
     <div className="lead-overlay" />
     <div className="lead-copy">
@@ -362,6 +382,7 @@ function ArticleModal({ item, lang, dict, onClose }) {
   const [articleBody,setArticleBody]=useState(selectedText.original);
   const [articleTranslating,setArticleTranslating]=useState(false);
   const [articleTranslated,setArticleTranslated]=useState(false);
+  const dialogRef = useRef(null);
   useEffect(()=>{
     const controller=new AbortController();
     setArticleBody(selectedText.original);
@@ -382,14 +403,35 @@ function ArticleModal({ item, lang, dict, onClose }) {
   },[item,lang]);
   useEffect(() => {
     if (!item) return undefined;
-    const handleKey = event => { if (event.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    const returnFocus = document.activeElement;
+    const dialog = dialogRef.current;
+    dialog?.querySelector('.modal-close')?.focus({ preventScroll:true });
+    const handleKey = event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialog) return;
+      const focusable = [...dialog.querySelectorAll('a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])')]
+        .filter(element => element.getClientRects().length > 0);
+      if (!focusable.length) { event.preventDefault(); dialog.focus(); return; }
+      const first = focusable[0];
+      const last = focusable[focusable.length-1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      if (returnFocus?.isConnected && typeof returnFocus.focus === 'function')
+        returnFocus.focus({ preventScroll:true });
+    };
   }, [item, onClose]);
   if (!item) return null;
   const intel = focusedIntelligence(item);
   const copy = uiCopy[lang] || uiCopy.ku;
-  return <div className="modal-backdrop" onClick={onClose} role="presentation"><article className="article-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={event => event.stopPropagation()}>
+  return <div className="modal-backdrop" onClick={onClose} role="presentation"><article ref={dialogRef} tabIndex={-1} className="article-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={event => event.stopPropagation()}>
     <div className={'modal-image'+(imageForNews(item)?'':' img-failed')} data-image-state={noPhotoLabel[lang]}><img src={imageForNews(item) || undefined} data-news-category={item.category || "markets"} alt="" decoding="async" fetchPriority="high" referrerPolicy="no-referrer" onError={imageFallback} /></div>
     <div className="modal-content">
       <button className="modal-close" type="button" onClick={onClose} aria-label={uiCopy[lang]?.close}>×</button>
@@ -473,6 +515,7 @@ function App() {
   const [newsVisibleCount, setNewsVisibleCount] = useState(36);
   const [markets, setMarkets] = useState(bootstrap.markets || []);
   const [selected, setSelected] = useState(null);
+  const closeArticle = useCallback(() => setSelected(null),[]);
   // Keep the page in place while reading an article on iOS and Android.
   useEffect(() => {
     if (!selected) return;
@@ -573,7 +616,7 @@ function App() {
   return <div className="page" id="top">
     <div className="shell">
       <Header lang={lang} setLang={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}} theme={theme} setTheme={setTheme}
-        query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} onSearch={()=>navigate('news')}/>
+        query={query} setQuery={setQuery} dict={dict} refreshing={refreshing} onRefresh={refreshAll} onSearch={()=>{if(activeView!=='news') navigate('news');}}/>
       <LanguagePills lang={lang} onLanguage={next=>{location.href=pagePath(next,route.page)+(route.page==='home' && activeView!=='home' ? '#'+activeView : '');}}/>
       {route.page !== 'home' ? (route.page === 'calendar' ? <EconomicCalendar lang={lang}/> : <AboutPage lang={lang} page={route.page}/>) : <>
       <Navigation active={activeView} onNavigate={navigate} lang={lang}/>
@@ -649,7 +692,7 @@ function App() {
     </div>
     {route.page==='home' && <Navigation mobile active={activeView} onNavigate={navigate} lang={lang}/>}
     <SourcesDisclosure lang={lang} news={displayNews} sourceHealth={sourceHealth}/>
-    <ArticleModal item={selected} lang={lang} dict={dict} onClose={()=>setSelected(null)}/>
+    <ArticleModal item={selected} lang={lang} dict={dict} onClose={closeArticle}/>
   </div>;
 }
 

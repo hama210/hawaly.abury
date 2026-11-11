@@ -501,3 +501,52 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
   font-size:10px;
   pointer-events:none;
 }
+
+
+/* Mobile usability polish: preserve HAWAL's existing dark palette and layout. */
+@media (min-width:681px) {
+ .site-header.no-search{grid-template-columns:minmax(145px,1fr) auto}
+ .site-header.no-search .header-search-toggle{display:grid;place-items:center}
+}
+@media (max-width:680px) {
+ /* Keep Search in the header's normal flow instead of covering language tabs. */
+ .site-header.mobile-search-open{flex-wrap:wrap;align-items:center}
+ .site-header.mobile-search-open .search-wrap.is-open{
+   display:flex;position:relative;inset:auto;top:auto;order:3;
+   flex:1 0 100%;height:46px;margin-top:3px;z-index:auto;box-shadow:none
+ }
+ .site-header .brand{min-width:0;flex:1 1 auto}
+ .site-header .brand-copy{min-width:0}
+ .site-header .brand-copy strong{font-size:clamp(22px,6vw,28px)}
+ .site-header .brand-copy small{display:block;max-width:132px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .site-header .header-tools{flex:0 0 auto;gap:3px}
+ .header-calendar-button,.site-header .icon-button{
+   width:44px;min-width:44px;height:44px;min-height:44px;
+   padding:0;display:grid;place-items:center
+ }
+ .site-header .header-search-toggle{display:grid}
+ .search-wrap input{font-size:16px;min-height:44px}
+ .category-tabs button{min-height:44px}
+ .topic-shortcuts button{min-height:44px}
+ .home-headerline button{min-height:44px;font-size:12px}
+ .news-screen .story-title,.home-news .story-title{font-size:14px;line-height:1.65}
+ .home-news .story-source,.news-screen .story-source{font-size:11px}
+ .home-news .story-source .story-age,.news-screen .story-source .story-age{font-size:10px!important}
+ .home-news .story-original,.news-screen .story-original{font-size:11px;line-height:1.5}
+ .home-news .story-excerpt,.news-screen .story-excerpt{font-size:12px;line-height:1.7}
+ .article-reader .article-body{font-size:15px;line-height:2}
+ .article-modal .article-reader{padding:15px}
+ .redesigned-mobile-nav button,.story-image,.story-title,.header-calendar-button{touch-action:manipulation}
+ .story-image:focus-visible,.story-title:focus-visible,.lead-story:focus-visible,
+ .site-header .icon-button:focus-visible,.category-tabs button:focus-visible{
+   outline:2px solid var(--primary);outline-offset:2px
+ }
+ /* Keep the keyboard from sharing screen space with the fixed tab bar. */
+ .page:has(.search-wrap input:focus) .redesigned-mobile-nav{display:none}
+}
+@media (max-width:390px) {
+ /* Override the later 760px selector that previously defeated narrow-card sizing. */
+ .home-news .story-card,.news-screen .story-card{grid-template-columns:98px minmax(0,1fr)}
+ .home-news .story-image,.news-screen .story-image{min-height:110px}
+ .home-news .story-copy,.news-screen .story-copy{padding:9px}
+}
