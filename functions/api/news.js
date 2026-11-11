@@ -456,20 +456,39 @@ export async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURREN
       results[index] = await fetchFeed(feeds[index], timeoutMs, controller.signal);
     }
   }
+  const workers = Promise.all(Array.from({ length: Math.min(concurrency, feeds.length) }, run));
   try {
-    await Promise.all(Array.from({ length: Math.min(concurrency, feeds.length) }, run));
+    // A publisher may ignore an AbortSignal (or keep a stream open).
+    // A hard race guarantees the public fast endpoint can return partial
+    // published records without awaiting that publisher indefinitely.
+    if (overallBudgetMs > 0) {
+      await Promise.race([
+        workers,
+        new Promise(resolve => {
+          const hardTimer = setTimeout(() => {
+            clearTimeout(hardTimer);
+            controller.abort('news batch hard deadline');
+            resolve();
+          }, overallBudgetMs);
+          // Store a cleanup callback for fast successful completions.
+          workers.finally(() => clearTimeout(hardTimer)).catch(() => {});
+        })
+      ]);
+    } else {
+      await workers;
+    }
   } finally {
     if(deadline) clearTimeout(deadline);
   }
   // Missing publishers are disclosed as failures; they never become fabricated articles.
-  return results.map((result,index) => result || {
+  return Array.from({length:feeds.length},(_,index) => results[index] || {
     source:feeds[index].source,ok:false,items:[],durationMs:overallBudgetMs,error:'news batch deadline exceeded'
   });
 }
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'more-news-v17-fast-budget');
+  cacheUrl.searchParams.set('version', 'more-news-v18-hard-deadline');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
@@ -494,6 +513,19 @@ export function selectPrioritizedNews(raw, requestedLimit) {
     ...iraq.slice(0, reserved),
     ...others.slice(0, Math.max(0, limit - reserved))
   ]).slice(0,limit);
+}
+
+async function cachedFeedResponse(cache, key, waitMs = 1000) {
+  if (!cache || !key) return null;
+  let timer;
+  try {
+    return await Promise.race([
+      cache.match(key).catch(() => null),
+      new Promise(resolve => { timer = setTimeout(() => resolve(null), waitMs); })
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function onRequest(context) {
@@ -522,7 +554,7 @@ export async function onRequest(context) {
   const cache = globalThis.caches?.default;
   const cacheKey = cache ? cacheKeyFor(url, mode, batch, limit) : null;
   if(cacheKey && !forceRefresh){
-    const cached = await cache.match(cacheKey);
+    const cached = await cachedFeedResponse(cache,cacheKey);
     if(cached) return withHeader(cached, 'X-News-Cache', 'HIT');
   }
 
