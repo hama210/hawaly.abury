@@ -1,1 +1,61 @@
-{"updatedAt":null,"events":[]}
+{
+  "updatedAt": "2026-11-11T15:46:18.063Z",
+  "events": [
+    {
+      "id": "eur-30-y-bond-auction-de.20261111T1030",
+      "time": "2026-11-11T10:30:00Z",
+      "currency": "EUR",
+      "impact": "low",
+      "title": "30-y Bond Auction (DE)",
+      "forecast": "",
+      "actual": "3.66%",
+      "previous": "3.8%",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "eur-consumer-price-index-mom-pt.20261111T1100",
+      "time": "2026-11-11T11:00:00Z",
+      "currency": "EUR",
+      "impact": "low",
+      "title": "Consumer Price Index  MoM (PT)",
+      "forecast": "0.2%",
+      "actual": "0.2%",
+      "previous": "0.2%",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "single_source",
+      "movedFrom": ""
+    },
+    {
+      "id": "eur-consumer-price-index-yoy-pt.20261111T1100",
+      "time": "2026-11-11T11:00:00Z",
+      "currency": "EUR",
+      "impact": "low",
+      "title": "Consumer Price Index  YoY (PT)",
+      "forecast": "3.8%",
+      "actual": "3.8%",
+      "previous": "3.8%",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "single_source",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-mba-mortgage-applications.20261111T1200",
+      "time": "2026-11-11T12:00:00Z",
+      "currency": "USD",
+      "impact": "low",
+      "title": "MBA Mortgage Applications",
+      "forecast": "",
+      "actual": "6.2%",
+      "previous": "-1.2%",
+      "period": "2026-11",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    }
+  ]
+}
