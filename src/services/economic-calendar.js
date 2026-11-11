@@ -27,6 +27,14 @@ function cleanEvent(raw) {
   };
 }
 
+// Providers cache the feed for about 15 minutes. If the feed's own
+// generated_at time is older than 45 minutes, show a visible data-delay notice.
+// A missing or future-dated timestamp is likewise not proof of freshness.
+export function isCalendarSourceDelayed(publishedAt, now = Date.now()) {
+  const stamp = Date.parse(publishedAt || '');
+  return !Number.isFinite(stamp) || stamp > now + 5 * 60 * 1000 || now - stamp > 45 * 60 * 1000;
+}
+
 export function normalizeCalendarPayload(payload) {
   if (!payload || !Array.isArray(payload.events)) throw new Error('Invalid economic calendar response');
   const events = payload.events.map(cleanEvent).filter(Boolean)
