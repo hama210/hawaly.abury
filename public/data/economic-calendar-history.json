@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-11T15:46:18.063Z",
+  "updatedAt": "2026-11-11T22:41:37.046Z",
   "events": [
     {
       "id": "eur-30-y-bond-auction-de.20261111T1030",
@@ -56,6 +56,48 @@
       "status": "scheduled",
       "confidence": "sources_agree",
       "movedFrom": ""
+    },
+    {
+      "id": "nzd-electronic-card-retail-sales-mom.20261111T2145",
+      "time": "2026-11-11T21:45:00Z",
+      "currency": "NZD",
+      "impact": "low",
+      "title": "Electronic Card Retail Sales MoM",
+      "forecast": "",
+      "actual": "-0.7%",
+      "previous": "-0.4%",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "nzd-electronic-card-retail-sales-yoy.20261111T2145",
+      "time": "2026-11-11T21:45:00Z",
+      "currency": "NZD",
+      "impact": "low",
+      "title": "Electronic Card Retail Sales  YoY",
+      "forecast": "",
+      "actual": "0.3%",
+      "previous": "0.9%",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "nzd-visitor-arrivals-yoy.20261112T2145",
+      "time": "2026-11-11T21:45:00Z",
+      "currency": "NZD",
+      "impact": "low",
+      "title": "Visitor Arrivals  YoY",
+      "forecast": "",
+      "actual": "9.8%",
+      "previous": "8%",
+      "period": "2026-09",
+      "status": "moved",
+      "confidence": "sources_agree",
+      "movedFrom": "2026-11-12T21:45:00Z"
     }
   ]
 }
