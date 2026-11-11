@@ -29,7 +29,8 @@ test('fast news selection still honors caller limits when no sources succeed',()
 
 test('hard batch deadline returns even when publisher fetch ignores AbortSignal',async()=>{
   const original=globalThis.fetch;
-  globalThis.fetch=()=>new Promise(()=>{});
+  // Deliberately ignores abort, but eventually resolves so the test runner has no lingering timers.
+  globalThis.fetch=()=>new Promise(resolve=>setTimeout(()=>resolve(new Response('<rss></rss>')),140));
   try{
     const started=Date.now();
     const result=await fetchFeeds([
