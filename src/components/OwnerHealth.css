@@ -10,6 +10,8 @@
 .oh-headline>div{display:grid;align-content:start;gap:8px;min-width:0;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:16px}
 .oh-headline span:not(.oh-state){font-size:11px;color:var(--muted)}
 .oh-headline strong{font-size:12px;overflow-wrap:anywhere;line-height:1.8}
+.oh-headline small{font-size:11px;color:var(--muted)}
+.oh-headline a{font-size:11px;color:var(--primary-strong);text-decoration:underline;text-underline-offset:3px}
 .oh-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
 .oh-panel{min-width:0;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:17px}
 .oh-panel h2{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 12px;font-size:16px}
