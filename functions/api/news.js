@@ -1,4 +1,5 @@
 import { meaningfulArticleText } from '../../src/lib/article-content.js';
+import { canonicalNewsKey } from '../../src/lib/news-key.js';
 import { extractNewsImage, coverForCategory } from '../../src/lib/news-images.js';
 
 const googleNewsFeed = query => `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
@@ -133,9 +134,11 @@ const TIER_WEIGHT = { official:36, major:32, local:28, specialist:22, curated:17
 // (e.g. &amp;nbsp;) without leaving raw markup in news headings.
 export function decodeNewsText(value = '') {
   let text = String(value).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
-  const named = { nbsp:' ', amp:'&', quot:'"', apos:"'", lt:'<', gt:'>', rsquo:"'" };
+  const named = { nbsp:' ', amp:'&', quot:'"', apos:"'", lt:'<', gt:'>', rsquo:"'",
+    lsquo:"'", ldquo:'"', rdquo:'"', mdash:'—', ndash:'–', hellip:'…', bull:'•',
+    euro:'€', pound:'£', copy:'©', reg:'®', trade:'™', laquo:'«', raquo:'»' };
   for (let pass = 0; pass < 3; pass++) {
-    const next = text.replace(/&#x([0-9a-f]+);|&#(\d+);|&(nbsp|amp|quot|apos|lt|gt|rsquo);/gi,
+    const next = text.replace(/&#x([0-9a-f]+);|&#(\d+);|&(nbsp|amp|quot|apos|lt|gt|rsquo|lsquo|ldquo|rdquo|mdash|ndash|hellip|bull|euro|pound|copy|reg|trade|laquo|raquo);/gi,
       (match, hex, decimal, entity) => {
         if (hex || decimal) {
           const point = Number.parseInt(hex || decimal, hex ? 16 : 10);
@@ -284,7 +287,7 @@ function isRelevantToFeed(item, feed){
 }
 
 function itemKey(item){
-  return item.title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().slice(0,110);
+  return canonicalNewsKey(item?.title);
 }
 
 function dedupeItems(items, seen = new Set()){
@@ -488,7 +491,7 @@ export async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURREN
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'more-news-v18-hard-deadline');
+  cacheUrl.searchParams.set('version', 'more-news-v19-unicode-headlines');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
