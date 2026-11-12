@@ -37,7 +37,10 @@ test('fast mode reads genuine direct local/business publishers instead of mostly
     assert.ok(payload.feedStats.sources.some(s=>s.source==='Iraq Business News'&&s.status==='active'));
     assert.ok(requests.includes('https://shafaq.com/rss/en/Economy'));
     assert.ok(requests.includes('https://www.iraq-businessnews.com/feed/'));
-    assert.equal(requests.some(url=>url.startsWith('https://news.google.com/')),false);
+    // Publisher-domain fallback can still attempt Google when a direct RSS fails.
+    // But the curated *primary* Google News search feeds are no longer fast sources.
+    assert.equal(payload.feedStats.sources.some(s=>s.source==='Iraq Dollar Live'),false);
+    assert.equal(payload.feedStats.sources.some(s=>s.source==='Trump Reuters'),false);
     // The original Reuters, Trump and local search source references remain
     // configured for the full catalogue and may recover later.
     assert.ok(FEEDS.find(item=>item.source==='Iraq Dollar Live'));
