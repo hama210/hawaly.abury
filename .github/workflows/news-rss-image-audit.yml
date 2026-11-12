@@ -1,0 +1,27 @@
+name: HAWAL RSS and publisher image audit
+on:
+  push:
+    branches:
+      - fix/news-rss-images-audit-20261112
+      - master
+    paths:
+      - 'scripts/news-rss-image-audit.mjs'
+      - '.github/workflows/news-rss-image-audit.yml'
+      - 'functions/api/news.js'
+      - 'src/lib/news-images.js'
+      - 'functions/api/news-image.js'
+      - 'functions/api/article-image.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-only-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Audit live public RSS timings and publisher image availability
+        run: node scripts/news-rss-image-audit.mjs
