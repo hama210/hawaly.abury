@@ -1,0 +1,33 @@
+name: HAWAL owner-only uptime watch
+
+on:
+  # Four checks per hour, every day. GitHub can delay or drop a run,
+  # so this is best-effort continuous monitoring, not guaranteed SLA.
+  schedule:
+    - cron: '11,26,41,56 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/owner-health-watch.yml'
+      - 'scripts/owner-health-watch.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hawal-owner-uptime-watch
+  cancel-in-progress: false
+
+jobs:
+  owner-watch:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check public feeds and deny anonymous owner access
+        run: node scripts/owner-health-watch.mjs

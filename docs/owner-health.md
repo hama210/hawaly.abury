@@ -21,7 +21,12 @@ This feature is **fail-closed**. It does not become accessible until Cloudflare 
 - Missing configuration and failed authorization return HTTP 403, not a default admin view.
 - Private HTML/API responses are **no-store**, **noindex**, and are not listed in the sitemap or public navigation.
 - Health checks use existing public HAWAL feed endpoints and the economic-calendar provider. **No tokens are forwarded** to those data sources.
-- The first release rechecks every 15 minutes **only while the dashboard is open**. No Cloudflare Cron Worker, persistent backend history, or email/push alert delivery has been enabled. Do not describe it as unattended 24/7 monitoring.
+- The interactive dashboard still refreshes full diagnostics every 15 minutes while open.
+- The separate GitHub Actions workflow `.github/workflows/owner-health-watch.yml` now performs **unauthenticated read-only public-site and private-route access checks every quarter hour**, including when the dashboard is closed. It evaluates news availability, USD/IQD, gold/silver, economic calendar, metals history, homepage and whether the owner page/API deny anonymous visitors. It deliberately does **not** fetch an authenticated owner report or send owner JWTs off site.
+- GitHub Actions scheduled events are *best effort*, not guaranteed to execute precisely every 15 minutes. GitHub may delay or skip runs. A failing check is visible in Actions and may trigger GitHub failure notifications if the repository owner's notification settings are configured to receive them. Notifications for scheduled workflows can be assigned to the GitHub account that last changed the cron expression; they are not guaranteed to go to the Cloudflare owner email.
+- The authenticated dashboard reads recent run metadata via the public GitHub API, but only exposes the status **after** checking the owner's JWT. It cannot manufacture missing runs or claim a missed run was successful.
+- ChatGPT owner-only condition monitoring, when separately enabled, may send private alerts in the owner's ChatGPT account (limited to hourly checks). An **email to muhammadch14@gmail.com is not sent by this workflow**; do not describe email delivery as configured.
+- No Cloudflare Cron Worker, public monitor data files, persistent private backend history or external mail-service credentials are created.
 - There are limits to the phrase "only owner": someone with full access to change the GitHub/Cloudflare deployment or Cloudflare Access policies can alter server code or security settings. Protect those accounts with MFA.
 
 ## Testing
@@ -29,3 +34,16 @@ This feature is **fail-closed**. It does not become accessible until Cloudflare 
 `npm test` covers signed JWT verification, forged-header rejection, wrong owner/admin email rejection, unauthenticated 403s for both private endpoints, safe public routing, health-source assessments and data freshness.
 
 The public live smoke workflow checks unauthenticated visitors get a 403 or a Cloudflare Access login redirect for the private paths. It **does not** authenticate as the owner or verify live private data until the required cloud environment variables are configured.
+
+## Background scheduler
+
+- GitHub workflow: [HAWAL owner-only uptime watch](https://github.com/hama210/hawaly.abury/actions/workflows/owner-health-watch.yml)
+- Source and tests: `scripts/owner-health-watch.mjs`, `tests/owner-health-watch.test.js`, `tests/owner-background-status.test.js`.
+- Cron: `11,26,41,56 * * * *` (UTC; 96 expected checks/day, if GitHub runs all of them).
+- Public-only sources: `/`, `/api/news?mode=fast&limit=8`, `/api/markets`, calendar provider API and `/api/metals-history`.
+- Confidential routes: `/owner-health` and `/owner-health/api`. Both **must return 403 or redirect to the verified Cloudflare Access login** when requested anonymously; a 200 triggers a critical failure.
+- GitHub workflow uses `permissions: contents: read` and no owner credentials or third-party secrets.
+- A single failed public-source request is rechecked before marking a critical incident; normal quiet news feeds and CBI-source gaps do not masquerade as global outages.
+- GitHub logs and workflow statuses on a public repository are visible to viewers: they contain only non-personal health-check summaries, never an owner email, Access token, or private dashboard data.
+- Owner notifications: enable GitHub Actions failure notification preferences for the workflow-owner account; alternatively use a separate private ChatGPT condition watch. Do not imply automatic email delivery unless it has been tested.
+- To test immediately after merge: check the latest `push` run from the default branch, then await the first `schedule` run. The initial push run proves the script can execute but does not prove that GitHub will execute future cron events precisely.

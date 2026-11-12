@@ -3,6 +3,7 @@ import { buildSourceHealthReport } from '../../src/lib/source-health.js';
 import { onRequest as loadNews } from '../api/news.js';
 import { onRequest as loadMarkets } from '../api/markets.js';
 import { onRequestGet as loadMetalsHistory } from '../api/metals-history.js';
+import { getOwnerBackgroundStatus } from '../lib/owner-watch-status.js';
 
 // Call Pages handlers directly; recursive same-host Worker fetches can fail or
 // loop through Access policies. Do not send Access JWTs to public data APIs.
@@ -32,13 +33,15 @@ export async function onRequest(context){
   const count=Number(batch0?.batchCount);
   const remaining=Number.isSafeInteger(count)&&count>1&&count<=8?count-1:0;
   const paths=Array.from({length:remaining},(_,i)=>'/api/news?mode=full&batch='+(i+1)+'&limit=120');
-  const [rest,markets,calendar,metalsHistory]=await Promise.all([
+  const [rest,markets,calendar,metalsHistory,background]=await Promise.all([
     Promise.all(paths.map(path=>checked(()=>getPublicApi(context,path,loadNews)))),
     checked(()=>getPublicApi(context,'/api/markets',loadMarkets)), 
     checked(()=>getCalendar()),
-    checked(()=>getPublicApi(context,'/api/metals-history',loadMetalsHistory))
+    checked(()=>getPublicApi(context,'/api/metals-history',loadMetalsHistory)),
+    checked(()=>getOwnerBackgroundStatus())
   ]);
   const report=buildSourceHealthReport({news:[batch0,...rest],markets,calendar,metalsHistory});
+  report.background=background||{status:'unknown',lastCheckedAt:null};
   // No report is stored in a public endpoint, browser cache or GitHub Actions log.
   return Response.json(report,{headers:{...ownerResponseHeaders,
     'Content-Type':'application/json; charset=utf-8'}});

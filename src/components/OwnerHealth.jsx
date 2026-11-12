@@ -47,6 +47,8 @@ export default function OwnerHealth(){
     return ()=>{controller.abort();window.clearInterval(timer);};
   },[revision]);
   const sections=report?.sections||{};
+  const background=report?.background;
+  const backgroundLabels={healthy:'پشکنینی خۆکاری بە سەرکەوتوویی ئەنجام دراوە',failed:'دوایین پشکنینی پاشبنەما کێشەی هەبوو',overdue:'پشکنینی پاشبنەما دواکەوتووە',running:'پشکنین لە کاردایە',unknown:'دۆخی GitHub بەردەست نییە', 'not-started':'چاوەڕوانی یەکەم پشکنینی خۆکار'};
   const news=sections.news,market=sections.markets,calendar=sections.calendar,history=sections.metalsHistory;
   return <main className="oh-page" dir="rtl">
     <header className="oh-header">
@@ -57,7 +59,7 @@ export default function OwnerHealth(){
     <div className="oh-headline">
       <div><span>دۆخی گشتی</span>{report?<Status value={report.status}/>:<span>چاوەڕوانی پشکنین</span>}</div>
       <div><span>دوایین پشکنین</span><strong>{dateLabel(report?.checkedAt)}</strong></div>
-      <div><span>جارێکی دیکە</span><strong>هەر ١٥ خولەک — تەنها کاتێک پەڕەکە کراوەیە</strong></div>
+      <div><span>پشکنینی پاشبنەما</span><strong>{backgroundLabels[background?.status]||'چاوەڕوانی زانیاری'}</strong><small>{background?.lastCheckedAt?dateLabel(background.lastCheckedAt):'—'}</small><a href="https://github.com/hama210/hawaly.abury/actions/workflows/owner-health-watch.yml" target="_blank" rel="noopener noreferrer">GitHub Actions ↗</a></div>
     </div>
     {error&&<div className="oh-error" role="alert">{error}</div>}
     {!report&&loading&&<p className="oh-loading" role="status">سەرچاوەکان دەخرێنە ژێر پشکنین...</p>}
@@ -86,7 +88,7 @@ export default function OwnerHealth(){
     </div>}
     <footer className="oh-footer">
       <p>پشکنینەکان داتای ڕاستەقینەی API بەکاردەهێنن؛ دۆخی Quiet واتە سەرچاوەکە لەوانەیە تەنها هەواڵی تازەی نەبێت.</p>
-      <p>ئەم وەشانە تەنها کاتێک پەڕەکەت کراوەیە هەر ١٥ خولەک پشکنین دەکات. بۆ پشکنینی پاشبنەمایی و هەڵگرتنی مێژوو پێویستە خزمەتگوزاریی پلاندانراوی Cloudflare جیاواز ڕێکبخرێت.</p>
+      <p>GitHub Actions هەر ١٥ خولەک (بە شێوەی best-effort) پشکنینی پاشبنەمایی ئەنجام دەدات، تەنانەت کاتێک پەڕەکە داخراوە. GitHub لەوانەیە پشکنینەکان دوا بخات یان هەندێکیان ئەنجام نەدات. پشکنینی وردی دەستی بە داشبۆردەکە هەر ١٥ خولەک ئەنجام دەدرێت کاتێک کراوەیە. هیچ مێژووی تایبەتییەک لە API ـی گشتی بڵاو ناکرێتەوە.</p>
     </footer>
   </main>;
 }
