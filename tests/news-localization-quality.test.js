@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {canonicalNewsKey} from '../src/lib/news-key.js';
+import {validateTranslation} from '../src/lib/translation-check.js';
 import {decodeNewsText,onRequest} from '../functions/api/news.js';
 import {getInitialNews} from '../src/services/news.js';
 import {MemoryCache,replaceGlobal,requestContext,silenceWarnings} from './helpers.js';
@@ -78,4 +79,15 @@ test('translation queue prioritizes visible title and summary pairs instead of e
   assert.match(source,/meaningfulArticleText\(original\(item, 'summary'\), original\(item, 'title'\)\)/);
   assert.match(source,/work\.queue\.push\(\.\.\.visibleJobs, \.\.\.backgroundJobs\)/);
   assert.doesNotMatch(source,/work\.queue\.push\(\s*\.\.\.headlines,\s*\.\.\.summaries/);
+});
+
+test('financial translations cannot silently remove or replace market pairs',()=>{
+  const original='USD/IQD climbs as Baghdad banks trade actively';
+  const dropped=validateTranslation(original,'نرخی دۆلار لە بانکەکانی بەغدا بەرز دەبێتەوە','ku');
+  assert.equal(dropped.ok,false);
+  assert.equal(dropped.reason,'changed-pair');
+  const kept=validateTranslation(original,'نرخی USD / IQD لە بانکەکانی بەغدا بەرز دەبێتەوە','ku');
+  assert.equal(kept.ok,true);
+  const changed=validateTranslation(original,'نرخی EUR/USD لە بانکەکانی بەغدا بەرز دەبێتەوە','ku');
+  assert.equal(changed.reason,'changed-pair');
 });
