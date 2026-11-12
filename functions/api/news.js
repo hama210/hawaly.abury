@@ -102,9 +102,9 @@ const FAST_FEED_SOURCES = [
 const FAST_FEED_TIMEOUT_MS = 9000;
 const FAST_BATCH_BUDGET_MS = 10000; // Overall budget; never wait for serial publisher fallbacks.
 const FULL_FEED_TIMEOUT_MS = 8000;
-// Unreliable Google News search feeds repeatedly time out at 8 s in the live audit.
-// Do not let them consume a whole batch when direct publishers already supply news.
-const GOOGLE_NEWS_FULL_TIMEOUT_MS = 6500;
+// Cap ONLY the optional publisher-search fallback. Do not shorten the
+// primary high-priority Iraq/Reuters Google News feeds: some valid reports
+// from those sources required nearly 9 seconds in the live production audit.
 const PUBLISHER_SEARCH_FALLBACK_TIMEOUT_MS = 3500;
 const FAST_CACHE_TTL = 60;
 const FULL_CACHE_TTL = 120;
@@ -381,9 +381,7 @@ async function fetchFeedAttempt(feed, timeoutMs, batchSignal){
   const normalTimeout = Math.max(timeoutMs, Number(feed.timeoutMs) || 0);
   const deadline = feed.format === 'fallback-google'
     ? Math.min(normalTimeout, PUBLISHER_SEARCH_FALLBACK_TIMEOUT_MS)
-    : feed.url.startsWith('https://news.google.com/rss/search?')
-      ? Math.min(normalTimeout, GOOGLE_NEWS_FULL_TIMEOUT_MS)
-      : normalTimeout;
+    : normalTimeout;
   const timeoutId = setTimeout(()=>controller.abort('feed timeout'), deadline);
   const onBatchAbort = () => controller.abort('news batch budget exceeded');
   if (batchSignal?.aborted) onBatchAbort();
