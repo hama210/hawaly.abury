@@ -91,9 +91,58 @@ test('provider failure or broken text never replaces the original headline',asyn
     assert.equal(response.translated[0],text);
     assert.equal(response.translatedFlags[0],false);
     assert.equal(response.sources[0],'original');
-    assert.equal(response.failureReasons[0],'google-public:http-429');
+    assert.equal(response.failureReasons[0],'google-public:http-429,google-alt:http-429');
   }finally{restoreFetch();restoreCache();}
 });
+test('Google alternate endpoint rescues Sorani translation when primary Google web API fails',async()=>{
+  const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});
+  const urls=[];
+  const restoreFetch=replaceGlobal('fetch',async url=>{
+    urls.push(String(url));
+    if(String(url).includes('translate.googleapis.com/translate_a/single'))
+      return new Response('upstream blocked',{status:503});
+    if(String(url).includes('clients5.google.com/translate_a/t'))
+      return Response.json(['نرخی زێڕ لە بەغدا ئەمڕۆ دابەزی.']);
+    throw new Error('Unexpected translation provider');
+  });
+  try{
+    const req=post(['Gold prices fell in Baghdad today.'],'ku');
+    const payload=await (await onRequest(req.context)).json();
+    assert.equal(payload.ok,true);
+    assert.deepEqual(payload.translatedFlags,[true]);
+    assert.deepEqual(payload.sources,['google-alt']);
+    assert.equal(urls.length,2);
+    assert.match(urls[1],/tl=ckb/);
+  }finally{restoreFetch();restoreCache();}
+});
+test('Google alternate endpoint can provide Arabic when the primary is unavailable',async()=>{
+  const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});
+  const restoreFetch=replaceGlobal('fetch',async url=>{
+    if(String(url).includes('translate.googleapis.com/translate_a/single'))
+      return new Response('upstream blocked',{status:503});
+    return Response.json(['انخفضت أسعار الذهب في بغداد اليوم.']);
+  });
+  try{
+    const req=post(['Gold prices fell in Baghdad today.'],'ar');
+    const payload=await (await onRequest(req.context)).json();
+    assert.deepEqual(payload.translatedFlags,[true]);
+    assert.deepEqual(payload.sources,['google-alt']);
+  }finally{restoreFetch();restoreCache();}
+});
+test('Google fallback fails closed when both public translators reject the request',async()=>{
+  const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});
+  const restoreFetch=replaceGlobal('fetch',async()=>new Response('blocked',{status:429}));
+  try{
+    const text='Silver markets face new uncertainty in London today.';
+    const req=post([text],'ku');
+    const payload=await (await onRequest(req.context)).json();
+    assert.equal(payload.translated[0],text);
+    assert.deepEqual(payload.translatedFlags,[false]);
+    assert.match(payload.failureReasons[0],/google-public:http-429/);
+    assert.match(payload.failureReasons[0],/google-alt:http-429/);
+  }finally{restoreFetch();restoreCache();}
+});
+
 test('inline translation does not trust old malformed translation fields',()=>{
   const old={title:'Iraq updates dollar rate',titleKu:'دەقی هەڵە',summary:'Dollar prices are steady',summaryKu:'کوردیی هەڵە'};
   assert.equal(getTitle(old,'ku'),old.title);
