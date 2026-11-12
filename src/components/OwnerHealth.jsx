@@ -50,6 +50,7 @@ export default function OwnerHealth(){
   const background=report?.background;
   const backgroundLabels={healthy:'پشکنینی خۆکاری بە سەرکەوتوویی ئەنجام دراوە',failed:'دوایین پشکنینی پاشبنەما کێشەی هەبوو',overdue:'پشکنینی پاشبنەما دواکەوتووە',running:'پشکنین لە کاردایە',unknown:'دۆخی GitHub بەردەست نییە', 'not-started':'چاوەڕوانی یەکەم پشکنینی خۆکار'};
   const news=sections.news,market=sections.markets,calendar=sections.calendar,history=sections.metalsHistory;
+  const incidentHistory=background?.history;
   return <main className="oh-page" dir="rtl">
     <header className="oh-header">
       <div><p>HAWAL · PRIVATE OWNER MONITOR</p><h1>چاودێری تایبەتی سەرچاوەکان</h1>
@@ -86,6 +87,28 @@ export default function OwnerHealth(){
           notes={[cleanNumber(s.points)+' خاڵ',dateLabel(s.updatedAt)]}/>)}</ul>
       </section>
     </div>}
+    {report&&<section className="oh-panel oh-incidents" aria-labelledby="oh-incidents-title">
+      <h2 id="oh-incidents-title">مێژووی کێشەکان و پشکنینە سەرنەکەوتووەکان</h2>
+      <p>ئەم بەشە کاتی سەرنەکەوتنی پشکنینی خۆکار و کاتی سەرکەوتنەوەی نیشان دەدات. سەرنەکەوتنی GitHub هەمیشە بەڵگەی تێکچوونی وێبسایت نییە؛ بۆ هۆکارەکە سەیری تۆماری GitHub بکە.</p>
+      {incidentHistory?.status==='unavailable'?<p className="oh-caution">مێژووی پشکنینەکانی GitHub ئێستا بەردەست نییە.</p>:
+        incidentHistory?.status==='ready'?<>
+          <p>{cleanNumber(incidentHistory.runsExamined)} پشکنینی تەواوبوو هەڵسەنگێنراوە.
+            {incidentHistory.coverageStart&&<> · لە {dateLabel(incidentHistory.coverageStart)} تا {dateLabel(incidentHistory.coverageEnd)}</>}
+            {incidentHistory.complete?'':' · تەنها بەشێک لە مێژووی تازەی GitHub نیشان دەدرێت'}
+          </p>
+          {incidentHistory.incidents.length===0?<p className="oh-no-incidents">هیچ پشکنینێکی سەرنەکەوتوو لە ماوەی بەردەستدا نەدۆزرایەوە. ✅</p>:
+            <ul className="oh-incidents-list">{incidentHistory.incidents.map(incident=><li className="oh-incident" key={incident.id}>
+              <div className="oh-incident-title"><strong>{incident.status==='ongoing'?'🟠 کێشەی هێشتا نەچاکبووەوە':'✓ پشکنین دووبارە سەرکەوتوو بوو'}</strong>
+                <span>{cleanNumber(incident.failedChecks)} پشکنینی سەرنەکەوتوو</span></div>
+              <div className="oh-incident-meta"><span>دەستپێک: {dateLabel(incident.startedAt)}</span>
+                <span>{incident.resolvedAt?'چاکبوونەوە: '+dateLabel(incident.resolvedAt):'هێشتا پشکنینی سەرکەوتووی دواتر نییە'}</span>
+                <span>ماوەی نزیکەیی: {cleanNumber(incident.durationMinutes)} خولەک</span>
+              </div>
+              {typeof incident.url==='string'&&incident.url.startsWith('https://github.com/hama210/hawaly.abury/actions/')&&<a href={incident.url} target="_blank" rel="noopener noreferrer">بەڵگە و هۆکاری پشکنین لە GitHub ↗</a>}
+            </li>)}</ul>}
+        </>:<p>زانیاریی مێژوو بار دەکرێت.</p>}
+      <p>ئەمە مێژووی سنوورداری GitHub Actions ـە، نەک بنکەدراوەی هەمیشەیی. ماوەی کێشەکان نزیکەییە، لەسەر بنەمای کاتی پشکنینەکان.</p>
+    </section>}
     <footer className="oh-footer">
       <p>پشکنینەکان داتای ڕاستەقینەی API بەکاردەهێنن؛ دۆخی Quiet واتە سەرچاوەکە لەوانەیە تەنها هەواڵی تازەی نەبێت.</p>
       <p>GitHub Actions هەر ١٥ خولەک (بە شێوەی best-effort) پشکنینی پاشبنەمایی ئەنجام دەدات، تەنانەت کاتێک پەڕەکە داخراوە. GitHub لەوانەیە پشکنینەکان دوا بخات یان هەندێکیان ئەنجام نەدات. پشکنینی وردی دەستی بە داشبۆردەکە هەر ١٥ خولەک ئەنجام دەدرێت کاتێک کراوەیە. هیچ مێژووی تایبەتییەک لە API ـی گشتی بڵاو ناکرێتەوە.</p>
