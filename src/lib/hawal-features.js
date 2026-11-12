@@ -1,4 +1,5 @@
 import { positive, quoteState, safeUrl } from './market-tools.js';
+import {cityMarketQuote} from './usd-iqd-cities.js';
 
 export const HISTORY_KEY = 'hawall-market-observations-v2';
 export const ALERTS_KEY = 'hawall-notification-settings-v1';
@@ -67,15 +68,14 @@ export function normalizeHistory(points, now = Date.now()) {
 
 export function collectRates(markets = [], now = Date.now()) {
   const local = markets.find(item => item.symbol === 'USD/IQD');
-  if (!local || quoteState(local, now) !== 'reported' || !safeUrl(local.sourceUrl)) return [];
-  const time = Date.parse(local.updatedAt || '');
-  if (!Number.isFinite(time)) return [];
-  const points = [];
-  for (const city of ['erbil','sulaymaniyah','baghdad']) {
-    for (const side of ['buy','sell']) {
-      if (positive(local?.[city]?.[side])) {
-        points.push({ city, side, price:local[city][side], at:local.updatedAt, source:local.source, sourceUrl:local.sourceUrl });
-      }
+  if(!local)return [];
+  const points=[];
+  for(const city of ['erbil','sulaymaniyah','baghdad']){
+    for(const side of ['buy','sell']){
+      const quote=cityMarketQuote(local,city,side);
+      if(quote&&quoteState(quote,now)==='reported'&&safeUrl(quote.sourceUrl))
+        points.push({city,side,price:quote.price,at:quote.updatedAt,
+          source:quote.source,sourceUrl:quote.sourceUrl});
     }
   }
   return points;
@@ -102,10 +102,11 @@ export function marketSnapshot(markets = [], news = [], now = Date.now()) {
   const local = markets.find(q => q.symbol === 'USD/IQD');
   const gold = markets.find(q => q.symbol === 'XAU/USD');
   const quotes = {};
-  if (local && quoteState(local, now) === 'reported' && safeUrl(local.sourceUrl)) {
-    for (const city of ['erbil','sulaymaniyah','baghdad']) {
-      const price = local?.[city]?.sell;
-      if (positive(price)) quotes[city] = { price, at:local.updatedAt, sourceUrl:local.sourceUrl };
+  if(local){
+    for(const city of ['erbil','sulaymaniyah','baghdad']){
+      const quote=cityMarketQuote(local,city,'sell');
+      if(quote&&quoteState(quote,now)==='reported'&&safeUrl(quote.sourceUrl))
+        quotes[city]={price:quote.price,at:quote.updatedAt,sourceUrl:quote.sourceUrl};
     }
   }
   if (gold && quoteState(gold, now) === 'reported' && safeUrl(gold.sourceUrl)) quotes.gold = { price:gold.price, at:gold.updatedAt, sourceUrl:gold.sourceUrl };

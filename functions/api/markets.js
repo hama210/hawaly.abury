@@ -1,4 +1,6 @@
 import { quoteState } from '../../src/lib/market-tools.js';
+import { parseXeIqdRates,mergeUsdIqdCities } from '../../src/lib/usd-iqd-cities.js';
+export { parseXeIqdRates,mergeUsdIqdCities } from '../../src/lib/usd-iqd-cities.js';
 
 const SYMBOLS = [
   { symbol: 'CL=F', pair: 'WTI/USD', name: 'WTI crude futures · barrel', type: 'commodity' },
@@ -207,10 +209,20 @@ async function fetchAlanChandUsdIqd() {
       text => /id="inputCalcValue"[^>]*data-rate="[\d.]+"/i.test(text),
       256 * 1024
     );
-    const perDollar = Number(html.match(/id="inputCalcValue"[^>]*data-rate="([\d.]+)"/i)?.[1]);
-    if (!Number.isFinite(perDollar) || perDollar < 1000 || perDollar > 2500) {
+    // The provider changed its markup: accept either the explicit data-rate
+    // or the provider's own "1 usd 1,693.5000 iqd" text, never a city quote.
+    const clean=stripMarkup(html);
+    const raw=html.match(/id="inputCalcValue"[^>]*data-rate="([\d.]+)"/i)?.[1]
+      || clean.match(/\b1\s+usd\s+([\d,.]+)\s+iqd\b/i)?.[1]
+      || clean.match(/\b1\s+US Dollar equals\s+([\d,.]+)\s+Iraqi Dinar\b/i)?.[1];
+    const perDollar=Number(String(raw||'').replace(/,/g,''));
+    if (!Number.isFinite(perDollar) || perDollar < 1000 || perDollar > 2500)
       throw new Error('could not parse AlanChand USD/IQD price');
-    }
+    // Undated or old HTML can be a cached historical page; reject it.
+    const dateText=clean.match(/exchange rate today,\s*[A-Za-z]+\s+(\d{1,2}\s+[A-Za-z]+\s+\d{4})/i)?.[1];
+    const reportDate=Date.parse(dateText||'');
+    if(!Number.isFinite(reportDate)||Math.abs(Date.now()-reportDate)>48*3600000)
+      throw new Error('AlanChand quote date unavailable or stale');
 
     return {
       ...USD_IQD,
@@ -220,9 +232,9 @@ async function fetchAlanChandUsdIqd() {
       sellPrice: null,
       baghdad: null,
       erbil: null,
-      changePct: 0,
+      changePct: null,
       status: 'neutral',
-      source: 'AlanChand local market',
+      source: 'AlanChand undated national rate',
       sourceUrl,
       updatedAt: null,
       fetchedAt: new Date().toISOString()
@@ -230,9 +242,21 @@ async function fetchAlanChandUsdIqd() {
   });
 }
 
+async function fetchXeIqdUsdIqd(){
+ return withTimeout(async signal=>{
+   const res=await fetch('https://xeiqd.com/rates.json',{
+     signal,headers:{'Accept':'application/json','User-Agent':'HAWAL-Market-Rates/1.0'},
+     cf:{cacheTtl:120}
+   });
+   if(!res.ok)throw new Error('XEIQD '+res.status);
+   const raw=await readTextLimited(res,()=>false,160*1024);
+   return parseXeIqdRates(JSON.parse(raw));
+ },5500);
+}
 async function fetchUsdIqd(failures) {
   const sources = [
     ['Shafaq News', fetchShafaqUsdIqd],
+    ['XEIQD', fetchXeIqdUsdIqd],
     ['AlanChand', fetchAlanChandUsdIqd]
   ];
   const results = await Promise.allSettled(sources.map(([, load]) => load()));
@@ -242,8 +266,11 @@ async function fetchUsdIqd(failures) {
       failures.push({ symbol: USD_IQD.symbol, source: sources[index][0], error: errorMessage(result.reason) });
     }
   }
-  const preferred = results.find(result => result.status === 'fulfilled');
-  return preferred?.value || null;
+  const shafaq=results[0].status==='fulfilled'?results[0].value:null;
+  const xeiqd=results[1].status==='fulfilled'?results[1].value:null;
+  // Quote only a city's own independently dated buy/sell side.
+  const combined=mergeUsdIqdCities(shafaq,xeiqd);
+  return combined|| (results[2].status==='fulfilled'?results[2].value:null);
 }
 
 function hasPrice(item) {
@@ -279,7 +306,7 @@ function staleItem(item) {
 
 function cacheKeyFor(url, kind) {
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('__hawali_cache', `markets-${kind}-v4`);
+  cacheUrl.searchParams.set('__hawali_cache', `markets-${kind}-v5-city-provenance`);
   return new Request(cacheUrl.toString(), { method: 'GET' });
 }
 
@@ -435,6 +462,14 @@ async function fetchCbi() {
     const response = await fetch(sourceUrl, { signal, cf:{ cacheTtl:3600 } });
     if (!response.ok) throw new Error(`CBI ${response.status}`);
     const html = await readTextLimited(response);
-    return { symbol:'CBI USD/IQD', name:'CBI published reference · 1 USD', marketKind:'official', quoteAmount:1, price:parseCbiRate(html), changePct:null, source:'Central Bank of Iraq', sourceUrl, updatedAt:null };
+    const price=parseCbiRate(html);
+    // The official 2026-10-07 notice identifies 1510 as sale-to-banks.
+    // Never attach that policy's effective date to a different future rate.
+    const matchesNotice=price===1510;
+    return { symbol:'CBI USD/IQD', name:'CBI published reference · 1 USD', marketKind:'official',
+      quoteAmount:1,price,changePct:null,source:'Central Bank of Iraq',sourceUrl,
+      updatedAt:null,rateType:matchesNotice?'sale-to-banks':null,
+      effectiveFrom:matchesNotice?'2026-10-07':null,
+      officialNoticeUrl:matchesNotice?'https://cbi.iq/news/view/3355':null };
   });
 }
