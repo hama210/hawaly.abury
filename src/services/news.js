@@ -1,4 +1,5 @@
 import { analyzeArticle } from '../utils/intelligence.js';
+import { canonicalNewsKey } from '../lib/news-key.js';
 
 const NEWS_CACHE_KEY = 'hawali-aburi-news-v14-publisher-originals';
 // Keep the last verified live response visible while a fresh background request
@@ -34,7 +35,7 @@ function mergeUnique(primary = [], backup = []) {
   const seen = new Map();
   const output = [];
   for (const item of [...primary, ...backup]) {
-    const key = String(item.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const key = canonicalNewsKey(item?.title);
     if (!key) continue;
     if (seen.has(key)) {
       // Preserve the dedicated Warsh attribution if the same official speech
