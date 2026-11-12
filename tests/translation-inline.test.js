@@ -49,7 +49,9 @@ test('Microsoft Translator uses Central Kurdish code ku, region secret and cache
 test('Google Cloud Translation uses Sorani ckb and handles encoded translation',async()=>{
   const restoreCache=replaceGlobal('caches',{default:new MemoryCache()});
   const restoreFetch=replaceGlobal('fetch',async(url,options)=>{
-    assert.match(String(url),/translation.googleapis.com\/language\/translate\/v2\?key=google-secret/);
+    assert.equal(String(url),'https://translation.googleapis.com/language/translate/v2');
+    assert.equal(options.headers['x-goog-api-key'],'google-secret');
+    assert.doesNotMatch(String(url),/google-secret|[?&]key=/);
     const body=JSON.parse(options.body);
     assert.equal(body.target,'ckb');
     assert.equal(body.format,'text');

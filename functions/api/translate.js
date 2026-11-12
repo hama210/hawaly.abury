@@ -48,8 +48,10 @@ async function microsoft(text,target,env){
 async function googleCloud(text,target,env){
   const key=env?.GOOGLE_TRANSLATE_API_KEY;
   if(!key)return '';
-  const result=await fetchJson('https://translation.googleapis.com/language/translate/v2?key='+encodeURIComponent(key),{
-    method:'POST',headers:{'Content-Type':'application/json'},
+  // Google Cloud Translation Basic v2 accepts x-goog-api-key. Never put
+  // secret API keys in the URL/query string (which may appear in logs).
+  const result=await fetchJson('https://translation.googleapis.com/language/translate/v2',{
+    method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
     body:JSON.stringify({q:[text],target:targetCodes[target].google,format:'text'})
   });
   return htmlDecode(clean(result?.data?.translations?.[0]?.translatedText));
