@@ -87,7 +87,7 @@ const FAST_FEED_SOURCES = [
   'CBS News World',
   'CENTCOM Updates',
   'Federal Reserve News',
-  'Federal Reserve Speeches',
+  // Dedicated Warsh feeds avoid surfacing unrelated remarks by officials.
   'Chairman Warsh Speeches',
   'Chairman Warsh Testimony',
   'European Central Bank',
