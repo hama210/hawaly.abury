@@ -1,0 +1,28 @@
+name: HAWAL News Translation Live Diagnostic
+on:
+  push:
+    branches:
+      - fix/news-translation-rss-20261112
+      - master
+    paths:
+      - scripts/news-live-diagnostic.mjs
+      - .github/workflows/news-live-diagnostic.yml
+      - functions/api/translate.js
+      - functions/api/news.js
+      - src/lib/translation-check.js
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check real production Sorani and Arabic translation and RSS feeds
+        run: node scripts/news-live-diagnostic.mjs
