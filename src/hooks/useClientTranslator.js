@@ -3,6 +3,7 @@ import {
   alreadyInTargetLanguage,
   validateTranslation
 } from '../lib/translation-check.js';
+import { meaningfulArticleText } from '../lib/article-content.js';
 
 const PREFIX = 'hawal-inline-translation-v14:';
 const TTL = 24 * 60 * 60 * 1000;
@@ -249,14 +250,18 @@ export function useClientTranslator(
 
     const now = Date.now();
 
-    const headlines = [];
-    const summaries = [];
+    // Pair each visible headline with its genuine publisher summary before
+    // translating off-screen headlines. This avoids starving localized snippets.
+    const visibleJobs = [];
+    const backgroundJobs = [];
 
-    for (const item of prioritized) {
+    for (const [index, item] of prioritized.entries()) {
 
       for (const field of ['title', 'summary']) {
 
-        const text = original(item, field);
+        const text = field === 'summary'
+          ? meaningfulArticleText(original(item, 'summary'), original(item, 'title'))
+          : original(item, 'title');
 
         if (!text || text.length > 1150) {
           continue;
@@ -285,21 +290,11 @@ export function useClientTranslator(
 
         work.seen.add(key);
 
-        (
-          field === 'title'
-            ? headlines
-            : summaries
-        ).push({
-          text,
-          key
-        });
+        (index < limit ? visibleJobs : backgroundJobs).push({ text, key });
       }
     }
 
-    work.queue.push(
-      ...headlines,
-      ...summaries
-    );
+    work.queue.push(...visibleJobs, ...backgroundJobs);
 
     if (!work.pump) {
 

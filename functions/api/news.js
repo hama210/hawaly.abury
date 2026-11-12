@@ -1,4 +1,5 @@
 import { meaningfulArticleText } from '../../src/lib/article-content.js';
+import { canonicalNewsKey } from '../../src/lib/news-key.js';
 import { extractNewsImage, coverForCategory } from '../../src/lib/news-images.js';
 
 const googleNewsFeed = query => `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
@@ -103,6 +104,10 @@ const MAX_FEED_BYTES = 768 * 1024;
 const NEWS_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 const NEWS_MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 const IRAQ_TERMS = /\b(iraq|iraqi|baghdad|kurdistan|erbil|sulaimani|sulaymaniyah|duhok|dohuk|basra|mosul|dinar|iqd|cbi|somo|rafidain|rasheed|krg)\b|central bank of iraq|iraq business/i;
+// Kurdish Sorani and Arabic words from original regional publisher feeds.
+// Do not discard genuine local stories merely because the headline is not English.
+const IRAQ_LOCAL_TERMS = /(?:عێراق|العراق|هەولێر|أربيل|اربيل|بغداد|بەغدا|کوردستان|كردستان|سلێمانی|السليمانية|دهۆک|دهوك)/u;
+const IRAQ_LOCAL_ECONOMY_TERMS = /(?:ئابووری|اقتصاد|نەوت|نفط|دینار|دينار|دۆلار|دولار|بودجە|موازنة|بانک|بنك|مووچە|رواتب|بازاڕ|أسواق|سوق|مصرف|تجارة|استثمار|صادرات|هاوردە)/u;
 // Category cover images are served from Hawal itself so they're available without external CDNs.
 
 const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','airstrike','strike','strikes','sanction','sanctions','missile','drone','weapon','weapons','terrorism','terrorist','ceasefire','invasion','conflict','blockade','strait of hormuz','centcom','irgc','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi','somo','budget','salary','salaries','oil revenue','basra','ceyhan','rafidain','rasheed','ukraine','russia','israel','iran','tehran','gaza','lebanon','red sea','houthi','nato'];
@@ -133,9 +138,11 @@ const TIER_WEIGHT = { official:36, major:32, local:28, specialist:22, curated:17
 // (e.g. &amp;nbsp;) without leaving raw markup in news headings.
 export function decodeNewsText(value = '') {
   let text = String(value).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
-  const named = { nbsp:' ', amp:'&', quot:'"', apos:"'", lt:'<', gt:'>', rsquo:"'" };
+  const named = { nbsp:' ', amp:'&', quot:'"', apos:"'", lt:'<', gt:'>', rsquo:"'",
+    lsquo:"'", ldquo:'"', rdquo:'"', mdash:'—', ndash:'–', hellip:'…', bull:'•',
+    euro:'€', pound:'£', copy:'©', reg:'®', trade:'™', laquo:'«', raquo:'»' };
   for (let pass = 0; pass < 3; pass++) {
-    const next = text.replace(/&#x([0-9a-f]+);|&#(\d+);|&(nbsp|amp|quot|apos|lt|gt|rsquo);/gi,
+    const next = text.replace(/&#x([0-9a-f]+);|&#(\d+);|&(nbsp|amp|quot|apos|lt|gt|rsquo|lsquo|ldquo|rdquo|mdash|ndash|hellip|bull|euro|pound|copy|reg|trade|laquo|raquo);/gi,
       (match, hex, decimal, entity) => {
         if (hex || decimal) {
           const point = Number.parseInt(hex || decimal, hex ? 16 : 10);
@@ -238,9 +245,10 @@ function marketEffects(text, sentiment, iraqImpact){
 function isIraqEconomy(item){
   const text = `${item.title} ${item.summary} ${item.source}`.toLowerCase();
   const group = String(item.sourceGroup || item.source || '');
-  const iraqRelated = IRAQ_TERMS.test(text) || /^(?:IraqiNews|Iraq Business News)$/i.test(group);
+  const iraqRelated = (IRAQ_TERMS.test(text) || IRAQ_LOCAL_TERMS.test(text)) || /^(?:IraqiNews|Iraq Business News)$/i.test(group);
   const economyRelated = /\b(economy|economic|oil|gas|opec|somo|budget|salary|salaries|dinar|iqd|bank|banking|cbi|finance|financial|investment|trade|customs|tax|stock|isx|securities|exports|imports|pipeline|power|electricity|agriculture|wheat|water|development|project|port|railway|private sector|jobs|unemployment|revenue|payroll|deficit|loan|dollar)\b/i.test(text)
-    || /Economy|Dinar|Budget|Oil|Business|Banking|Finance|Investment|Stock|Trade|Power|Gas|Agriculture|Private Sector|KRG Budget|SOMO|Ministry|EIA|MEES|Iraq Oil Report|Central Bank/i.test(group);
+    || /Economy|Dinar|Budget|Oil|Business|Banking|Finance|Investment|Stock|Trade|Power|Gas|Agriculture|Private Sector|KRG Budget|SOMO|Ministry|EIA|MEES|Iraq Oil Report|Central Bank/i.test(group)
+    || IRAQ_LOCAL_ECONOMY_TERMS.test(text);
   return iraqRelated && economyRelated;
 }
 
@@ -265,8 +273,8 @@ function isRelevantToFeed(item, feed){
     && /\b(iran|iraq|saudi|yemen|houthi|war|military|ceasefire|tariff|oil|economy|economic|dollar|market|sanction|trade|hormuz)\b/i.test(text);
   if(feed.format === 'priority-conflict') return CONFLICT_DEVELOPMENT_TERMS.test(text)
     && /\b(saudi|riyadh|abha|jeddah|yemen|houthi|iran|iraq|middle east|centcom|israel|lebanon|hormuz)\b/i.test(text);
-  if(feed.format === 'priority-iraq') return IRAQ_TERMS.test(text)
-    && /\b(dollar|dinar|usd|iqd|devaluation|exchange|currency|cbi|market|prices|protest|budget|bank|traders)\b/i.test(text);
+  if(feed.format === 'priority-iraq') return (IRAQ_TERMS.test(text) || IRAQ_LOCAL_TERMS.test(text))
+    && (/\b(dollar|dinar|usd|iqd|devaluation|exchange|currency|cbi|market|prices|protest|budget|bank|traders)\b/i.test(text) || IRAQ_LOCAL_ECONOMY_TERMS.test(text));
   if(feed.category === 'oil') return /\b(oil|crude|opec|brent|wti)\b/i.test(text);
   if(feed.category === 'crypto') return /\b(bitcoin|ethereum|crypto|btc|eth)\b/i.test(text);
   if(feed.category === 'iraq') return isIraqEconomy(item);
@@ -284,7 +292,7 @@ function isRelevantToFeed(item, feed){
 }
 
 function itemKey(item){
-  return item.title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().slice(0,110);
+  return canonicalNewsKey(item?.title);
 }
 
 function dedupeItems(items, seen = new Set()){
@@ -488,7 +496,7 @@ export async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURREN
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'more-news-v18-hard-deadline');
+  cacheUrl.searchParams.set('version', 'more-news-v19-unicode-headlines');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
