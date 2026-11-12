@@ -10,7 +10,8 @@ export const IMAGE_PROXY_HOSTS=[
 export function isProxyableNewsImage(url){
   try{
     const u=new URL(url);
-    return u.protocol==='https:' && IMAGE_PROXY_HOSTS.some(host => u.hostname === host);
+    return u.protocol==='https:' && !u.username && !u.password && !u.port &&
+      IMAGE_PROXY_HOSTS.some(host => u.hostname === host);
   }catch{return false;}
 }
 export function coverForCategory(category) {
