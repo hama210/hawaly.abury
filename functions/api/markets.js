@@ -462,6 +462,14 @@ async function fetchCbi() {
     const response = await fetch(sourceUrl, { signal, cf:{ cacheTtl:3600 } });
     if (!response.ok) throw new Error(`CBI ${response.status}`);
     const html = await readTextLimited(response);
-    return { symbol:'CBI USD/IQD', name:'CBI selling to banks · 1 USD', marketKind:'official', quoteAmount:1, price:parseCbiRate(html), changePct:null, source:'Central Bank of Iraq', sourceUrl, updatedAt:null, rateType:'sale-to-banks', effectiveFrom:'2026-10-07', officialNoticeUrl:'https://cbi.iq/news/view/3355' };
+    const price=parseCbiRate(html);
+    // The official 2026-10-07 notice identifies 1510 as sale-to-banks.
+    // Never attach that policy's effective date to a different future rate.
+    const matchesNotice=price===1510;
+    return { symbol:'CBI USD/IQD', name:'CBI published reference · 1 USD', marketKind:'official',
+      quoteAmount:1,price,changePct:null,source:'Central Bank of Iraq',sourceUrl,
+      updatedAt:null,rateType:matchesNotice?'sale-to-banks':null,
+      effectiveFrom:matchesNotice?'2026-10-07':null,
+      officialNoticeUrl:matchesNotice?'https://cbi.iq/news/view/3355':null };
   });
 }
