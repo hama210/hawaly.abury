@@ -3,7 +3,7 @@ export async function onRequest(context){
   const microsoft=Boolean(context.env?.MICROSOFT_TRANSLATOR_KEY);
   const googleCloud=Boolean(context.env?.GOOGLE_TRANSLATE_API_KEY);
   return Response.json({
-    revision:'hawal-inline-v12',
+    revision:'hawal-inline-v13-google-alt',
     inlineTranslation:true,
     languages:{ku:'Central Kurdish (Sorani)',ar:'Arabic'},
     microsoftConfigured:microsoft,
@@ -12,6 +12,6 @@ export async function onRequest(context){
     liveProviderCheck:'not performed',
     note: microsoft||googleCloud
       ? 'A credential is configured. This status does not guarantee individual translation requests will succeed.'
-      : 'Only an unauthenticated best-effort Google endpoint is configured. Connect a Microsoft Translator or Google Cloud Translation key for supported production use.'
+      : 'Two unauthenticated best-effort Google web endpoints are available. Neither guarantees production reliability. Configure a supported Google Cloud Translation key for dependable translation.'
   },{headers:{'Cache-Control':'no-store'}});
 }

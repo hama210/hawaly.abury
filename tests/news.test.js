@@ -334,7 +334,7 @@ test('Middle East conflict stories are classified without mixing in unrelated wa
   assert.equal(conflictRegionFor({ title:'Russia launches missiles at Ukraine', summary:'The war continues in Europe' }), null)
 })
 
-test('fast news fetch shows verified Trump, Saudi conflict and Iraq dollar headlines with source diagnostics', async () => {
+test('full news catalogue retains verified Trump, Saudi conflict and Iraq dollar headlines with source diagnostics', async () => {
   const restoreCaches = replaceGlobal('caches', { default: new MemoryCache() });
   const restoreWarn = silenceWarnings();
   const published = new Date().toUTCString();
@@ -348,14 +348,23 @@ test('fast news fetch shows verified Trump, Saudi conflict and Iraq dollar headl
     return item ? new Response('<rss><channel>' + item + '</channel></rss>', { status:200 }) : new Response('unavailable', { status:503 });
   });
   try {
-    const call = requestContext('https://example.com/api/news?mode=fast&limit=48&refresh=1');
-    const result = await (await onRequest(call.context)).json();
-    await call.settle();
-    assert.ok(result.items.some(item => item.sourceGroup === 'Trump Reuters'));
-    assert.ok(result.items.some(item => item.sourceGroup === 'Saudi War Updates'));
-    assert.ok(result.items.some(item => item.sourceGroup === 'Iraq Dollar Live'));
-    assert.ok(result.feedStats.sources.some(source => source.source === 'Iraq Dollar Live' && source.status === 'active'));
-    assert.ok(result.feedStats.sources.some(source => source.source === 'BBC War' && source.status === 'failed'));
+    // High-failure Google News RSS searches remain discoverable through the
+    // full feed catalogue, but do not crowd out stable direct RSS in fast mode.
+    const allItems = [];
+    const allSources = [];
+    const batchCount = Math.ceil(FEEDS.length / 22);
+    for (let batch = 0; batch < batchCount; batch++) {
+      const call = requestContext('https://example.com/api/news?mode=full&batch='+batch+'&limit=48&refresh=1');
+      const result = await (await onRequest(call.context)).json();
+      await call.settle();
+      allItems.push(...result.items);
+      allSources.push(...result.feedStats.sources);
+    }
+    assert.ok(allItems.some(item => item.sourceGroup === 'Trump Reuters'));
+    assert.ok(allItems.some(item => item.sourceGroup === 'Saudi War Updates'));
+    assert.ok(allItems.some(item => item.sourceGroup === 'Iraq Dollar Live'));
+    assert.ok(allSources.some(source => source.source === 'Iraq Dollar Live' && source.status === 'active'));
+    assert.ok(allSources.some(source => source.source === 'BBC War' && source.status === 'failed'));
   } finally {
     restoreFetch();
     restoreWarn();

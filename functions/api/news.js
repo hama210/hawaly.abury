@@ -71,28 +71,33 @@ export const FEEDS = [
 const MAX_FEEDS_PER_REQUEST = 22;
 const FETCH_CONCURRENCY = 11;
 const BATCH_COUNT = Math.ceil(FEEDS.length / MAX_FEEDS_PER_REQUEST);
+// Fast mode uses first-party direct RSS/Atom sources observed returning valid
+// live items in the 2026-11-12 production audit. Google News RSS search currently
+// returns 503 or times out from this Cloudflare runtime. Keep those sources in
+// the full catalogue for future recovery; do NOT invent or relabel articles.
+// It is normal for some official feeds to have no recent relevant posts.
 const FAST_FEED_SOURCES = [
-  'Federal Reserve',
-  'Federal Reserve News',
-  'Chairman Warsh Speeches',
-  'Chairman Warsh Testimony',
   'Shafaq Economy',
-  'Shafaq USD-IQD',
-  'Iraq Dollar Live',
-  'Iraq Dollar Reaction',
-  'Trump White House',
-  'Trump Reuters',
-  'Trump Announcements',
-  'Saudi War Updates',
-  'Reuters Saudi War',
-  'Reuters Iran-US Conflict',
-  'AP Middle East Conflict',
-  'CENTCOM Updates',
+  'Iraq Business News',
+  'BBC Business',
   'BBC War',
   'Al Jazeera War',
   'Guardian Iran',
+  'Iran International',
+  'CBS News World',
+  'CENTCOM Updates',
+  'Federal Reserve News',
+  // Dedicated Warsh feeds avoid surfacing unrelated remarks by officials.
+  'Chairman Warsh Speeches',
+  'Chairman Warsh Testimony',
+  'European Central Bank',
+  'US Inflation (BLS)',
+  'Financial Times Markets',
+  'MarketWatch',
+  'CNBC Markets',
   'FXStreet',
-  'CNBC Markets'
+  'FXStreet Metals',
+  'Euronews Business'
 ];
 const FAST_FEED_TIMEOUT_MS = 9000;
 const FAST_BATCH_BUDGET_MS = 10000; // Overall budget; never wait for serial publisher fallbacks.
@@ -380,6 +385,9 @@ async function fetchFeedAttempt(feed, timeoutMs, batchSignal){
       : feed.category === 'iraq' ? 30 : 24;
     let xml = await readFeedBody(res, perFeedLimit);
     if(feed.format === 'treasury-html') xml = treasuryHtmlToFeedXml(xml, feed.url);
+    // A 200 response may still be an HTML captcha/error page, not RSS.
+    // Never label such a broken feed as merely 'quiet'.
+    if(!/<(?:rss|feed|rdf:RDF)\b/i.test(xml)) throw new Error('invalid RSS/Atom document');
     const items = [...xml.matchAll(/<(item|entry)\b[\s\S]*?<\/\1>/gi)].slice(0,perFeedLimit).map((m, idx)=>{
       const entry = m[0];
       const rawTitle = extractTag(entry,'title');
@@ -496,7 +504,7 @@ export async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURREN
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'more-news-v19-unicode-headlines');
+  cacheUrl.searchParams.set('version', 'more-news-v20-direct-fast-rss');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
