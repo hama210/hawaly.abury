@@ -50,7 +50,12 @@ function backendFor(item){
  const proxy=['images.mktw.net','media.shafaq.com','i.iranintl.com','ichef.bbci.co.uk',
   'd1ldvf68ux039x.cloudfront.net','cdn.sanity.io','static.aljazeera.net',
   'www.aljazeera.com','media.guim.co.uk','i.guim.co.uk'];
- return proxy.includes(u.hostname)?'/api/news-image?src='+encodeURIComponent(raw):null;
+ if(proxy.includes(u.hostname))return '/api/news-image?src='+encodeURIComponent(raw);
+ // FXStreet's editorial image CDN is currently loaded directly by browsers.
+ // Probe only this exact public host (never arbitrary URLs from an RSS feed).
+ if(u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&
+    u.hostname==='editorial.fxsstatic.com')return raw;
+ return null;
 }
 const batches=await Promise.all([
  api('/api/news?mode=fast&limit=60&refresh=1'),
@@ -92,7 +97,8 @@ const allCandidates=[...candidates.values()];
 const guardian=allCandidates.filter(test=>test.kind==='publisher-image'&&test.url.includes('i.guim.co.uk'));
 const chosen=[...guardian,...allCandidates.filter(test=>!guardian.includes(test))].slice(0,14);
 const results=await Promise.all(chosen.map(async test=>({...test,url:undefined,
-  endpoint:test.url.split('?')[0],...await probe(BASE+test.url)})));
+  endpoint:test.url.startsWith('https://')?'publisher-direct:'+new URL(test.url).hostname:test.url.split('?')[0],
+  ...await probe(test.url.startsWith('https://')?test.url:BASE+test.url)})));
 const slow=[...sources.values()].map(s=>({source:s.source,observations:s.observations,
    status:s.statuses,avgMs:Math.round(s.totalMs/s.observations),maxMs:s.maxMs,
    failures:s.failures.slice(0,2)})).sort((a,b)=>b.maxMs-a.maxMs);
