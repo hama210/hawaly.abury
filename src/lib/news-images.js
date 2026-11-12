@@ -17,10 +17,12 @@ export function coverForCategory(category) {
   const categoryKey=String(category||'').toLowerCase();
   return '/news-covers/'+(CATEGORIES.has(categoryKey)?categoryKey:'markets')+'.svg';
 }
+const codePoint=(original,point)=>Number.isInteger(point)&&point>0&&point<=0x10ffff&&
+  !(point>=0xd800&&point<=0xdfff)?String.fromCodePoint(point):original;
 const unescapeHtml=value=>String(value||'').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"')
-  .replace(/&apos;|&#39;/gi,"'")
-  .replace(/&#x([0-9a-f]+);/gi,(_,hex)=>String.fromCodePoint(parseInt(hex,16)))
-  .replace(/&#(\d+);/g,(_,decimal)=>String.fromCodePoint(Number(decimal)));
+  .replace(/&apos;|&#39;/gi,"'").replace(/&lt;/gi,'<').replace(/&gt;/gi,'>')
+  .replace(/&#x([0-9a-f]+);/gi,(match,hex)=>codePoint(match,parseInt(hex,16)))
+  .replace(/&#(\d+);/g,(match,decimal)=>codePoint(match,Number(decimal)));
 export function verifiedImageUrl(raw,baseUrl='') {
   const text=unescapeHtml(raw).trim();
   if(!text||/^(?:data|blob|javascript):/i.test(text)) return '';
@@ -48,13 +50,19 @@ function eligible(tag){
 }
 export function extractNewsImage(entry,feedUrl){
   const source=String(entry||'');
+  // Publishers sometimes encode the HTML <img> in their RSS description.
+  // Decode only image tags, not arbitrary publisher HTML.
+  const decodedImgTags=source.replace(/&lt;img\b[\s\S]{0,1800}?&gt;/gi,tag=>unescapeHtml(tag));
   const urls=[
     ...matches(source,'media:content').filter(eligible).map(tag=>attr(tag,'url')),
     ...matches(source,'media:thumbnail').filter(eligible).map(tag=>attr(tag,'url')),
     ...matches(source,'enclosure').filter(eligible).map(tag=>attr(tag,'url')),
+    // Atom enclosures use <link rel="enclosure" type="image/..." href="..."/>.
+    ...matches(source,'link').filter(tag=>/\benclosure\b/i.test(attr(tag,'rel')))
+      .filter(eligible).map(tag=>attr(tag,'href')),
     ...matches(source,'itunes:image').filter(eligible).map(tag=>attr(tag,'href')),
     ...(source.match(/<image\b[^>]*>[\s\S]*?<url[^>]*>([\s\S]*?)<\/url>/i)?.slice(1,2)||[]),
-    ...matches(source,'img').filter(eligible).map(tag=>attr(tag,'src'))
+    ...matches(decodedImgTags,'img').filter(eligible).map(tag=>attr(tag,'src'))
   ];
   for(const candidate of urls){
     const url=verifiedImageUrl(candidate,feedUrl);
