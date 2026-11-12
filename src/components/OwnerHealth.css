@@ -31,3 +31,16 @@
 .oh-footer p{margin:5px 0;font-size:11px;color:var(--muted);line-height:1.85}
 .oh-page button:focus-visible,.oh-page a:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
 @media(max-width:750px){.oh-grid{grid-template-columns:minmax(0,1fr)}.oh-headline{grid-template-columns:minmax(0,1fr)}.oh-header{padding:15px;flex-wrap:wrap}}
+
+
+/* Owner-only incident history — matches existing light/dark variables and mobile layout. */
+.oh-incidents{display:grid;gap:10px}
+.oh-incidents>p{margin:0}
+.oh-incidents-list{display:grid;gap:10px;margin:0!important}
+.oh-incident{display:grid;gap:9px;min-width:0;padding:13px;border:1px solid var(--line);border-radius:10px;background:var(--bg-soft)}
+.oh-incident-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.oh-incident-title strong{color:var(--text);font-size:13px}
+.oh-incident-title span,.oh-incident-meta{color:var(--muted);font-size:11px}
+.oh-incident-meta{display:flex;gap:7px 16px;flex-wrap:wrap;line-height:1.8}
+.oh-incident a{color:var(--primary-strong);text-decoration:underline;text-underline-offset:3px;font-size:12px}
+.oh-no-incidents{padding:13px;border:1px solid var(--line);background:var(--bg-soft);border-radius:10px}
