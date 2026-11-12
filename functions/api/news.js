@@ -379,9 +379,11 @@ async function fetchFeedAttempt(feed, timeoutMs, batchSignal){
   const startedAt = Date.now();
   const controller = new AbortController();
   const normalTimeout = Math.max(timeoutMs, Number(feed.timeoutMs) || 0);
-  const deadline = feed.url.startsWith('https://news.google.com/rss/search?')
-    ? Math.min(normalTimeout, GOOGLE_NEWS_FULL_TIMEOUT_MS)
-    : normalTimeout;
+  const deadline = feed.format === 'fallback-google'
+    ? Math.min(normalTimeout, PUBLISHER_SEARCH_FALLBACK_TIMEOUT_MS)
+    : feed.url.startsWith('https://news.google.com/rss/search?')
+      ? Math.min(normalTimeout, GOOGLE_NEWS_FULL_TIMEOUT_MS)
+      : normalTimeout;
   const timeoutId = setTimeout(()=>controller.abort('feed timeout'), deadline);
   const onBatchAbort = () => controller.abort('news batch budget exceeded');
   if (batchSignal?.aborted) onBatchAbort();
