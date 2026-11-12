@@ -1,6 +1,6 @@
 import {validateTranslation,alreadyInTargetLanguage} from '../../src/lib/translation-check.js';
 
-const TRANSLATION_VERSION='hawal-inline-v12';
+const TRANSLATION_VERSION='hawal-inline-v13-google-alt';
 const TTL=24*60*60;
 const REQUEST_LIMIT=12;
 const MAX_TEXT_CHARS=1200;
@@ -22,9 +22,9 @@ function htmlDecode(value){
     return Number.isSafeInteger(number)&&number>0&&number<0x110000?String.fromCodePoint(number):'';
   });
 }
-async function fetchJson(url,options={}){
+async function fetchJson(url,options={},timeoutMs=TIMEOUT_MS){
   const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort('translator timed out'),TIMEOUT_MS);
+  const timer=setTimeout(()=>controller.abort('translator timed out'),timeoutMs);
   try{
     const response=await fetch(url,{...options,signal:controller.signal,redirect:'error'});
     if(!response.ok)throw new Error('translator status '+response.status);
@@ -63,7 +63,7 @@ async function googlePublic(text,target){
 }
 async function googleClients5(text,target){
   const url='https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=auto&tl='+targetCodes[target].google+'&q='+encodeURIComponent(text);
-  const result=await fetchJson(url,{headers:{'Accept':'application/json'}});
+  const result=await fetchJson(url,{headers:{'Accept':'application/json'}},5000);
   if(Array.isArray(result)){
     const first=result[0];
     if(typeof first==='string')return clean(first);
@@ -97,6 +97,10 @@ async function translateOne(text,target,request,context){
   if(context.env?.MICROSOFT_TRANSLATOR_KEY)providers.push(['microsoft',()=>microsoft(text,target,context.env)]);
   if(context.env?.GOOGLE_TRANSLATE_API_KEY)providers.push(['google-cloud',()=>googleCloud(text,target,context.env)]);
   providers.push(['google-public',()=>googlePublic(text,target)]);
+  // The alternative Google web endpoint is optional and unauthenticated.
+  // It was previously defined but never called. This is best-effort, not
+  // a substitute for a supported Google Cloud Translation API account.
+  providers.push(['google-alt',()=>googleClients5(text,target)]);
   const failures=[];
   for(const [name,provider] of providers){
     try{
