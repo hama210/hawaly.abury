@@ -1,0 +1,26 @@
+name: HAWAL USD-IQD live provenance audit
+on:
+  push:
+    branches:
+      - fix/usd-iqd-city-cbi-audit-20261112
+      - master
+    paths:
+      - 'scripts/usd-iqd-live-audit.mjs'
+      - '.github/workflows/usd-iqd-live-audit.yml'
+      - 'functions/api/markets.js'
+      - 'src/services/markets.js'
+      - 'src/lib/market-tools.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit-public-markets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check public market prices, time, source and city provenance
+        run: node scripts/usd-iqd-live-audit.mjs
