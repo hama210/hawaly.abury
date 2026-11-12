@@ -20,6 +20,9 @@ on:
       - 'functions/owner-health/api.js'
       - 'functions/lib/owner-auth.js'
       - 'src/lib/source-health.js'
+      - 'functions/lib/owner-watch-status.js'
+      - 'scripts/owner-health-watch.mjs'
+      - '.github/workflows/owner-health-watch.yml'
       - 'src/components/OwnerHealth.jsx'
       - 'public/sitemap.xml'
 
