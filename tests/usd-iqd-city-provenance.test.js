@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { parseXeIqdRates,mergeUsdIqdCities,cityMarketQuote } from '../src/lib/usd-iqd-cities.js';
 import { onRequest,parseCbiRate } from '../functions/api/markets.js';
 import { quoteState } from '../src/lib/market-tools.js';
+import {collectRates,marketSnapshot} from '../src/lib/hawal-features.js';
+import {renderPage} from '../src/lib/server-page.js';
+import fs from 'node:fs';
 import { MemoryCache,replaceGlobal,requestContext,silenceWarnings } from './helpers.js';
 
 const inPast=(minutes=10)=>new Date(Date.now()-minutes*60000).toISOString();
@@ -114,4 +117,28 @@ test('public markets API combines Shafaq and XEIQD independently, while keeping 
    assert.equal(cbi.effectiveFrom,'2026-10-07');
    assert.ok(payload.failures.some(f=>f.source==='AlanChand'));
  }finally{restoreFetch();restoreWarn();restoreCache();}
+});
+
+test('history, watch snapshot and server HTML preserve independent Sulaymaniyah source and timestamps',()=>{
+ const rates=mergeUsdIqdCities({
+   source:'Shafaq News local market',sourceUrl:'https://shafaq.com/en/Economy/rate',
+   updatedAt:inPast(15),erbil:{sell:169400,buy:169300},
+   baghdad:{sell:169450,buy:169250},sulaymaniyah:null
+ },parseXeIqdRates(xeFixture()));
+ rates.dataStatus='live';
+ const entries=collectRates([rates]);
+ const slemani=entries.find(x=>x.city==='sulaymaniyah'&&x.side==='sell');
+ const erbil=entries.find(x=>x.city==='erbil'&&x.side==='sell');
+ assert.equal(slemani.source,'XEIQD city market');
+ assert.equal(erbil.source,'Shafaq News local market');
+ assert.equal(slemani.at,rates.sulaymaniyah.sideUpdatedAt.sell);
+ assert.notEqual(slemani.at,erbil.at);
+ const snap=marketSnapshot([rates],[]);
+ assert.equal(snap.quotes.sulaymaniyah.sourceUrl,'https://xeiqd.com/en/usd/slemani');
+ assert.equal(snap.quotes.sulaymaniyah.at,slemani.at);
+ const html=renderPage(fs.readFileSync('index.html','utf8'),{
+   lang:'en',page:'home',markets:[rates],news:[]});
+ assert.match(html,/169,300/);
+ assert.match(html,/XEIQD city market/);
+ assert.match(html,/https:\/\/xeiqd\.com\/en\/usd\/slemani/);
 });
