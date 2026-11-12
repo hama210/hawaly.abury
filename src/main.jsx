@@ -42,7 +42,7 @@ import { articleText, matchesCategory } from './utils/categories.js';
 import { articleSelection, storyExcerpt, readerCopy } from './lib/article-content.js';
 import { useClientTranslator } from './hooks/useClientTranslator.js';
 import { translateArticleBody } from './lib/article-translation.js';
-import { imageForNews } from './lib/news-images.js';
+import { imageForNews, imageRecoveryForNews } from './lib/news-images.js';
 import { MOBILE_VIEWS, viewFromHash } from './lib/mobile-view.js';
 
 const categories = ['all', 'iraq', 'kurdistan', 'forex', 'metals', 'oil', 'crypto', 'indices', 'geopolitics'];
@@ -170,6 +170,15 @@ function copyLink(url) {
 // A failed publisher image should not silently turn into a stock chart or logo.
 function imageFallback(event) {
   const element=event.currentTarget;
+  // RSS thumbnails can be blocked by publishers. Try the *same article's*
+  // authenticated public OpenGraph photo once before showing "no photo".
+  // The fixed fallback route independently validates publisher domains.
+  const recovery=element.dataset.newsRecovery;
+  if(recovery && element.dataset.newsRecoveryTried!=='1'){
+    element.dataset.newsRecoveryTried='1';
+    element.src=recovery;
+    return;
+  }
   element.parentElement?.classList.add('img-failed');
   element.style.display='none';
 }
@@ -356,7 +365,7 @@ function Hero({ item, lang, dict, onOpen }) {
   if (!item) return null;
   const intel = focusedIntelligence(item);
   return <article className={'lead-story'+(imageForNews(item)?'':' img-failed')} data-image-state={noPhotoLabel[lang]} role="button" tabIndex="0" onClick={() => onOpen(item)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen(item); } }}>
-    <img src={imageForNews(item) || undefined} data-news-category={item.category || "markets"} alt="" decoding="async" fetchPriority="high" referrerPolicy="no-referrer" onError={imageFallback} />
+    <img src={imageForNews(item) || undefined} data-news-recovery={imageRecoveryForNews(item) || undefined} data-news-category={item.category || "markets"} alt="" decoding="async" fetchPriority="high" referrerPolicy="no-referrer" onError={imageFallback} />
     <div className="lead-overlay" />
     <div className="lead-copy">
       <span className="lead-label">{uiCopy[lang]?.lead || uiCopy.ku.lead}</span>
@@ -371,7 +380,7 @@ function Hero({ item, lang, dict, onOpen }) {
 function NewsCard({ item, lang, onOpen }) {
   const intel = focusedIntelligence(item);
   return <article className="story-card">
-    <button className={'story-image'+(imageForNews(item)?'':' img-failed')} data-image-state={noPhotoLabel[lang]} type="button" onClick={() => onOpen(item)} aria-label={sourceTitle(item,lang)}><img src={imageForNews(item) || undefined} data-news-category={item.category || "markets"} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={imageFallback} /></button>
+    <button className={'story-image'+(imageForNews(item)?'':' img-failed')} data-image-state={noPhotoLabel[lang]} type="button" onClick={() => onOpen(item)} aria-label={sourceTitle(item,lang)}><img src={imageForNews(item) || undefined} data-news-recovery={imageRecoveryForNews(item) || undefined} data-news-category={item.category || "markets"} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={imageFallback} /></button>
     <div className="story-copy">
       <div className="story-source"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span className="story-age">{isNewStory(item) && <b className="fresh-pill">{uiCopy[lang]?.fresh}</b>}<time dateTime={item.publishedAt}>{timestamp(item.publishedAt,lang)}</time></span></div>
       <a className="story-original" href={safeUrl(item.link)} target="_blank" rel="noopener noreferrer">{dashboardCopy[lang].original} ↗</a><button dir="auto" className="story-title" type="button" onClick={() => onOpen(item)}>{sourceTitle(item,lang)}</button>
@@ -438,7 +447,7 @@ function ArticleModal({ item, lang, dict, onClose }) {
   const intel = focusedIntelligence(item);
   const copy = uiCopy[lang] || uiCopy.ku;
   return <div className="modal-backdrop" onClick={onClose} role="presentation"><article ref={dialogRef} tabIndex={-1} className="article-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={event => event.stopPropagation()}>
-    <div className={'modal-image'+(imageForNews(item)?'':' img-failed')} data-image-state={noPhotoLabel[lang]}><img src={imageForNews(item) || undefined} data-news-category={item.category || "markets"} alt="" decoding="async" fetchPriority="high" referrerPolicy="no-referrer" onError={imageFallback} /></div>
+    <div className={'modal-image'+(imageForNews(item)?'':' img-failed')} data-image-state={noPhotoLabel[lang]}><img src={imageForNews(item) || undefined} data-news-recovery={imageRecoveryForNews(item) || undefined} data-news-category={item.category || "markets"} alt="" decoding="async" fetchPriority="high" referrerPolicy="no-referrer" onError={imageFallback} /></div>
     <div className="modal-content">
       <button className="modal-close" type="button" onClick={onClose} aria-label={uiCopy[lang]?.close}>×</button>
       <div className="story-meta"><span className="source-with-trust"><span>{item.source}</span><SourceTrustBadge tier={item.sourceTier} lang={lang} /></span><span>•</span><time dateTime={item.publishedAt} title={timestamp(item.publishedAt,lang)}>{timestamp(item.publishedAt,lang)}</time><span>•</span><span>{dict.sentiment}: {sentimentLabel(intel.sentiment, lang)}</span></div>

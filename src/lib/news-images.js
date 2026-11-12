@@ -5,12 +5,13 @@ const CATEGORIES=new Set(['iraq','kurdistan','forex','metals','oil','crypto','in
 export const IMAGE_PROXY_HOSTS=[
   'images.mktw.net','media.shafaq.com','i.iranintl.com','ichef.bbci.co.uk',
   'd1ldvf68ux039x.cloudfront.net','cdn.sanity.io','static.aljazeera.net',
-  'www.aljazeera.com','media.guim.co.uk'
+  'www.aljazeera.com','media.guim.co.uk','i.guim.co.uk'
 ];
 export function isProxyableNewsImage(url){
   try{
     const u=new URL(url);
-    return u.protocol==='https:' && IMAGE_PROXY_HOSTS.some(host => u.hostname === host);
+    return u.protocol==='https:' && !u.username && !u.password && !u.port &&
+      IMAGE_PROXY_HOSTS.some(host => u.hostname === host);
   }catch{return false;}
 }
 export function coverForCategory(category) {
@@ -118,12 +119,8 @@ export function trustedRemoteImage(raw){
   return IMAGE_CDN_DOMAINS.some(domain=>hostname===domain||hostname.endsWith('.'+domain)) ? url : '';
 }
 
-// Never pass a shared category illustration off as a publisher's photo.
-export function imageForNews(item){
-  const url=verifiedImageUrl(item?.image);
-  const categoryCover=typeof item?.image==='string' && /^\/news-covers\/[a-z-]+\.svg(?:\?.*)?$/i.test(item.image);
-  if(url && item?.imageSource!=='illustration' && !categoryCover)
-    return isProxyableNewsImage(url) ? '/api/news-image?src='+encodeURIComponent(url) : url;
+// Only recover photos from the SAME article's own publisher/OpenGraph page.
+function articlePhotoForNews(item){
   const article=trustedArticleUrl(item?.link);
   let google=false;
   try{
@@ -131,9 +128,25 @@ export function imageForNews(item){
     google=link.protocol==='https:' && link.hostname==='news.google.com' &&
       /^\/(?:rss\/)?(?:articles|read)\/[A-Za-z0-9_-]{12,1500}$/.test(link.pathname);
   }catch{}
-  // Resolve actual photos from publisher OpenGraph where possible.
-  if(article||google)
-    return '/api/article-image?article='+encodeURIComponent(article||item.link)+'&category='+encodeURIComponent(item?.category||'markets');
-  // No publisher image: let the UI render an honest no-photo state.
+  if(article||google)return '/api/article-image?article='+encodeURIComponent(article||item.link)+
+    '&category='+encodeURIComponent(item?.category||'markets');
   return '';
+}
+
+// Never pass a shared category illustration off as a publisher's photo.
+export function imageForNews(item){
+  const url=verifiedImageUrl(item?.image);
+  const categoryCover=typeof item?.image==='string' && /^\/news-covers\/[a-z-]+\.svg(?:\?.*)?$/i.test(item.image);
+  if(url && new URL(url).protocol==='https:' &&
+      item?.imageSource!=='illustration' && !categoryCover)
+    return isProxyableNewsImage(url) ? '/api/news-image?src='+encodeURIComponent(url) : url;
+  return articlePhotoForNews(item);
+}
+
+// If the RSS media URL is dead, try the original article's OpenGraph photo
+// once. An actual photo is never replaced by a generic stock/logo illustration.
+export function imageRecoveryForNews(item){
+  const first=imageForNews(item);
+  if(!first || first.startsWith('/api/article-image?'))return '';
+  return articlePhotoForNews(item);
 }
