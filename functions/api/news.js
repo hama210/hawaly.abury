@@ -102,6 +102,10 @@ const FAST_FEED_SOURCES = [
 const FAST_FEED_TIMEOUT_MS = 9000;
 const FAST_BATCH_BUDGET_MS = 10000; // Overall budget; never wait for serial publisher fallbacks.
 const FULL_FEED_TIMEOUT_MS = 8000;
+// Unreliable Google News search feeds repeatedly time out at 8 s in the live audit.
+// Do not let them consume a whole batch when direct publishers already supply news.
+const GOOGLE_NEWS_FULL_TIMEOUT_MS = 6500;
+const PUBLISHER_SEARCH_FALLBACK_TIMEOUT_MS = 3500;
 const FAST_CACHE_TTL = 60;
 const FULL_CACHE_TTL = 120;
 const SOURCE_CACHE_TTL = 60;
@@ -374,7 +378,11 @@ function treasuryHtmlToFeedXml(html, feedUrl){
 async function fetchFeedAttempt(feed, timeoutMs, batchSignal){
   const startedAt = Date.now();
   const controller = new AbortController();
-  const timeoutId = setTimeout(()=>controller.abort('feed timeout'), Math.max(timeoutMs, Number(feed.timeoutMs) || 0));
+  const normalTimeout = Math.max(timeoutMs, Number(feed.timeoutMs) || 0);
+  const deadline = feed.url.startsWith('https://news.google.com/rss/search?')
+    ? Math.min(normalTimeout, GOOGLE_NEWS_FULL_TIMEOUT_MS)
+    : normalTimeout;
+  const timeoutId = setTimeout(()=>controller.abort('feed timeout'), deadline);
   const onBatchAbort = () => controller.abort('news batch budget exceeded');
   if (batchSignal?.aborted) onBatchAbort();
   else batchSignal?.addEventListener('abort', onBatchAbort, { once:true });
@@ -448,23 +456,32 @@ function publisherDomain(feed){
   }catch{return '';}
 }
 async function fetchFeed(feed, timeoutMs, batchSignal){
+  const startedAt = Date.now();
+  const elapsed = result => ({ ...result, durationMs:Date.now()-startedAt });
   const primary = await fetchFeedAttempt(feed, timeoutMs, batchSignal);
-  if(primary.ok) return { ...primary, via:'direct' };
-  if(batchSignal?.aborted) return primary;
+  if(primary.ok) return elapsed({ ...primary, via:'direct' });
+  if(batchSignal?.aborted) return elapsed(primary);
+  // A valid feed with zero *relevant recent* stories is not a broken feed.
+  // Publisher rate limits and timeouts should not trigger an extra unrelated
+  // Google News fetch, which makes full batches slower and less reliable.
+  if(primary.error === 'no usable recent items' ||
+     primary.error === 'feed timeout' ||
+     primary.error === 'news batch budget exceeded' ||
+     primary.error === '429') return elapsed(primary);
   const domain = publisherDomain(feed);
-  if(!domain) return primary;
+  if(!domain) return elapsed(primary);
   const backup = await fetchFeedAttempt({
     ...feed,
     url:googleNewsFeed('site:' + domain + ' when:7d'),
     format:'fallback-google'
-  }, Math.min(7000, timeoutMs), batchSignal);
-  if(!backup.ok) return primary;
-  return {
+  }, PUBLISHER_SEARCH_FALLBACK_TIMEOUT_MS, batchSignal);
+  if(!backup.ok) return elapsed(primary);
+  return elapsed({
     ...backup,
     source:feed.source,
     via:'publisher-search',
     directError:primary.error
-  };
+  });
 }
 
 export async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURRENCY, overallBudgetMs = 0){
@@ -512,7 +529,7 @@ export async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURREN
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'more-news-v21-article-html-boundaries');
+  cacheUrl.searchParams.set('version', 'more-news-v22-bounded-publisher-fallback');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
