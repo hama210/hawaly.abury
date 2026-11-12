@@ -104,6 +104,10 @@ const MAX_FEED_BYTES = 768 * 1024;
 const NEWS_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 const NEWS_MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 const IRAQ_TERMS = /\b(iraq|iraqi|baghdad|kurdistan|erbil|sulaimani|sulaymaniyah|duhok|dohuk|basra|mosul|dinar|iqd|cbi|somo|rafidain|rasheed|krg)\b|central bank of iraq|iraq business/i;
+// Kurdish Sorani and Arabic words from original regional publisher feeds.
+// Do not discard genuine local stories merely because the headline is not English.
+const IRAQ_LOCAL_TERMS = /(?:عێراق|العراق|هەولێر|أربيل|اربيل|بغداد|بەغدا|کوردستان|كردستان|سلێمانی|السليمانية|دهۆک|دهوك)/u;
+const IRAQ_LOCAL_ECONOMY_TERMS = /(?:ئابووری|اقتصاد|نەوت|نفط|دینار|دينار|دۆلار|دولار|بودجە|موازنة|بانک|بنك|مووچە|رواتب|بازاڕ|أسواق|سوق|مصرف|تجارة|استثمار|صادرات|هاوردە)/u;
 // Category cover images are served from Hawal itself so they're available without external CDNs.
 
 const highWords = ['fed','fomc','cpi','nfp','rate decision','interest rate','war','attack','airstrike','strike','strikes','sanction','sanctions','missile','drone','weapon','weapons','terrorism','terrorist','ceasefire','invasion','conflict','blockade','strait of hormuz','centcom','irgc','opec','central bank','recession','inflation','gdp','oil exports','central bank of iraq','trump','tariff','white house','iraq','baghdad','kurdistan','dinar','cbi','somo','budget','salary','salaries','oil revenue','basra','ceyhan','rafidain','rasheed','ukraine','russia','israel','iran','tehran','gaza','lebanon','red sea','houthi','nato'];
@@ -241,9 +245,10 @@ function marketEffects(text, sentiment, iraqImpact){
 function isIraqEconomy(item){
   const text = `${item.title} ${item.summary} ${item.source}`.toLowerCase();
   const group = String(item.sourceGroup || item.source || '');
-  const iraqRelated = IRAQ_TERMS.test(text) || /^(?:IraqiNews|Iraq Business News)$/i.test(group);
+  const iraqRelated = (IRAQ_TERMS.test(text) || IRAQ_LOCAL_TERMS.test(text)) || /^(?:IraqiNews|Iraq Business News)$/i.test(group);
   const economyRelated = /\b(economy|economic|oil|gas|opec|somo|budget|salary|salaries|dinar|iqd|bank|banking|cbi|finance|financial|investment|trade|customs|tax|stock|isx|securities|exports|imports|pipeline|power|electricity|agriculture|wheat|water|development|project|port|railway|private sector|jobs|unemployment|revenue|payroll|deficit|loan|dollar)\b/i.test(text)
-    || /Economy|Dinar|Budget|Oil|Business|Banking|Finance|Investment|Stock|Trade|Power|Gas|Agriculture|Private Sector|KRG Budget|SOMO|Ministry|EIA|MEES|Iraq Oil Report|Central Bank/i.test(group);
+    || /Economy|Dinar|Budget|Oil|Business|Banking|Finance|Investment|Stock|Trade|Power|Gas|Agriculture|Private Sector|KRG Budget|SOMO|Ministry|EIA|MEES|Iraq Oil Report|Central Bank/i.test(group)
+    || IRAQ_LOCAL_ECONOMY_TERMS.test(text);
   return iraqRelated && economyRelated;
 }
 
@@ -268,8 +273,8 @@ function isRelevantToFeed(item, feed){
     && /\b(iran|iraq|saudi|yemen|houthi|war|military|ceasefire|tariff|oil|economy|economic|dollar|market|sanction|trade|hormuz)\b/i.test(text);
   if(feed.format === 'priority-conflict') return CONFLICT_DEVELOPMENT_TERMS.test(text)
     && /\b(saudi|riyadh|abha|jeddah|yemen|houthi|iran|iraq|middle east|centcom|israel|lebanon|hormuz)\b/i.test(text);
-  if(feed.format === 'priority-iraq') return IRAQ_TERMS.test(text)
-    && /\b(dollar|dinar|usd|iqd|devaluation|exchange|currency|cbi|market|prices|protest|budget|bank|traders)\b/i.test(text);
+  if(feed.format === 'priority-iraq') return (IRAQ_TERMS.test(text) || IRAQ_LOCAL_TERMS.test(text))
+    && (/\b(dollar|dinar|usd|iqd|devaluation|exchange|currency|cbi|market|prices|protest|budget|bank|traders)\b/i.test(text) || IRAQ_LOCAL_ECONOMY_TERMS.test(text));
   if(feed.category === 'oil') return /\b(oil|crude|opec|brent|wti)\b/i.test(text);
   if(feed.category === 'crypto') return /\b(bitcoin|ethereum|crypto|btc|eth)\b/i.test(text);
   if(feed.category === 'iraq') return isIraqEconomy(item);
