@@ -159,7 +159,15 @@ export function decodeNewsText(value = '') {
     if (next === text) break;
     text = next;
   }
-  return text.replace(/<[^>]*>/g, '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+  // RSS descriptions/content:encoded may contain HTML paragraphs. Removing
+  // tags without inserting boundaries fuses words (e.g. "Iraq.Baghdad").
+  // Keep publisher words readable; do not invent or scrape article text.
+  return text
+    .replace(/<(?:script|style|svg)\b[^>]*>[\s\S]*?<\/(?:script|style|svg)>/gi, ' ')
+    .replace(/<\/?(?:p|div|li|ul|ol|section|article|h[1-6]|blockquote)\b[^>]*>/gi, ' ')
+    .replace(/<br\b[^>]*\/?\s*>/gi, ' ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
 }
 const decode = decodeNewsText;
 const extractTag = (xml, tag) => decode(xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))?.[1] || '');
@@ -504,7 +512,7 @@ export async function fetchFeeds(feeds, timeoutMs, concurrency = FETCH_CONCURREN
 
 function cacheKeyFor(url, mode, batch, limit){
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('version', 'more-news-v20-direct-fast-rss');
+  cacheUrl.searchParams.set('version', 'more-news-v21-article-html-boundaries');
   cacheUrl.searchParams.set('mode', mode);
   if(mode === 'full') cacheUrl.searchParams.set('batch', String(batch));
   cacheUrl.searchParams.set('limit', String(limit));
