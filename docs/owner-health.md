@@ -47,3 +47,20 @@ The public live smoke workflow checks unauthenticated visitors get a 403 or a Cl
 - GitHub logs and workflow statuses on a public repository are visible to viewers: they contain only non-personal health-check summaries, never an owner email, Access token, or private dashboard data.
 - Owner notifications: enable GitHub Actions failure notification preferences for the workflow-owner account; alternatively use a separate private ChatGPT condition watch. Do not imply automatic email delivery unless it has been tested.
 - To test immediately after merge: check the latest `push` run from the default branch, then await the first `schedule` run. The initial push run proves the script can execute but does not prove that GitHub will execute future cron events precisely.
+
+## Owner incident history (bounded and authenticated)
+
+- `functions/lib/owner-watch-status.js` reads recent completed GitHub Actions workflow-run metadata (up to three pages of 100, roughly three days at the intended 15-minute cadence) using the public GitHub API, deduplicates by run ID and groups consecutive **failed check runs**.
+- Each group records first failed check, last failed check, count of failed checks, first following successful check (if any), estimated duration and a URL to that GitHub Actions run. Exact incident start/recovery times are not known between checks.
+- A failed workflow can reflect a bad website state **or a failed GitHub runner**, not necessarily a proven outage. The run's own logs explain which source or Cloudflare Access route failed; do not label all failures a proven site outage. Cancelled and pending runs never prove recovery.
+- The history is included **only inside `/owner-health/api` after existing RS256 owner JWT verification**, then rendered inside the existing `/owner-health` component. No new public endpoint, Cloudflare binding, service token or private-data GitHub write was introduced.
+- This is **recent workflow run history**, not a permanent database. Older entries expire or fall outside the 300-run window. A longer, truly private long-term audit log needs a separately provisioned private storage service such as Cloudflare D1 with scoped credentials, which is not configured by this change.
+- GitHub workflow metadata/logs are public because this repository is public; only the curated display inside HAWAL is gated by Access. The underlying public run status is not private data. No owner emails or tokens are included in run logs.
+- If GitHub API is temporarily unavailable, UI clearly reports the history as unavailable and never pretends no incidents occurred.
+
+## Owner email notification
+
+- The existing hourly ChatGPT private HAWAL condition-watch automation uses the connected Gmail service as the sender and targets the owner's already-authorized contact address. Its notification rules require a **new, confirmed critical incident** or confirmed recovery and should deduplicate notifications using prior sent message subjects or incident identifiers.
+- This external ChatGPT automation is **not** a Cloudflare Pages email service or the GitHub Actions workflow. Its operation depends on the connected Gmail account and scheduled task staying enabled; it cannot guarantee immediate/15-minute delivery.
+- No OAuth secrets, SMTP passwords or personal email address are committed to this public repository. If the connection breaks, the private ChatGPT task should notify the owner in chat instead of misreporting email delivery.
+- Never send email for quiet RSS feeds, temporary source errors, weekend market closures or a single missing CBI quote.
