@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - fix/news-rss-images-audit-20261112
+      - audit/guardian-photo-verification-20261112
       - master
     paths:
       - 'scripts/news-rss-image-audit.mjs'
