@@ -71,7 +71,8 @@ test('Guardian image CDN observed in live RSS is proxied only from exact HTTPS h
   assert.equal(imageForNews({image:img,imageSource:'publisher',category:'geopolitics'}),
     '/api/news-image?src='+encodeURIComponent(img));
   for(const url of ['http://i.guim.co.uk/a.jpg',
-    'https://i.guim.co.uk.evil.test/a.jpg','https://evil.test/a.jpg']){
+    'https://i.guim.co.uk.evil.test/a.jpg','https://evil.test/a.jpg',
+    'https://user:pass@i.guim.co.uk/a.jpg','https://i.guim.co.uk:8443/a.jpg']){
     assert.equal(isProxyableNewsImage(url),false);
   }
 });
