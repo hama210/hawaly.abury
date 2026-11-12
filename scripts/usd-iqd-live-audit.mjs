@@ -4,6 +4,7 @@ const urls={
  cbi:'https://cbi.iq/',
  shafaq:'https://shafaq.com/rss/en/Economy',
  xeiqd:'https://xeiqd.com/en',
+ xeiqdJson:'https://xeiqd.com/rates.json',
  alanchand:'https://alanchand.com/en/exchange-rates/usd-iqd'
 };
 async function get(label,url){
@@ -36,10 +37,17 @@ const shafaqItems=[...shafaq.matchAll(/<item>[\s\S]*?<\/item>/gi)].slice(0,50)
  .map(x=>x[0]).filter(x=>/(?:dollar|USD|exchange rate)/i.test(x)).slice(0,4)
  .map(item=>({title:around(item,'<title>',175),time:around(item,'<pubDate>',100)}));
 const alan=results.find(x=>x.label==='alanchand')?.body||'';
+const rawXeiqdJson=results.find(x=>x.label==='xeiqdJson')?.body||'';
+let xeiqdData=null;
+try{xeiqdData=JSON.parse(rawXeiqdJson)}catch{}
+const xeiqdBrief=xeiqdData==null?null:
+  Array.isArray(xeiqdData)?{arrayLength:xeiqdData.length,first:xeiqdData.slice(0,2)}:
+  {keys:Object.keys(xeiqdData).slice(0,35),payload:JSON.stringify(xeiqdData).slice(0,6500)};
 const report={asOf:new Date().toISOString(),
   hosts:results.map(x=>({source:x.label,http:x.http,contentType:x.contentType,ms:x.ms,length:x.body.length,error:x.error||null})),
   hawal:{status:data?.dataStatus,updatedAt:data?.updatedAt,failures:(data?.failures||[]).filter(x=>x.symbol==='USD/IQD'||x.symbol==='CBI USD/IQD'),rows:liveRows},
   cbiUsdRows:cbiTable,
+  xeiqdJson:xeiqdBrief,
   shafaqRateHeadlines:shafaqItems,
   xeiqdSample:{sulaymaniyah:around(xeiqd,'Slemani'),sula:around(xeiqd,'Sulaymaniyah'),
     erbil:around(xeiqd,'Erbil'),baghdad:around(xeiqd,'Baghdad'),
