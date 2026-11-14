@@ -250,7 +250,7 @@ async function fetchXeIqdUsdIqd(){
    });
    if(!res.ok)throw new Error('XEIQD '+res.status);
    const raw=await readTextLimited(res,()=>false,160*1024);
-   return parseXeIqdRates(JSON.parse(raw));
+   return parseXeIqdRates(JSON.parse(raw),Date.now(),{allowStaleSulaymaniyah:true});
  },5500);
 }
 async function fetchUsdIqd(failures) {

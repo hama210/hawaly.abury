@@ -51,6 +51,8 @@ async function inspect([path, kind]) {
     if (kind === 'html' || kind === 'calendar' || kind === 'metals') {
       if (!type.includes('text/html') || !body.includes('id="root"'))
         return {path,kind,status,ok:false,reason:'Expected React HTML shell'};
+      const bootstrap = body.match(/<script id="hawall-bootstrap" type="application\/json">([\s\S]*?)<\/script>/);
+      if (bootstrap) JSON.parse(bootstrap[1]);
       const locale = path.startsWith('/ar/') ? 'ar' : path.startsWith('/en/') ? 'en' : 'ckb';
       const langOk = body.includes('lang="'+locale+'"');
       const metalsOk = kind !== 'metals' || (body.includes('GC=F') && body.includes('SI=F'));

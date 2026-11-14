@@ -74,3 +74,14 @@ test('middleware preserves JSON/assets and renders correct language HTML at the 
  const api=await onRequest({...base,request:new Request('https://example.com/api/news'),next:async()=>Response.json({ok:true})});
  assert.deepEqual(await api.json(),{ok:true});
 });
+
+test('server renders literal dollar sequences in headlines and preserves bootstrap JSON', () => {
+ const title = "Volume ($'000), replacement tokens $& and $`";
+ const data = {lang:'en',page:'home',markets:[],news:[{
+   title, link:'https://example.com/story', source:'Example', publishedAt:'2026-10-08T09:00:00Z'
+ }]};
+ const html = renderPage(fs.readFileSync('index.html','utf8'),data);
+ const bootstrap = html.match(/<script id="hawall-bootstrap" type="application\/json">([\s\S]*?)<\/script>/);
+ assert.deepEqual(JSON.parse(bootstrap[1]),data);
+ assert.ok(html.includes('replacement tokens $&amp;'));
+});

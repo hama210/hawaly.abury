@@ -35,10 +35,10 @@ export function renderPage(template, data) {
  const url = SITE_URL + pagePath(lang,page);
  const title = `${page==='owner-health'?'HAWAL · Private Owner Monitor':page==='home'?c.title:page==='calendar'?cal.title:page==='metals'?met.title:c[page]} | Hawall · هەواڵی ئابوری`;
  const description = page==='owner-health'?'Private owner-only monitoring dashboard':page==='home'?c.subtitle:page==='calendar'?cal.lead:page==='metals'?met.description:page==='about'?c.aboutText:c.contactText;
- let html = template.replace(/<html\b[^>]*>/i,`<html lang="${lang==='ku'?'ckb':lang}" dir="${lang==='en'?'ltr':'rtl'}">`).replace(/<title>[\s\S]*?<\/title>/i,`<title>${escapeHtml(title)}</title>`);
+ let html = template.replace(/<html\b[^>]*>/i,()=>`<html lang="${lang==='ku'?'ckb':lang}" dir="${lang==='en'?'ltr':'rtl'}">`).replace(/<title>[\s\S]*?<\/title>/i,()=>`<title>${escapeHtml(title)}</title>`);
  html=html.replace(/<meta\b[^>]*(?:name="description"|property="og:(?:title|description|url|locale)"|name="twitter:(?:title|description)")[^>]*>/gi,'').replace(/<link\b[^>]*rel="(?:canonical|alternate)"[^>]*>/gi,'');
  const tags=`<meta name="description" content="${escapeHtml(description)}"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${url}"><meta property="og:locale" content="${lang==='ku'?'ckb_IQ':lang==='ar'?'ar_IQ':'en_US'}"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:description" content="${escapeHtml(description)}"><link rel="canonical" href="${url}">${['ku','ar','en'].map(l=>`<link rel="alternate" hreflang="${l}" href="${SITE_URL+pagePath(l,page)}">`).join('')}<link rel="alternate" hreflang="x-default" href="${SITE_URL+pagePath('ku',page)}">`;
- html=html.replace('</head>',(page==='owner-health'?'<meta name="robots" content="noindex,nofollow,noarchive">':'')+tags+'</head>');
- html=html.replace(/<div id="root">[\s\S]*?<\/div>/,`<div id="root">${serverContent(data)}</div>`);
- return html.replace('</body>',`<script id="hawall-bootstrap" type="application/json">${scriptJson(data)}</script></body>`);
+ html=html.replace('</head>',()=>(page==='owner-health'?'<meta name="robots" content="noindex,nofollow,noarchive">':'')+tags+'</head>');
+ html=html.replace(/<div id="root">[\s\S]*?<\/div>/,()=>`<div id="root">${serverContent(data)}</div>`);
+ return html.replace('</body>',()=>`<script id="hawall-bootstrap" type="application/json">${scriptJson(data)}</script></body>`);
 }

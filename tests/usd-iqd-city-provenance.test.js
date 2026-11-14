@@ -142,3 +142,19 @@ test('history, watch snapshot and server HTML preserve independent Sulaymaniyah 
  assert.match(html,/XEIQD city market/);
  assert.match(html,/https:\/\/xeiqd\.com\/en\/usd\/slemani/);
 });
+
+test('Sulaymaniyah can display a source-dated stale quote for up to 72 hours', () => {
+ const now = Date.now();
+ const fixture = xeFixture();
+ const sides = fixture.cities.find(city => city.slug === 'slemani').sides;
+ for (const side of sides) side.updated_at = inPast(56 * 60);
+ const options = {allowStaleSulaymaniyah:true};
+ const rates = mergeUsdIqdCities(null,parseXeIqdRates(fixture,now,options),now);
+ const quote = cityMarketQuote(rates,'sulaymaniyah','sell');
+ assert.equal(quote.price,169300);
+ assert.equal(quote.updatedAt,sides[0].updated_at);
+ assert.equal(quoteState(quote,now),'stale');
+
+ for (const side of sides) side.updated_at = inPast(73 * 60);
+ assert.equal(parseXeIqdRates(fixture,now,options).cities.sulaymaniyah,undefined);
+});

@@ -4,13 +4,14 @@
 export const LOCAL_CITIES=['erbil','sulaymaniyah','baghdad'];
 const XE_CITY_SLUGS={erbil:'erbil',sulaymaniyah:'slemani',baghdad:'baghdad'};
 const SOURCE_AGE_MS=24*60*60*1000;
+const SULAYMANIYAH_FALLBACK_AGE_MS=72*60*60*1000;
 const FUTURE_TOLERANCE_MS=5*60*1000;
 const validRate=value=>typeof value==='number'&&Number.isFinite(value)&&value>=100000&&value<=250000;
-const validTime=(raw,now)=>{const t=Date.parse(raw||'');
- return Number.isFinite(t)&&t<=now+FUTURE_TOLERANCE_MS&&t>=now-SOURCE_AGE_MS ? new Date(t).toISOString():null;};
-const recent=(value,at,now)=>validRate(value)&&Boolean(validTime(at,now));
+const validTime=(raw,now,maxAge=SOURCE_AGE_MS)=>{const t=Date.parse(raw||'');
+ return Number.isFinite(t)&&t<=now+FUTURE_TOLERANCE_MS&&t>=now-maxAge ? new Date(t).toISOString():null;};
+const recent=(value,at,now,maxAge)=>validRate(value)&&Boolean(validTime(at,now,maxAge));
 
-export function parseXeIqdRates(payload,now=Date.now()){
+export function parseXeIqdRates(payload,now=Date.now(),{allowStaleSulaymaniyah=false}={}){
  const data=typeof payload==='string'?JSON.parse(payload):payload;
  if(!data || data.base_currency!=='IQD'||!Array.isArray(data.cities))
    throw new Error('XEIQD city rate schema invalid');
@@ -18,15 +19,16 @@ export function parseXeIqdRates(payload,now=Date.now()){
  for(const [city,slug] of Object.entries(XE_CITY_SLUGS)){
    const match=data.cities.find(x=>x?.slug===slug);
    if(!match||!Array.isArray(match.sides))continue;
+   const maxAge=city==='sulaymaniyah'&&allowStaleSulaymaniyah ? SULAYMANIYAH_FALLBACK_AGE_MS : SOURCE_AGE_MS;
    const sideRecords={};
    for(const side of ['buy','sell']){
      const candidates=match.sides.filter(x=>x?.side===side&&
-       recent(x.usd_iqd_per_100,x.updated_at,now)&&
+       recent(x.usd_iqd_per_100,x.updated_at,now,maxAge)&&
        (x.usd_iqd_per_1==null||Math.abs(x.usd_iqd_per_1*100-x.usd_iqd_per_100)<=1));
      candidates.sort((a,b)=>Date.parse(b.updated_at)-Date.parse(a.updated_at));
      if(candidates[0])sideRecords[side]={
        price:candidates[0].usd_iqd_per_100,
-       updatedAt:validTime(candidates[0].updated_at,now),
+       updatedAt:validTime(candidates[0].updated_at,now,maxAge),
        source:'XEIQD city market',sourceUrl:'https://xeiqd.com/en/usd/'+slug
      };
    }
@@ -59,7 +61,7 @@ export function mergeUsdIqdCities(shafaq,xeiqd,now=Date.now()){
    for(const side of ['buy','sell']){
      const a=publisher[side],b=other[side];
      const first=a&&b?(Date.parse(a.updatedAt)>=Date.parse(b.updatedAt)?a:b):(a||b);
-     if(first&&recent(first.price,first.updatedAt,now))chosen[side]=first;
+     if(first&&recent(first.price,first.updatedAt,now,city==='sulaymaniyah' ? SULAYMANIYAH_FALLBACK_AGE_MS : SOURCE_AGE_MS))chosen[side]=first;
    }
    if(!chosen.buy&&!chosen.sell)continue;
    const newer=[chosen.buy,chosen.sell].filter(Boolean).sort((a,b)=>
