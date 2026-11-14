@@ -1,6 +1,13 @@
 // Economic release dates are grouped by the reader's fixed Iraq time zone.
 export const CALENDAR_TIME_ZONE = 'Asia/Baghdad';
 export const HISTORY_RETENTION_DAYS = 90;
+export function calendarClockTime(value) {
+  const date=new Date(value);
+  if (!Number.isFinite(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone:CALENDAR_TIME_ZONE,hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+  }).format(date);
+}
 const DAY_MS = 86400000;
 
 export function calendarDayKey(value) {
