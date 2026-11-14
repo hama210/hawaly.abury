@@ -58,6 +58,14 @@ const sample=raw.filter(e=>/unemploy|jobless|CPI|PCE|payroll|interest rate|rate 
  .slice(0,28).map(e=>({id:e.id,time:e.time,currency:e.currency,impact:e.impact,title:e.title,
  actual:e.actual,forecast:e.forecast,previous:e.previous,analysis:analyzeCalendarEvent(e).note}));
 const archiveActual=history.events.filter(e=>String(e.actual||'').trim()).length;
+// A valid HTTP 200 with a new timestamp can still be missing published Actuals.
+// Check the source-backed, unexpired published IDs already known in master.
+const publishedInRepository=repositoryArchive.events.filter(e=>
+  String(e.actual||'').trim() && Number.isFinite(Date.parse(e.time||'')) &&
+  Date.parse(e.time)>=now-90*86400000 && Date.parse(e.time)<=now);
+const publicPublishedIds=new Set(history.events.filter(e=>String(e.actual||'').trim()).map(e=>e.id));
+const missingPublishedResults=publishedInRepository.filter(e=>!publicPublishedIds.has(e.id))
+  .map(e=>({id:e.id,time:e.time,source:'archived-release'}));
 const archiveForecast=history.events.filter(e=>String(e.forecast||'').trim()).length;
 const providerActual=normalized.events.filter(e=>String(e.actual||'').trim()).length;
 const providerForecast=normalized.events.filter(e=>String(e.forecast||'').trim()).length;
@@ -69,7 +77,8 @@ const result={at:new Date(now).toISOString(),sources:{
  },completeness:{providerActual,providerForecast,archiveActual,archiveForecast,
   pastActualUnpublished:normalized.events.filter(e=>Date.parse(e.time)<now-6*3600000&&!e.actual).length,
   providerDuplicateIds:raw.length-new Set(raw.map(e=>e.id)).size,
-  archiveDuplicateIds:history.events.length-new Set(history.events.map(e=>e.id)).size},
+  archiveDuplicateIds:history.events.length-new Set(history.events.map(e=>e.id)).size,
+  missingPublishedCount:missingPublishedResults.length,missingPublishedResults:missingPublishedResults.slice(0,20)},
  abnormal,groups:[...group.entries()].sort((a,b)=>b[1]-a[1]).slice(0,25),
  sample,archiveSample:history.events.filter(e=>e.actual&&e.forecast).slice(-7).map(e=>({
  id:e.id,title:e.title,time:e.time,currency:e.currency,impact:e.impact,actual:e.actual,forecast:e.forecast,previous:e.previous,
@@ -84,4 +93,5 @@ if(process.env.GITHUB_STEP_SUMMARY){
   '- Anomalies (sampled): '+abnormal.length+'\n');
 }
 if(provider.http!==200||archive.http!==200||normalized.error||history.error ||
-   (process.env.GITHUB_REF==='refs/heads/master'&&!archiveAligned))process.exitCode=1;
+   (process.env.GITHUB_REF==='refs/heads/master'&&(!archiveAligned||missingPublishedResults.length>0)))
+  process.exitCode=1;
