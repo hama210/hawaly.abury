@@ -243,6 +243,9 @@ export default function EconomicCalendar({ lang='ku' }) {
             <strong dir="ltr">{c.actual}: {event.actual}</strong>
           </div>)}
         </div> : <p className="ec-muted">{c.historyEmpty}</p>}
+      {archiveFailed && <p className="ec-archive-warning" role="status">
+        {c.archiveUnavailable} <button type="button" onClick={()=>setRevision(x=>x+1)}>{c.retry}</button>
+      </p>}
     </section>
     {isPastView && <section className="ec-history-tools" aria-label={c.history}>
       <label>{c.historyPeriod}<select value={historyDays} onChange={event => { setHistoryDays(event.target.value); setHistoryDate(''); }}>
