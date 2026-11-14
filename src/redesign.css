@@ -550,3 +550,11 @@ body{background:radial-gradient(ellipse 75vw 38vw at 90% -15%,rgba(0,119,255,.15
  .home-news .story-image,.news-screen .story-image{min-height:110px}
  .home-news .story-copy,.news-screen .story-copy{padding:9px}
 }
+
+@media (prefers-reduced-motion: no-preference) {
+ .pulse-rotating > *{animation:pulse-slide-in .28s ease-out both}
+ @keyframes pulse-slide-in{
+  from{transform:translateY(8px);opacity:0}
+  to{transform:translateY(0);opacity:1}
+ }
+}

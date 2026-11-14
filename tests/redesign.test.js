@@ -22,8 +22,11 @@ test('the four preview-inspired screens are part of the actual application',()=>
 
 test('home and market cards use genuine API quote values and never invented mockup numbers',()=>{
   assert.match(dashboard,/markets\.find\(m=>m\.symbol==='USD\/IQD'\)/);
-  assert.match(dashboard,/markets\.find\(m=>m\.symbol==='XAU\/USD'\)/);
-  assert.match(dashboard,/markets\.find\(m=>m\.symbol==='BRENT\/USD'\)/);
+  assert.match(dashboard,/symbol:'XAU\/USD'/);
+  assert.match(dashboard,/symbol:'BRENT\/USD'/);
+  assert.match(dashboard,/symbol:'EUR\/USD'/);
+  assert.match(dashboard,/symbol:'GBP\/USD'/);
+  assert.match(dashboard,/markets\.find\(m=>m\.symbol===item\.symbol\)/);
   assert.match(dashboard,/quoteState\(q\)/);
   assert.match(dashboard,/c\.noQuote/);
   assert.doesNotMatch(dashboard,/153,750|4,150\.1|82\.91/);

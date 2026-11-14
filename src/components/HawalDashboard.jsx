@@ -1,5 +1,6 @@
-import React from 'react';
-import { quoteState, safeUrl, timestamp, pagePath } from '../lib/market-tools.js';
+import React, { useEffect, useRef, useState } from 'react';
+import { dashboardCopy } from '../lib/dashboard-copy.js';
+import { positive, quoteState, safeUrl, timestamp, pagePath } from '../lib/market-tools.js';
 
 export const tabs = ['home','markets','news','more'];
 export const navigationCopy = {
@@ -33,27 +34,63 @@ export function Navigation({ active, onNavigate, lang, mobile = false }) {
    </button>)}
  </nav>;
 }
+const rotatingMarkets = [
+ {title:'Gold (XAU)',symbol:'XAU/USD',label:'◉'},
+ {title:'Brent Oil',symbol:'BRENT/USD',label:'◈'},
+ {title:'EUR/USD',symbol:'EUR/USD',label:'€'},
+ {title:'GBP/USD',symbol:'GBP/USD',label:'£'},
+ {title:'Silver (XAG)',symbol:'XAG/USD',label:'◉'},
+ {title:'WTI Oil',symbol:'WTI/USD',label:'◈'}
+];
+
 export function HomeMarkets({ markets=[], lang, onNavigate }) {
  const c=navigationCopy[lang] || navigationCopy.ku;
  const local=markets.find(m=>m.symbol==='USD/IQD');
+ const rotationRef=useRef(null);
+ const [offset,setOffset]=useState(0);
+ const quotes=rotatingMarkets.map(item=>({...item,source:markets.find(m=>m.symbol===item.symbol)}));
+ const available=quotes.filter(({source})=>{
+   const state=quoteState(source);
+   return state==='reported'||state==='stale';
+ });
+ const count=available.length;
+ useEffect(()=>{
+   if(count<=2)return;
+   const timer=window.setInterval(()=>{
+     if(!document.hidden&&!rotationRef.current?.matches(':hover, :focus-within')){
+       setOffset(index=>(index+2)%count);
+     }
+   },5000);
+   return ()=>window.clearInterval(timer);
+ },[count]);
+
+ const displayed=count>2
+   ? [available[offset%count],available[(offset+1)%count]]
+   : [...available,...quotes.filter(item=>!available.includes(item))].slice(0,2);
  const items=[
-  {title:'USD/IQD',symbol:'USD/IQD',label:'🇮🇶',price:local?.erbil?.sell,state:quoteState(local),type:'local',source:local,unit:'IQD / $100'},
-  {title:'Gold (XAU)',symbol:'XAU/USD',label:'◉',unit:'USD / oz',source:markets.find(m=>m.symbol==='XAU/USD')},
-  {title:'Brent Oil',symbol:'BRENT/USD',label:'◈',unit:'USD / barrel',source:markets.find(m=>m.symbol==='BRENT/USD')}
+   {title:'USD/IQD',symbol:'USD/IQD',label:'🇮🇶',type:'local',price:local?.erbil?.sell,source:local},
+   ...displayed
  ];
- return <section className="home-markets" aria-label={c.marketPulse}>
-   {items.map(item=>{
+ const staleLabel=(dashboardCopy[lang] || dashboardCopy.ku).stale;
+
+ return <section ref={rotationRef} className="home-markets" aria-label={c.marketPulse}>
+   {items.map((item,index)=>{
      const q=item.source;
-     const value=item.type==='local'?item.price:q?.price;
      const state=quoteState(q);
-     const fresh=state==='reported'&&typeof value==='number'&&Number.isFinite(value)&&value>0;
-     const change=Number.isFinite(q?.changePct) && item.type!=='local' ? q.changePct : null;
-     const amount=fresh?value.toLocaleString('en-US',{minimumFractionDigits:value<10?2:0,maximumFractionDigits:2}):'—';
-     return <button type="button" key={item.symbol} className="pulse-card" onClick={()=>item.symbol==='XAU/USD'?window.location.assign(pagePath(lang,'metals')+'#gold'):onNavigate('markets')} aria-label={item.title + ', ' + (fresh?amount:c.noQuote)}>
-       <div className="pulse-label"><span className={'pulse-symbol pulse-'+item.symbol.split('/')[0].toLowerCase()}>{item.label}</span><span dir="ltr">{item.title}</span></div>
-       <strong dir="ltr">{amount}</strong>
-       <span className={'pulse-change '+(change>0?'up':change<0?'down':'')}>{change===null?(state==='reported'?c.tracked:c.noQuote):(change>0?'+':'')+change.toFixed(2)+'% '+(change>0?'▲':change<0?'▼':'')}</span>
-       <small>{fresh&&q?.updatedAt?timestamp(q.updatedAt,lang):c.noQuote}</small>
+     const value=item.type==='local'?item.price:q?.price;
+     const priced=positive(value)&&(state==='reported'||(state==='stale'&&item.type!=='local'));
+     const change=priced&&Number.isFinite(q?.changePct)&&item.type!=='local'?q.changePct:null;
+     const amount=priced?value.toLocaleString('en-US',{
+       maximumFractionDigits:item.symbol==='EUR/USD'||item.symbol==='GBP/USD'?4:2,
+       minimumFractionDigits:value<10?2:0
+     }):'—';
+     return <button type="button" key={index} className={item.type==='local'?'pulse-card':'pulse-card pulse-rotating'} onClick={()=>item.symbol==='XAU/USD'?window.location.assign(pagePath(lang,'metals')+'#gold'):onNavigate('markets')} aria-label={item.title + ', ' + (priced?amount:c.noQuote) + (priced&&state==='stale'?', '+staleLabel:'')}>
+       <React.Fragment key={item.symbol}>
+         <div className="pulse-label"><span className={'pulse-symbol pulse-'+item.symbol.split('/')[0].toLowerCase()}>{item.label}</span><span dir="ltr">{item.title}</span></div>
+         <strong dir="ltr">{amount}</strong>
+         <span className={'pulse-change '+(change>0?'up':change<0?'down':'')}>{change===null?(priced?c.tracked:c.noQuote):(change>0?'+':'')+change.toFixed(2)+'% '+(change>0?'▲':change<0?'▼':'')}</span>
+         <small>{priced&&q?.updatedAt?(state==='stale'?staleLabel+' · ':'')+timestamp(q.updatedAt,lang):c.noQuote}</small>
+       </React.Fragment>
      </button>;
    })}
  </section>;
