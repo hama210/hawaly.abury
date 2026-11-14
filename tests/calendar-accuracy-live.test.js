@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {analyzeCalendarEvent,calendarScenarios,parseEconomicValue,hasPublishedCalendarActual,
  indicatorKind} from '../src/lib/economic-impact.js';
 import {normalizeCalendarPayload} from '../src/services/economic-calendar.js';
-import {calendarDayKey} from '../src/lib/calendar-history.js';
+import {calendarDayKey,calendarClockTime} from '../src/lib/calendar-history.js';
 
 test('parses provider values with minus AFTER currencies, including JPY and NZD deficits',()=>{
  assert.deepEqual(parseEconomicValue('¥-956B'),{value:-956e9,unit:'number'});
@@ -35,6 +35,8 @@ test('provider event time must include timezone; known Unix time works without a
  const cpi=normalized.events.find(e=>e.id==='1');
  assert.equal(cpi.actual,'');assert.equal(cpi.forecast,'0.3%');assert.equal(cpi.previous,'0.2%');
  assert.equal(calendarDayKey('2026-11-14T21:00:00Z'),'2026-11-15');
+ assert.equal(calendarClockTime('2026-11-17T13:30:00Z'),'16:30');
+ assert.equal(calendarClockTime('2026-11-14T21:15:00Z'),'00:15');
 });
 
 test('a missing/placeholder Actual does not falsely signal a published result',()=>{
