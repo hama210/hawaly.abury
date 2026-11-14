@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-14T00:53:43.666Z",
+  "updatedAt": "2026-11-14T11:28:01.353Z",
   "events": [
     {
       "id": "eur-30-y-bond-auction-de.20261111T1030",
@@ -1043,6 +1043,20 @@
       "currency": "USD",
       "impact": "medium",
       "title": "Fed's Jefferson speech",
+      "forecast": "",
+      "actual": "",
+      "previous": "",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "single_source",
+      "movedFrom": ""
+    },
+    {
+      "id": "gbp-boe-s-greene-speech.20261114T1100",
+      "time": "2026-11-14T11:00:00Z",
+      "currency": "GBP",
+      "impact": "medium",
+      "title": "BoE's Greene speech",
       "forecast": "",
       "actual": "",
       "previous": "",
