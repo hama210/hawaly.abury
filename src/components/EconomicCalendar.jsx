@@ -5,7 +5,6 @@ import { analyzeCalendarEvent, calendarScenarios, hasPublishedCalendarActual } f
 import { calendarText, calendarEventTitle } from '../lib/calendar-i18n.js';
 import EconomicEventAlerts from './EconomicEventAlerts.jsx';
 
-const CURRENCIES = ['USD','EUR','GBP','JPY','CAD','AUD','NZD','CHF','CNY'];
 const BAGHDAD_TZ = CALENDAR_TIME_ZONE;
 const dateKey = calendarDayKey;
 const releaseTime = calendarClockTime;
@@ -76,32 +75,42 @@ function EventCard({ event, lang, c, now }) {
   const resultClass = comparison.status === "surprise" ? (comparison.difference > 0 ? "above" : "below") : "neutral";
   const translated = calendarEventTitle(event.title, lang);
   const translationAvailable = translated !== event.title;
+  const isSpeech = /\b(?:speech|speaks|remarks)\b/i.test(event.title);
+  const noNumericResult = !resultPublished && (isSpeech || event.impact === 'holiday');
+  const releaseAt = Date.parse(event.time);
+  const releaseState = resultPublished ? c.released : releaseAt > now ? c.upcoming
+    : releaseAt < now - 6 * 3600000 ? c.noActualPast : c.awaiting;
   return <article className={'ec-event ec-impact-'+event.impact}>
-    <div className="ec-event-summary">
-      <time className="ec-time" dateTime={event.time} dir="ltr">{releaseTime(event.time)}</time>
-      <div className="ec-event-heading">
-        <strong dir="auto">{translated}</strong>
-        {translationAvailable && <small dir="ltr" className="ec-original">{event.title}</small>}
-        {event.status === 'tentative' && <small className="ec-tentative">⚠ {c.tentative}</small>}
-        {event.status === 'moved' && <small className="ec-tentative">↻ {c.moved}</small>}
-      </div>
-      <span className="ec-currency" dir="ltr">{event.currency}</span>
-      <span className={'ec-impact-pill ec-'+event.impact}>{event.impact === 'unknown' ? c.notAvailable : (c[event.impact === 'high' ? 'major' : event.impact] || c.notAvailable)}</span>
-    </div>
-    <p className="ec-release-state">{resultPublished ? c.released : Date.parse(event.time) > now ? c.upcoming : Date.parse(event.time) < now - 6 * 3600000 ? c.noActualPast : c.awaiting}</p>
-    <div className="ec-values">
-      <div><span>{c.previous}</span><strong dir="ltr">{event.previous || c.notAvailable}</strong></div>
-      <div><span>{c.forecast}</span><strong dir="ltr">{event.forecast || c.notAvailable}</strong></div>
-      <div><span>{c.actual}</span><strong className={resultPublished ? 'ec-result-' + resultClass : ''} dir="ltr">{resultPublished ? event.actual : c.notAvailable}</strong></div>
-    </div>
-    {comparison.status === 'surprise' && <p className={'ec-comparison ec-result-' + resultClass}>{comparison.difference > 0 ? '↑ ' + c.actualHigher : '↓ ' + c.actualLower}</p>}
-    {Date.parse(event.time) > now && !resultPublished && <BeforeRelease event={event} lang={lang} c={c}/>}
     <details className="ec-details">
-      <summary>{c.showDetails}</summary>
+      <summary className="ec-event-summary">
+        <time className="ec-time" dateTime={event.time} dir="ltr">{releaseTime(event.time)}</time>
+        <span className="ec-event-heading">
+          <strong dir="auto">{translated}</strong>
+          {event.status === 'tentative' && <small className="ec-tentative">⚠ {c.tentative}</small>}
+          {event.status === 'moved' && <small className="ec-tentative">↻ {c.moved}</small>}
+        </span>
+        <span className="ec-currency" dir="ltr">{event.currency}</span>
+        <span className={'ec-impact-pill ec-'+event.impact}>{event.impact === 'unknown' ? c.notAvailable : (c[event.impact === 'high' ? 'major' : event.impact] || c.notAvailable)}</span>
+        <span className="ec-event-actual">
+          {noNumericResult ? (isSpeech ? c.speech : c.noNumericResult) : <>
+            {c.actual} <strong className={resultPublished ? 'ec-result-' + resultClass : ''} dir="ltr">{resultPublished ? event.actual : c.notAvailable}</strong>
+          </>}
+        </span>
+        <span className="ec-event-chevron" aria-hidden="true">⌄</span>
+      </summary>
       <div className="ec-detail-inner">
-        {!translationAvailable && lang !== 'en' && <p className="ec-muted">{c.unknownTitle}: <span dir="ltr">{event.title}</span></p>}
+        {lang !== 'en' && <p className="ec-muted">{!translationAvailable && c.unknownTitle + ': '}<span dir="ltr">{event.title}</span></p>}
         {event.period && <p className="ec-muted">{c.period}: <span dir="ltr">{event.period}</span></p>}
-        <ImpactContext event={event} lang={lang} c={c}/>
+        <p className="ec-release-state">{noNumericResult ? c.noNumericResult : releaseState}</p>
+        {!noNumericResult && <>
+          <div className="ec-values">
+            <div><span>{c.previous}</span><strong dir="ltr">{event.previous || c.notAvailable}</strong></div>
+            <div><span>{c.forecast}</span><strong dir="ltr">{event.forecast || c.notAvailable}</strong></div>
+          </div>
+          {releaseAt > now && !resultPublished && <BeforeRelease event={event} lang={lang} c={c}/>}
+          <ImpactContext event={event} lang={lang} c={c}/>
+        </>}
+        <a href={CALENDAR_SOURCE_URL} target="_blank" rel="noreferrer">{c.source}: ShowMyTrades ↗</a>
       </div>
     </details>
   </article>;
@@ -113,7 +122,6 @@ export default function EconomicCalendar({ lang='ku' }) {
   const [captured,setCaptured] = useState([]);
   const [state,setState] = useState('loading');
   const [revision,setRevision] = useState(0);
-  const [currency,setCurrency] = useState('USD');
   const [impact,setImpact] = useState('all');
   const [windowDays,setWindowDays] = useState('week');
   const [historyDays,setHistoryDays] = useState('7');
@@ -165,7 +173,7 @@ export default function EconomicCalendar({ lang='ku' }) {
     return () => controller.abort();
   },[revision]);
 
-  useEffect(() => { setVisibleLimit(60); },[windowDays,historyDays,historyDate,currency,impact,metalsOnly,search]);
+  useEffect(() => { setVisibleLimit(60); },[windowDays,historyDays,historyDate,impact,metalsOnly,search]);
   const history = useMemo(() => mergeCalendarEvents(archive.events,captured),[archive.events,captured]);
   const combined = useMemo(() => mergeCalendarEvents(history,data.events),[history,data.events]);
   const latestActuals = useMemo(() => recentPublishedCalendarResults(combined,now,30),[combined,now]);
@@ -176,13 +184,12 @@ export default function EconomicCalendar({ lang='ku' }) {
     return candidates.filter(event => {
     if (!matchesCalendarView(event.time,windowDays === 'results' ? 'history' : windowDays,now,{historyDays,historyDate})) return false;
     if (metalsOnly && (event.currency !== 'USD' || event.impact === 'holiday')) return false;
-    if (!metalsOnly && currency !== 'all' && event.currency !== currency) return false;
     if (impact !== 'all' && event.impact !== impact) return false;
     if (search.trim() && !event.title.toLowerCase().includes(search.trim().toLowerCase()) &&
       !calendarEventTitle(event.title, lang).toLowerCase().includes(search.trim().toLowerCase())) return false;
     return true;
     });
-  },[combined,now,windowDays,historyDays,historyDate,metalsOnly,currency,impact,search,lang]);
+  },[combined,now,windowDays,historyDays,historyDate,metalsOnly,impact,search,lang]);
 
   const selectedDataPending = isPastView
     ? (archiveLoading || state === 'loading') && !history.length
@@ -203,13 +210,13 @@ export default function EconomicCalendar({ lang='ku' }) {
   const soon = data.events.filter(event => {
     const left = Date.parse(event.time) - now;
     return event.impact === 'high' && left >= 0 && left <= 15 * 60000
-      && (metalsOnly ? event.currency === 'USD' : currency === 'all' || event.currency === currency);
+      && (!metalsOnly || event.currency === 'USD');
   });
 
   const next = data.events.find(event => Date.parse(event.time) > now && event.impact !== 'holiday'
-    && (metalsOnly ? event.currency === 'USD' : currency === 'all' || event.currency === currency)
+    && (!metalsOnly || event.currency === 'USD')
     && (impact === 'all' || event.impact === impact));
-  const resetFilters = () => { setCurrency('all'); setImpact('all'); setWindowDays('week'); setHistoryDays('7'); setHistoryDate(''); setSearch(''); setMetalsOnly(false); };
+  const resetFilters = () => {  setImpact('all'); setWindowDays('week'); setHistoryDays('7'); setHistoryDate(''); setSearch(''); setMetalsOnly(false); };
   const todayKey = dateKey(now);
   const tabs = ['yesterday','today','tomorrow','week','results','history'];
   const tabLabels = {yesterday:c.yesterday,today:c.today,tomorrow:c.tomorrow,week:c.weekTab,results:c.released,history:c.history};
@@ -227,7 +234,7 @@ export default function EconomicCalendar({ lang='ku' }) {
       {tabs.map(tab => <button key={tab} type="button" className={windowDays===tab ? 'active' : ''}
         aria-current={windowDays===tab ? 'date' : undefined} aria-pressed={windowDays===tab}
         onClick={() => { setWindowDays(tab); setHistoryDate(''); if (tab === 'history' || tab === 'results') {
-          setCurrency('all');setImpact('all');setMetalsOnly(false);setSearch('');
+          setImpact('all');setMetalsOnly(false);setSearch('');
           if(tab === 'results')setHistoryDays('30');
         } }}>{tabLabels[tab]}</button>)}
     </nav>
@@ -236,7 +243,7 @@ export default function EconomicCalendar({ lang='ku' }) {
         <strong>{c.released} · {archiveLoading && !archive.events.length ? '…' : latestActuals.length}</strong>
         <button type="button" onClick={()=>{
           setWindowDays('results');setHistoryDays('30');setHistoryDate('');
-          setCurrency('all');setImpact('all');setMetalsOnly(false);setSearch('');
+          setImpact('all');setMetalsOnly(false);setSearch('');
         }}>{c.history} ↗</button>
       </div>
       {archiveLoading && !archive.events.length ? <p className="ec-muted">{c.loading}</p>
@@ -267,10 +274,6 @@ export default function EconomicCalendar({ lang='ku' }) {
     </section>
     {soon.length > 0 && <div className="ec-warning-soon" role="status">🔴 {c.soon}: {soon.map(event => calendarEventTitle(event.title,lang)).join(' · ')}</div>}
     <section className="ec-filter-bar" aria-label={c.title}>
-      <label>{c.currency}<select aria-label={c.currency} value={currency} disabled={metalsOnly} onChange={e=>setCurrency(e.target.value)}>
-        <option value="all">{c.allCurrency}</option>
-        {CURRENCIES.map(code=><option key={code} value={code}>{code}</option>)}
-      </select></label>
       <label>{c.impact}<select aria-label={c.impact} value={impact} onChange={e=>setImpact(e.target.value)}>
         <option value="all">{c.all}</option>
         <option value="high">🔴 {c.major}</option>

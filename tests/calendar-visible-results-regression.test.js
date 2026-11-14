@@ -60,7 +60,7 @@ test('calendar UI exposes a dedicated Actual results tab, preview and correct so
  assert.match(source,/const latestActuals = useMemo\(\(\) => recentPublishedCalendarResults\(combined,now,30\)/);
  assert.match(source,/latestActuals\.slice\(0,3\)\.map/);
  assert.match(source,/windowDays === 'results' \?/);
- assert.match(source,/setCurrency\('all'\);setImpact\('all'\);setMetalsOnly\(false\);setSearch\(''\)/);
+ assert.match(source,/setImpact\('all'\);setMetalsOnly\(false\);setSearch\(''\)/);
  assert.match(source,/fetchCalendarHistory\(controller\.signal\)/);
  assert.match(source,/\{c\.actual\}: \{event\.actual\}/);
  assert.match(source,/archiveFailed/);

@@ -35,7 +35,7 @@ const dictionary = {
     archiveNote:'ئەم ئەنجامانە لە داتای ڕاستەقینەی سەرچاوە تۆمار کراون. ئەنجامەکانی پێش دەستپێکردنی ئەرشیڤ بەردەست نین.',
     archiveUnavailable:'خوێندنەوەی ئەرشیڤ سەرکەوتوو نەبوو؛ داتای تازە هێشتا بەردەستە.',
     archiveUpdated:'دوایین تۆمارکردنی ئەرشیڤ', historyEmpty:'هیچ داتایەکی مێژوویی بۆ ئەم ماوەیە تۆمار نەکراوە.',
-    loadMore:'ڕووداوی زیاتر نیشان بدە', noActualPast:'ئەنجام لە سەرچاوە تۆمار نەکراوە',
+    loadMore:'ڕووداوی زیاتر نیشان بدە', speech:'وتار', noNumericResult:'چاوەڕوانی ئەنجامی ژمارەیی ناکرێت', noActualPast:'ئەنجام لە سەرچاوە تۆمار نەکراوە',
     ratesDisclaimer:'بۆ زێڕ و زیو، فشاری دۆلار تەنها یەک فاکتەرە؛ بازاڕ دەتوانێت بەپێچەوانە بجوڵێت.'
   },
   ar: {
@@ -66,7 +66,7 @@ const dictionary = {
     archiveNote:'النتائج محفوظة من بيانات المصدر الفعلية. لا تتوفر أحداث أقدم من بداية الأرشفة.',
     archiveUnavailable:'تعذر تحميل الأرشيف؛ لا تزال البيانات الحديثة متاحة.',
     archiveUpdated:'آخر تحديث للأرشيف', historyEmpty:'لا توجد نتائج مؤرشفة لهذه الفترة بعد.',
-    loadMore:'عرض المزيد من الأحداث', noActualPast:'لم تُسجل نتيجة فعلية في المصدر',
+    loadMore:'عرض المزيد من الأحداث', speech:'خطاب', noNumericResult:'لا تُتوقع نتيجة رقمية', noActualPast:'لم تُسجل نتيجة فعلية في المصدر',
     ratesDisclaimer:'تأثير الدولار عامل واحد فقط للذهب والفضة؛ الأسعار قد تتحرك عكس ذلك.'
   },
   en: {
@@ -97,7 +97,7 @@ const dictionary = {
     archiveNote:'Past results are saved from real source records. Events before archiving started cannot be backfilled.',
     archiveUnavailable:'The archive could not be loaded; recent source events are still available.',
     archiveUpdated:'Archive last captured', historyEmpty:'No archived releases are available for this period yet.',
-    loadMore:'Show more events', noActualPast:'No actual result captured by the source',
+    loadMore:'Show more events', speech:'Speech', noNumericResult:'No numeric result expected', noActualPast:'No actual result captured by the source',
     ratesDisclaimer:'USD pressure is one factor in precious metals; their prices can move in the opposite direction.'
   }
 };

@@ -67,7 +67,7 @@ test('USD gold and silver influence is explicitly conditional and not invented f
 
 test('calendar UI never shows hypothetical pre-release arrows after the scheduled release',()=>{
  const text=readFileSync('src/components/EconomicCalendar.jsx','utf8');
- assert.match(text,/Date\.parse\(event\.time\) > now && !resultPublished && <BeforeRelease/);
+ assert.match(text,/releaseAt > now && !resultPublished && <BeforeRelease/);
  assert.match(text,/hasPublishedCalendarActual\(event\)/);
  assert.match(text,/event\.impact === 'unknown' \? c\.notAvailable/);
 });
