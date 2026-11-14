@@ -124,7 +124,7 @@ export default function EconomicCalendar({ lang='ku' }) {
   const [state,setState] = useState('loading');
   const [revision,setRevision] = useState(0);
   const [impact,setImpact] = useState('all');
-  const [windowDays,setWindowDays] = useState('week');
+  const [windowDays,setWindowDays] = useState('upcoming');
   const [historyDays,setHistoryDays] = useState('7');
   const [historyDate,setHistoryDate] = useState('');
   const [visibleLimit,setVisibleLimit] = useState(60);
@@ -182,15 +182,18 @@ export default function EconomicCalendar({ lang='ku' }) {
   const visible = useMemo(() => {
     const candidates=windowDays === 'results' ?
       recentPublishedCalendarResults(combined,now,Number(historyDays)) : combined;
+    const feedIds = windowDays === 'upcoming' ? new Set(data.events.map(event => event.id)) : null;
     return candidates.filter(event => {
-    if (!matchesCalendarView(event.time,windowDays === 'results' ? 'history' : windowDays,now,{historyDays,historyDate})) return false;
+    if (feedIds ? !feedIds.has(event.id) : !matchesCalendarView(
+      event.time,windowDays === 'results' ? 'history' : windowDays,now,{historyDays,historyDate}
+    )) return false;
     if (metalsOnly && (event.currency !== 'USD' || event.impact === 'holiday')) return false;
     if (impact !== 'all' && event.impact !== impact) return false;
     if (search.trim() && !event.title.toLowerCase().includes(search.trim().toLowerCase()) &&
       !calendarEventTitle(event.title, lang).toLowerCase().includes(search.trim().toLowerCase())) return false;
     return true;
     });
-  },[combined,now,windowDays,historyDays,historyDate,metalsOnly,impact,search,lang]);
+  },[combined,data.events,now,windowDays,historyDays,historyDate,metalsOnly,impact,search,lang]);
 
   const selectedDataPending = isPastView
     ? (archiveLoading || state === 'loading') && !history.length
@@ -217,10 +220,10 @@ export default function EconomicCalendar({ lang='ku' }) {
   const next = data.events.find(event => Date.parse(event.time) > now && event.impact !== 'holiday'
     && (!metalsOnly || event.currency === 'USD')
     && (impact === 'all' || event.impact === impact));
-  const resetFilters = () => {  setImpact('all'); setWindowDays('week'); setHistoryDays('7'); setHistoryDate(''); setSearch(''); setMetalsOnly(false); };
+  const resetFilters = () => {  setImpact('all'); setWindowDays('upcoming'); setHistoryDays('7'); setHistoryDate(''); setSearch(''); setMetalsOnly(false); };
   const todayKey = dateKey(now);
-  const tabs = ['yesterday','today','tomorrow','week','results','history'];
-  const tabLabels = {yesterday:c.yesterday,today:c.today,tomorrow:c.tomorrow,week:c.weekTab,results:c.released,history:c.history};
+  const tabs = ['upcoming','yesterday','today','tomorrow','week','results','history'];
+  const tabLabels = {upcoming:c.feedTab,yesterday:c.yesterday,today:c.today,tomorrow:c.tomorrow,week:c.weekTab,results:c.released,history:c.history};
   return <main className="ec-page" dir={lang === 'en' ? 'ltr' : 'rtl'}>
     <section className="ec-header">
       <div>

@@ -56,8 +56,10 @@ test('visible results include past releases in Iraq time while week and upcoming
 
 test('calendar UI exposes a dedicated Actual results tab, preview and correct source archive loading',()=>{
  const source=readFileSync('src/components/EconomicCalendar.jsx','utf8');
- assert.match(source,/const tabs = \['yesterday','today','tomorrow','week','results','history'\]/);
+ assert.match(source,/const tabs = \['upcoming','yesterday','today','tomorrow','week','results','history'\]/);
  assert.match(source,/const latestActuals = useMemo\(\(\) => recentPublishedCalendarResults\(combined,now,30\)/);
+ assert.match(source,/useState\('upcoming'\)/);
+ assert.match(source,/new Set\(data.events.map\(event => event.id\)\)/);
  assert.match(source,/latestActuals\.slice\(0,3\)\.map/);
  assert.match(source,/windowDays === 'results' \?/);
  assert.match(source,/setImpact\('all'\);setMetalsOnly\(false\);setSearch\(''\)/);
