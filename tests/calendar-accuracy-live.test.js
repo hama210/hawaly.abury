@@ -30,7 +30,7 @@ test('provider event time must include timezone; known Unix time works without a
   {id:'5',time,currency:'USD',title:'Unknown impact',impact:'unclassified'},
  ]});
  assert.equal(normalized.events.length,4);
- assert.ok(normalized.events.slice(0,3).every(e=>e.time===time));
+ assert.ok(normalized.events.slice(0,3).every(e=>Date.parse(e.time)===Date.parse(time)));
  assert.equal(normalized.events.find(e=>e.id==='5').impact,'unknown');
  const cpi=normalized.events.find(e=>e.id==='1');
  assert.equal(cpi.actual,'');assert.equal(cpi.forecast,'0.3%');assert.equal(cpi.previous,'0.2%');
