@@ -1,3 +1,5 @@
+import { hasPublishedCalendarActual } from './economic-impact.js';
+
 // Economic release dates are grouped by the reader's fixed Iraq time zone.
 export const CALENDAR_TIME_ZONE = 'Asia/Baghdad';
 export const HISTORY_RETENTION_DAYS = 90;
@@ -54,6 +56,21 @@ export function matchesCalendarView(time, view, now = Date.now(), { historyDays 
     }
     default: return false;
   }
+}
+
+// Build the Actual-only result list from the already-captured source archive.
+// Do not interpret an empty, pending or unparseable value as a published result.
+// Limit to the source-backed history window and sort most recent first.
+export function recentPublishedCalendarResults(events = [], now = Date.now(), days = 30) {
+  if (!Array.isArray(events)) return [];
+  const historyDays = [7,30,90].includes(Number(days)) ? Number(days) : 30;
+  return events.filter(event =>
+    event && Number.isFinite(Date.parse(event.time || '')) &&
+    Date.parse(event.time) <= now &&
+    matchesCalendarView(event.time,'history',now,{historyDays}) &&
+    hasPublishedCalendarActual(event)
+  ).sort((a,b) => Date.parse(b.time) - Date.parse(a.time) ||
+    String(a.id||'').localeCompare(String(b.id||'')));
 }
 
 const isValid = event => event && typeof event === 'object'
