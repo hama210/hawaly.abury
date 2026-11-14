@@ -1,7 +1,7 @@
 // Read-only calendar audit. Use the same public provider and static archive as HAWAL.
 // No authentication, no owner endpoint, and no translation services.
 import { normalizeCalendarPayload,normalizeCalendarHistory,CALENDAR_API_URL } from '../src/services/economic-calendar.js';
-import { archivePastCalendarEvents } from '../src/lib/calendar-history.js';
+import {readFileSync} from 'node:fs';
 import { analyzeCalendarEvent,parseEconomicValue,indicatorKind } from '../src/lib/economic-impact.js';
 const BASE='https://hawaly-aburyy.pages.dev';
 async function get(url){
@@ -12,9 +12,27 @@ async function get(url){
   return {http:response.status,ms:Date.now()-start,etag:response.headers.get('etag'),data};
  }catch(e){return {http:null,ms:Date.now()-start,error:String(e?.name||'network-error')};}
 }
-const [provider,archive]=await Promise.all([
+const [provider,initialArchive]=await Promise.all([
  get(CALENDAR_API_URL),get(BASE+'/data/economic-calendar-history.json')
 ]);
+let archive=initialArchive;
+// The site previously served 38 archived releases while master had 76.
+// A successful HTTP status is not proof the public archive is current.
+const repositoryArchive=JSON.parse(readFileSync('public/data/economic-calendar-history.json','utf8'));
+const expectedAt=Date.parse(repositoryArchive.updatedAt||'');
+const aligned=copy=>Number.isFinite(expectedAt)&&copy.http===200 &&
+  Number.isFinite(Date.parse(copy.data?.updatedAt||''))&&
+  Date.parse(copy.data.updatedAt)>=expectedAt;
+if(process.env.GITHUB_REF==='refs/heads/master'&&!aligned(archive)){
+ for(let attempt=1;attempt<=10&&!aligned(archive);attempt++){
+   await new Promise(resolve=>setTimeout(resolve,10000));
+   archive=await get(BASE+'/data/economic-calendar-history.json');
+   console.log('Public calendar archive deployment check',JSON.stringify({
+    attempt,http:archive.http,updatedAt:archive.data?.updatedAt||null,aligned:aligned(archive)
+   }));
+ }
+}
+const archiveAligned=aligned(archive);
 let normalized,history;
 try{normalized=normalizeCalendarPayload(provider.data);}catch(e){normalized={error:e.message,events:[]};}
 try{history=normalizeCalendarHistory(archive.data);}catch(e){history={error:e.message,events:[]};}
@@ -46,7 +64,8 @@ const providerForecast=normalized.events.filter(e=>String(e.forecast||'').trim()
 const result={at:new Date(now).toISOString(),sources:{
  provider:{http:provider.http,ms:provider.ms,etag:provider.etag,rawCount:raw.length,valid:normalized.events.length,
   publishedAt:normalized.publishedAt,serverTime:provider.data?.server_time_iso||null,error:normalized.error||provider.error||null},
- archive:{http:archive.http,ms:archive.ms,count:history.events.length,updatedAt:history.updatedAt,error:history.error||archive.error||null}
+ archive:{http:archive.http,ms:archive.ms,count:history.events.length,updatedAt:history.updatedAt,
+    repositoryUpdatedAt:repositoryArchive.updatedAt,aligned:archiveAligned,error:history.error||archive.error||null}
  },completeness:{providerActual,providerForecast,archiveActual,archiveForecast,
   pastActualUnpublished:normalized.events.filter(e=>Date.parse(e.time)<now-6*3600000&&!e.actual).length,
   providerDuplicateIds:raw.length-new Set(raw.map(e=>e.id)).size,
@@ -64,4 +83,5 @@ if(process.env.GITHUB_STEP_SUMMARY){
   '- Past releases captured: '+history.events.length+', with actual '+archiveActual+' and forecast '+archiveForecast+'\n'+
   '- Anomalies (sampled): '+abnormal.length+'\n');
 }
-if(provider.http!==200||archive.http!==200||normalized.error||history.error)process.exitCode=1;
+if(provider.http!==200||archive.http!==200||normalized.error||history.error ||
+   (process.env.GITHUB_REF==='refs/heads/master'&&!archiveAligned))process.exitCode=1;
