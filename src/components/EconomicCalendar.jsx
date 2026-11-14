@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { fetchEconomicCalendar, fetchCalendarHistory, CALENDAR_SOURCE_URL } from '../services/economic-calendar.js';
 import { calendarDayKey, shiftCalendarDay, matchesCalendarView, mergeCalendarEvents } from '../lib/calendar-history.js';
-import { analyzeCalendarEvent, calendarScenarios } from '../lib/economic-impact.js';
+import { analyzeCalendarEvent, calendarScenarios, hasPublishedCalendarActual } from '../lib/economic-impact.js';
 import { calendarText, calendarEventTitle } from '../lib/calendar-i18n.js';
 import EconomicEventAlerts from './EconomicEventAlerts.jsx';
 
@@ -77,6 +77,7 @@ function BeforeRelease({ event, lang, c }) {
 
 function EventCard({ event, lang, c, now }) {
   const comparison = analyzeCalendarEvent(event);
+  const resultPublished = hasPublishedCalendarActual(event);
   const resultClass = comparison.status === "surprise" ? (comparison.difference > 0 ? "above" : "below") : "neutral";
   const translated = calendarEventTitle(event.title, lang);
   const translationAvailable = translated !== event.title;
@@ -90,16 +91,16 @@ function EventCard({ event, lang, c, now }) {
         {event.status === 'moved' && <small className="ec-tentative">↻ {c.moved}</small>}
       </div>
       <span className="ec-currency" dir="ltr">{event.currency}</span>
-      <span className={'ec-impact-pill ec-'+event.impact}>{c[event.impact === 'high' ? 'major' : event.impact] || event.impact}</span>
+      <span className={'ec-impact-pill ec-'+event.impact}>{event.impact === 'unknown' ? c.notAvailable : (c[event.impact === 'high' ? 'major' : event.impact] || c.notAvailable)}</span>
     </div>
-    <p className="ec-release-state">{event.actual ? c.released : Date.parse(event.time) > now ? c.upcoming : Date.parse(event.time) < now - 6 * 3600000 ? c.noActualPast : c.awaiting}</p>
+    <p className="ec-release-state">{resultPublished ? c.released : Date.parse(event.time) > now ? c.upcoming : Date.parse(event.time) < now - 6 * 3600000 ? c.noActualPast : c.awaiting}</p>
     <div className="ec-values">
       <div><span>{c.previous}</span><strong dir="ltr">{event.previous || c.notAvailable}</strong></div>
       <div><span>{c.forecast}</span><strong dir="ltr">{event.forecast || c.notAvailable}</strong></div>
-      <div><span>{c.actual}</span><strong className={event.actual ? 'ec-result-' + resultClass : ''} dir="ltr">{event.actual || c.notAvailable}</strong></div>
+      <div><span>{c.actual}</span><strong className={resultPublished ? 'ec-result-' + resultClass : ''} dir="ltr">{resultPublished ? event.actual : c.notAvailable}</strong></div>
     </div>
     {comparison.status === 'surprise' && <p className={'ec-comparison ec-result-' + resultClass}>{comparison.difference > 0 ? '↑ ' + c.actualHigher : '↓ ' + c.actualLower}</p>}
-    <BeforeRelease event={event} lang={lang} c={c}/>
+    {Date.parse(event.time) > now && !resultPublished && <BeforeRelease event={event} lang={lang} c={c}/>}
     <details className="ec-details">
       <summary>{c.showDetails}</summary>
       <div className="ec-detail-inner">
