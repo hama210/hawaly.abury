@@ -2,8 +2,8 @@ name: Archive economic calendar results
 
 on:
   schedule:
-    # Every four hours: the provider only retains six hours of past releases.
-    - cron: '17 */4 * * *'
+    # Every two hours to leave room for delays within the six-hour lookback.
+    - cron: '17 */2 * * *'
   workflow_dispatch:
   push:
     branches: [master]

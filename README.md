@@ -96,7 +96,7 @@ ranges and a date picker. The shared archive begins collecting real releases
 when the capture workflow first runs; it **cannot backfill** older dates.
 
 The GitHub Actions workflow `.github/workflows/archive-calendar.yml` runs
-approximately every four hours and on initial deployment. It collects released
+approximately every two hours and on initial deployment. It collects released
 events from ShowMyTrades using `scripts/archive-calendar.mjs`, merges by the
 provider's stable event ID, preserves the last nonblank reported values, prunes
 data older than 90 days, and commits only real archive changes into

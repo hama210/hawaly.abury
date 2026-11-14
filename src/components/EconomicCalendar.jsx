@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { fetchEconomicCalendar, fetchCalendarHistory, CALENDAR_SOURCE_URL } from '../services/economic-calendar.js';
-import { calendarDayKey, calendarClockTime, CALENDAR_TIME_ZONE, shiftCalendarDay, matchesCalendarView, mergeCalendarEvents, recentPublishedCalendarResults } from '../lib/calendar-history.js';
+import { calendarDayKey, calendarClockTime, CALENDAR_TIME_ZONE, shiftCalendarDay, archivePastCalendarEvents, matchesCalendarView, mergeCalendarEvents, recentPublishedCalendarResults } from '../lib/calendar-history.js';
 import { analyzeCalendarEvent, calendarScenarios, hasPublishedCalendarActual } from '../lib/economic-impact.js';
 import { calendarText, calendarEventTitle } from '../lib/calendar-i18n.js';
 import EconomicEventAlerts from './EconomicEventAlerts.jsx';
@@ -110,6 +110,7 @@ function EventCard({ event, lang, c, now }) {
 export default function EconomicCalendar({ lang='ku' }) {
   const c = calendarText(lang);
   const [data,setData] = useState({events:[],publishedAt:null});
+  const [captured,setCaptured] = useState([]);
   const [state,setState] = useState('loading');
   const [revision,setRevision] = useState(0);
   const [currency,setCurrency] = useState('USD');
@@ -139,9 +140,11 @@ export default function EconomicCalendar({ lang='ku' }) {
     fetchEconomicCalendar(controller.signal)
       .then(result => {
         if (controller.signal.aborted) return;
+        const receivedAt = Date.now();
+        setCaptured(previous => archivePastCalendarEvents(previous,result.events,receivedAt));
         setData(result);
         setState('ready');
-        setNow(Date.now());
+        setNow(receivedAt);
       })
       .catch(() => {
         if (!controller.signal.aborted) setState('error');
@@ -163,7 +166,8 @@ export default function EconomicCalendar({ lang='ku' }) {
   },[revision]);
 
   useEffect(() => { setVisibleLimit(60); },[windowDays,historyDays,historyDate,currency,impact,metalsOnly,search]);
-  const combined = useMemo(() => mergeCalendarEvents(archive.events,data.events),[archive.events,data.events]);
+  const history = useMemo(() => mergeCalendarEvents(archive.events,captured),[archive.events,captured]);
+  const combined = useMemo(() => mergeCalendarEvents(history,data.events),[history,data.events]);
   const latestActuals = useMemo(() => recentPublishedCalendarResults(combined,now,30),[combined,now]);
   const isPastView=windowDays === 'history' || windowDays === 'results';
   const visible = useMemo(() => {
@@ -181,9 +185,9 @@ export default function EconomicCalendar({ lang='ku' }) {
   },[combined,now,windowDays,historyDays,historyDate,metalsOnly,currency,impact,search,lang]);
 
   const selectedDataPending = isPastView
-    ? archiveLoading && !archive.events.length
+    ? (archiveLoading || state === 'loading') && !history.length
     : state === 'loading' && !data.events.length;
-  const selectedDataSettled = isPastView ? !archiveLoading : state !== 'loading';
+  const selectedDataSettled = isPastView ? !archiveLoading && state !== 'loading' : state !== 'loading';
   const pageEvents = isPastView ? visible.slice(0,visibleLimit) : visible;
   const grouped = useMemo(() => {
     const list = [];

@@ -58,7 +58,7 @@ export function matchesCalendarView(time, view, now = Date.now(), { historyDays 
   }
 }
 
-// Build the Actual-only result list from the already-captured source archive.
+// Build the Actual-only result list from captured and current provider events.
 // Do not interpret an empty, pending or unparseable value as a published result.
 // Limit to the source-backed history window and sort most recent first.
 export function recentPublishedCalendarResults(events = [], now = Date.now(), days = 30) {
@@ -91,6 +91,9 @@ export function mergeCalendarEvents(older = [], newer = []) {
     for (const name of preserveValues) {
       if ((event[name] === null || event[name] === undefined || String(event[name]).trim() === '')
           && saved[name] !== null && saved[name] !== undefined) next[name] = saved[name];
+    }
+    if (hasPublishedCalendarActual(saved) && !hasPublishedCalendarActual(event)) {
+      next.actual = saved.actual;
     }
     merged.set(event.id,next);
   }

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
-  recentPublishedCalendarResults, mergeCalendarEvents, matchesCalendarView,
+  recentPublishedCalendarResults, mergeCalendarEvents, matchesCalendarView, archivePastCalendarEvents,
   calendarDayKey
 } from '../src/lib/calendar-history.js';
 import { normalizeCalendarHistory } from '../src/services/economic-calendar.js';
@@ -67,4 +67,23 @@ test('calendar UI exposes a dedicated Actual results tab, preview and correct so
  const css=readFileSync('src/economic-calendar.css','utf8');
  assert.match(css,/\.ec-latest-results-list/);
  assert.match(css,/@media\(max-width:720px\)/);
+});
+
+test('a fresh release stays visible before the shared archive catches up', () => {
+  const release = {
+    id: 'usd-cpi', title: 'CPI MoM', currency: 'USD', impact: 'high',
+    time: '2026-11-16T13:30:00Z', actual: '0.4%', forecast: '0.3%', previous: '0.2%'
+  };
+  const publishedAt = Date.parse('2026-11-16T13:32:00Z');
+  const captured = archivePastCalendarEvents([], [release], publishedAt);
+  const placeholder = { ...release, actual: '—', forecast: '', previous: '' };
+  const refreshed = mergeCalendarEvents(captured, [placeholder]);
+  assert.deepEqual(recentPublishedCalendarResults(refreshed, publishedAt), [release]);
+
+  const afterLookback = Date.parse('2026-11-16T20:30:00Z');
+  const rolledOff = archivePastCalendarEvents(captured, [], afterLookback);
+  assert.deepEqual(recentPublishedCalendarResults(rolledOff, afterLookback), [release]);
+  assert.deepEqual(recentPublishedCalendarResults(mergeCalendarEvents(rolledOff, [
+    { ...release, actual: '0.5%' }
+  ]), afterLookback).map(event => event.actual), ['0.5%']);
 });
