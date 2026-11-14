@@ -5,9 +5,13 @@ export const CALENDAR_HISTORY_URL = '/data/economic-calendar-history.json';
 
 function cleanEvent(raw) {
   if (!raw || typeof raw !== 'object') return null;
-  const time = typeof raw.time === 'string' && Number.isFinite(Date.parse(raw.time))
-    ? raw.time
-    : Number.isFinite(raw.ts) ? new Date(raw.ts * 1000).toISOString() : null;
+  // The provider supplies UTC ISO times and Unix seconds. Never interpret
+  // timezone-less timestamps as the viewer's browser timezone.
+  const hasZone=typeof raw.time==='string' && /(?:Z|[+-]\d{2}:\d{2})$/i.test(raw.time);
+  const timeDate=hasZone?Date.parse(raw.time):NaN;
+  const unix=typeof raw.ts==='number'&&Number.isInteger(raw.ts)&&raw.ts>=946684800&&raw.ts<=4102444800
+    ?new Date(raw.ts*1000).toISOString():null;
+  const time=Number.isFinite(timeDate)?new Date(timeDate).toISOString():unix;
   if (!time || !/^[A-Z]{3}$/.test(String(raw.currency || ''))) return null;
   const safe = value => typeof value === 'string' || typeof value === 'number' ? String(value).slice(0, 160) : '';
   const title = safe(raw.title);
@@ -16,7 +20,8 @@ function cleanEvent(raw) {
     id: safe(raw.id) || String(raw.currency) + '-' + time + '-' + title,
     time,
     currency: String(raw.currency),
-    impact: ['high','medium','low','holiday'].includes(raw.impact) ? raw.impact : 'low',
+    // Unknown provider impact must not be misrepresented as a "low" event.
+    impact: ['high','medium','low','holiday'].includes(raw.impact) ? raw.impact : 'unknown',
     title,
     forecast: safe(raw.forecast),
     actual: safe(raw.actual),
