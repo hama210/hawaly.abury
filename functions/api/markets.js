@@ -306,7 +306,7 @@ function staleItem(item) {
 
 function cacheKeyFor(url, kind) {
   const cacheUrl = new URL(url.origin + url.pathname);
-  cacheUrl.searchParams.set('__hawali_cache', `markets-${kind}-v5-city-provenance`);
+  cacheUrl.searchParams.set('__hawali_cache', `markets-${kind}-${kind === 'fresh' ? 'v6' : 'v5'}-city-provenance`);
   return new Request(cacheUrl.toString(), { method: 'GET' });
 }
 

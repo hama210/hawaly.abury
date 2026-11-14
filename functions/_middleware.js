@@ -14,7 +14,7 @@ const SNAPSHOT_SECONDS = 120;
 async function snapshot(context) {
   const origin = new URL(context.request.url).origin;
   const cache = globalThis.caches?.default;
-  const key = new Request(origin + '/__hawall_snapshot_v1');
+  const key = new Request(origin + '/__hawall_snapshot_v2');
   const cached = cache && await cache.match(key);
   if (cached) {
     try {
