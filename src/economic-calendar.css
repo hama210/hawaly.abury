@@ -150,7 +150,7 @@
 .ec-event-actual{white-space:nowrap}
 .ec-event-chevron{color:var(--primary);font-size:16px}
 .ec-details[open] .ec-event-chevron{transform:rotate(180deg)}
-.ec-detail-inner .ec-values{grid-template-columns:repeat(2,minmax(0,1fr));margin:10px 0}
+.ec-detail-inner .ec-values{margin:10px 0}
 @media(max-width:720px){
  .ec-details .ec-event-summary{grid-template-columns:55px minmax(0,1fr) auto auto}
  .ec-details .ec-impact-pill{grid-column:2}

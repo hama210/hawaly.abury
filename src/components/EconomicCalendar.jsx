@@ -106,6 +106,7 @@ function EventCard({ event, lang, c, now }) {
           <div className="ec-values">
             <div><span>{c.previous}</span><strong dir="ltr">{event.previous || c.notAvailable}</strong></div>
             <div><span>{c.forecast}</span><strong dir="ltr">{event.forecast || c.notAvailable}</strong></div>
+            <div><span>{c.actual}</span><strong className={resultPublished ? 'ec-result-' + resultClass : ''} dir="ltr">{resultPublished ? event.actual : c.notAvailable}</strong></div>
           </div>
           {releaseAt > now && !resultPublished && <BeforeRelease event={event} lang={lang} c={c}/>}
           <ImpactContext event={event} lang={lang} c={c}/>
