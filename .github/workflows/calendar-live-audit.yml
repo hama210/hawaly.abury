@@ -1,0 +1,27 @@
+name: HAWAL calendar public accuracy audit
+on:
+  push:
+    branches:
+      - fix/calendar-accuracy-impact-time-20261114
+      - master
+    paths:
+      - '.github/workflows/calendar-live-audit.yml'
+      - 'scripts/calendar-live-audit.mjs'
+      - 'src/services/economic-calendar.js'
+      - 'src/lib/economic-impact.js'
+      - 'src/lib/calendar-history.js'
+      - 'src/components/EconomicCalendar.jsx'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-calendar-accuracy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Audit public Actual, Forecast, Previous, impact and release times
+        run: node scripts/calendar-live-audit.mjs
