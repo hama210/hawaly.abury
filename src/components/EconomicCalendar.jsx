@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { fetchEconomicCalendar, fetchCalendarHistory, CALENDAR_SOURCE_URL } from '../services/economic-calendar.js';
-import { calendarDayKey, calendarClockTime, CALENDAR_TIME_ZONE, shiftCalendarDay, matchesCalendarView, mergeCalendarEvents } from '../lib/calendar-history.js';
+import { calendarDayKey, calendarClockTime, CALENDAR_TIME_ZONE, shiftCalendarDay, matchesCalendarView, mergeCalendarEvents, recentPublishedCalendarResults } from '../lib/calendar-history.js';
 import { analyzeCalendarEvent, calendarScenarios, hasPublishedCalendarActual } from '../lib/economic-impact.js';
 import { calendarText, calendarEventTitle } from '../lib/calendar-i18n.js';
 import EconomicEventAlerts from './EconomicEventAlerts.jsx';
@@ -164,21 +164,27 @@ export default function EconomicCalendar({ lang='ku' }) {
 
   useEffect(() => { setVisibleLimit(60); },[windowDays,historyDays,historyDate,currency,impact,metalsOnly,search]);
   const combined = useMemo(() => mergeCalendarEvents(archive.events,data.events),[archive.events,data.events]);
-  const visible = useMemo(() => combined.filter(event => {
-    if (!matchesCalendarView(event.time,windowDays,now,{historyDays,historyDate})) return false;
+  const latestActuals = useMemo(() => recentPublishedCalendarResults(combined,now,30),[combined,now]);
+  const isPastView=windowDays === 'history' || windowDays === 'results';
+  const visible = useMemo(() => {
+    const candidates=windowDays === 'results' ?
+      recentPublishedCalendarResults(combined,now,Number(historyDays)) : combined;
+    return candidates.filter(event => {
+    if (!matchesCalendarView(event.time,windowDays === 'results' ? 'history' : windowDays,now,{historyDays,historyDate})) return false;
     if (metalsOnly && (event.currency !== 'USD' || event.impact === 'holiday')) return false;
     if (!metalsOnly && currency !== 'all' && event.currency !== currency) return false;
     if (impact !== 'all' && event.impact !== impact) return false;
     if (search.trim() && !event.title.toLowerCase().includes(search.trim().toLowerCase()) &&
       !calendarEventTitle(event.title, lang).toLowerCase().includes(search.trim().toLowerCase())) return false;
     return true;
-  }),[combined,now,windowDays,historyDays,historyDate,metalsOnly,currency,impact,search,lang]);
+    });
+  },[combined,now,windowDays,historyDays,historyDate,metalsOnly,currency,impact,search,lang]);
 
-  const selectedDataPending = windowDays === 'history'
+  const selectedDataPending = isPastView
     ? archiveLoading && !archive.events.length
     : state === 'loading' && !data.events.length;
-  const selectedDataSettled = windowDays === 'history' ? !archiveLoading : state !== 'loading';
-  const pageEvents = windowDays === 'history' ? visible.slice(0,visibleLimit) : visible;
+  const selectedDataSettled = isPastView ? !archiveLoading : state !== 'loading';
+  const pageEvents = isPastView ? visible.slice(0,visibleLimit) : visible;
   const grouped = useMemo(() => {
     const list = [];
     for (const event of pageEvents) {
@@ -201,8 +207,8 @@ export default function EconomicCalendar({ lang='ku' }) {
     && (impact === 'all' || event.impact === impact));
   const resetFilters = () => { setCurrency('all'); setImpact('all'); setWindowDays('week'); setHistoryDays('7'); setHistoryDate(''); setSearch(''); setMetalsOnly(false); };
   const todayKey = dateKey(now);
-  const tabs = ['yesterday','today','tomorrow','week','history'];
-  const tabLabels = {yesterday:c.yesterday,today:c.today,tomorrow:c.tomorrow,week:c.weekTab,history:c.history};
+  const tabs = ['yesterday','today','tomorrow','week','results','history'];
+  const tabLabels = {yesterday:c.yesterday,today:c.today,tomorrow:c.tomorrow,week:c.weekTab,results:c.released,history:c.history};
   return <main className="ec-page" dir={lang === 'en' ? 'ltr' : 'rtl'}>
     <section className="ec-header">
       <div>
@@ -216,9 +222,29 @@ export default function EconomicCalendar({ lang='ku' }) {
     <nav className="ec-date-tabs" aria-label={c.dateTabs}>
       {tabs.map(tab => <button key={tab} type="button" className={windowDays===tab ? 'active' : ''}
         aria-current={windowDays===tab ? 'date' : undefined} aria-pressed={windowDays===tab}
-        onClick={() => { setWindowDays(tab); setHistoryDate(''); if (tab === 'history') setCurrency('all'); }}>{tabLabels[tab]}</button>)}
+        onClick={() => { setWindowDays(tab); setHistoryDate(''); if (tab === 'history' || tab === 'results') {
+          setCurrency('all');setImpact('all');setMetalsOnly(false);setSearch('');
+          if(tab === 'results')setHistoryDays('30');
+        } }}>{tabLabels[tab]}</button>)}
     </nav>
-    {windowDays === 'history' && <section className="ec-history-tools" aria-label={c.history}>
+    <section className="ec-latest-results" aria-label={c.released}>
+      <div className="ec-latest-results-head">
+        <strong>{c.released} · {archiveLoading && !archive.events.length ? '…' : latestActuals.length}</strong>
+        <button type="button" onClick={()=>{
+          setWindowDays('results');setHistoryDays('30');setHistoryDate('');
+          setCurrency('all');setImpact('all');setMetalsOnly(false);setSearch('');
+        }}>{c.history} ↗</button>
+      </div>
+      {archiveLoading && !archive.events.length ? <p className="ec-muted">{c.loading}</p>
+        : latestActuals.length ? <div className="ec-latest-results-list">
+          {latestActuals.slice(0,3).map(event=><div key={event.id} className="ec-latest-result">
+            <span dir="auto">{calendarEventTitle(event.title,lang)}</span>
+            <small dir="ltr">{event.currency} · {releaseDate(event.time,lang)} · {releaseTime(event.time)}</small>
+            <strong dir="ltr">{c.actual}: {event.actual}</strong>
+          </div>)}
+        </div> : <p className="ec-muted">{c.historyEmpty}</p>}
+    </section>
+    {isPastView && <section className="ec-history-tools" aria-label={c.history}>
       <label>{c.historyPeriod}<select value={historyDays} onChange={event => { setHistoryDays(event.target.value); setHistoryDate(''); }}>
         <option value="7">{c.past7}</option><option value="30">{c.past30}</option><option value="90">{c.past90}</option>
       </select></label>
@@ -253,17 +279,17 @@ export default function EconomicCalendar({ lang='ku' }) {
       <span>{c.updated}: {data.publishedAt ? releaseDate(data.publishedAt,lang) + ' · ' + releaseTime(data.publishedAt) : '—'} (UTC+3)</span>
       <a href={CALENDAR_SOURCE_URL} target="_blank" rel="noreferrer">{c.source}: ShowMyTrades ↗</a>
     </div>
-    {windowDays === 'history' && archive.updatedAt && <p className="ec-archive-date">{c.archiveUpdated}: {releaseDate(archive.updatedAt,lang)} · {releaseTime(archive.updatedAt)} (UTC+3)</p>}
-    {windowDays === 'history' && archiveFailed && <p className="ec-archive-warning" role="status">{c.archiveUnavailable}</p>}
+    {isPastView && archive.updatedAt && <p className="ec-archive-date">{c.archiveUpdated}: {releaseDate(archive.updatedAt,lang)} · {releaseTime(archive.updatedAt)} (UTC+3)</p>}
+    {isPastView && archiveFailed && <p className="ec-archive-warning" role="status">{c.archiveUnavailable}</p>}
     {state === 'error' && <div role="alert" className="ec-error">{data.events.length ? c.stale : c.error} <button type="button" onClick={()=>setRevision(x=>x+1)}>{c.retry}</button></div>}
     {selectedDataPending && !visible.length && <p className="ec-message" role="status">{c.loading}</p>}
     {selectedDataSettled && !visible.length && !(state === 'error' && windowDays !== 'history') &&
-      <p className="ec-message">{windowDays === 'history' ? c.historyEmpty : c.empty}</p>}
+      <p className="ec-message">{isPastView ? c.historyEmpty : c.empty}</p>}
     {grouped.map(group => <section className="ec-day" key={group.key}>
       <h2><span>{releaseDate(group.date,lang)}</span><small>{group.events.length} {c.count}</small></h2>
       <div className="ec-event-list">{group.events.map(event => <EventCard key={event.id} event={event} lang={lang} c={c} now={now}/>)}</div>
     </section>)}
-    {windowDays === 'history' && visible.length > pageEvents.length && <button className="ec-show-more" type="button"
+    {isPastView && visible.length > pageEvents.length && <button className="ec-show-more" type="button"
       onClick={() => setVisibleLimit(count => count + 60)}>{c.loadMore} ({visible.length - pageEvents.length})</button>}
     <section className="ec-notes"><p>{c.delay}</p><p>{c.recentWindow}</p><p>{c.warning}</p></section>
   </main>;
