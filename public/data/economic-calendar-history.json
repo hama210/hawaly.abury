@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-14T14:32:13.584Z",
+  "updatedAt": "2026-11-15T22:47:40.773Z",
   "events": [
     {
       "id": "eur-30-y-bond-auction-de.20261111T1030",
@@ -1063,6 +1063,34 @@
       "period": "",
       "status": "scheduled",
       "confidence": "single_source",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-fed-s-schmid-speech.20261115T1840",
+      "time": "2026-11-15T18:40:00.000Z",
+      "currency": "USD",
+      "impact": "medium",
+      "title": "Fed's Schmid speech",
+      "forecast": "",
+      "actual": "",
+      "previous": "",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "single_source",
+      "movedFrom": ""
+    },
+    {
+      "id": "nzd-business-nz-psi.20261115T2130",
+      "time": "2026-11-15T21:30:00.000Z",
+      "currency": "NZD",
+      "impact": "medium",
+      "title": "Business NZ PSI",
+      "forecast": "",
+      "actual": "51.7",
+      "previous": "50.9",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "sources_agree",
       "movedFrom": ""
     }
   ]
