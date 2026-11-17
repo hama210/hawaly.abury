@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-17T13:21:43.484Z",
+  "updatedAt": "2026-11-17T22:20:59.118Z",
   "events": [
     {
       "id": "eur-30-y-bond-auction-de.20261111T1030",
@@ -1593,6 +1593,76 @@
       "actual": "23.75K",
       "previous": "19.75K",
       "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "eur-ecb-s-lane-speech.20261117T1830",
+      "time": "2026-11-17T18:30:00.000Z",
+      "currency": "EUR",
+      "impact": "medium",
+      "title": "ECB's Lane speech",
+      "forecast": "",
+      "actual": "",
+      "previous": "",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-fed-s-williams-speech.20261117T1925",
+      "time": "2026-11-17T19:25:00.000Z",
+      "currency": "USD",
+      "impact": "medium",
+      "title": "Fed's Williams speech",
+      "forecast": "",
+      "actual": "",
+      "previous": "",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-api-weekly-crude-oil-stock.20261117T2130",
+      "time": "2026-11-17T21:30:00.000Z",
+      "currency": "USD",
+      "impact": "low",
+      "title": "API Weekly Crude Oil Stock",
+      "forecast": "-0.5M",
+      "actual": "5.3M",
+      "previous": "9M",
+      "period": "2026-11",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "nzd-producer-price-index-input-qoq.20261118T2145",
+      "time": "2026-11-17T21:45:00.000Z",
+      "currency": "NZD",
+      "impact": "low",
+      "title": "Producer Price Index - Input  QoQ",
+      "forecast": "1.5%",
+      "actual": "0.7%",
+      "previous": "2.9%",
+      "period": "2026-07",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "nzd-producer-price-index-output-qoq.20261118T2145",
+      "time": "2026-11-17T21:45:00.000Z",
+      "currency": "NZD",
+      "impact": "medium",
+      "title": "Producer Price Index - Output  QoQ",
+      "forecast": "1.1%",
+      "actual": "0.8%",
+      "previous": "1.6%",
+      "period": "2026-07",
       "status": "scheduled",
       "confidence": "sources_agree",
       "movedFrom": ""
