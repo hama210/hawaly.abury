@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-19T10:18:16.690Z",
+  "updatedAt": "2026-11-19T20:32:58.965Z",
   "events": [
     {
       "id": "eur-30-y-bond-auction-de.20261111T1030",
@@ -2463,6 +2463,104 @@
       "period": "",
       "status": "scheduled",
       "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-eia-natural-gas-storage-change.20261119T1530",
+      "time": "2026-11-19T15:30:00.000Z",
+      "currency": "USD",
+      "impact": "low",
+      "title": "EIA Natural Gas Storage Change",
+      "forecast": "25B",
+      "actual": "20B",
+      "previous": "61B",
+      "period": "2026-11",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-kansas-fed-manufacturing-activity.20261126T1600",
+      "time": "2026-11-19T16:00:00.000Z",
+      "currency": "USD",
+      "impact": "low",
+      "title": "Kansas Fed Manufacturing Activity",
+      "forecast": "",
+      "actual": "23",
+      "previous": "16",
+      "period": "2026-11",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-4-week-bill-auction.20261119T1630",
+      "time": "2026-11-19T16:30:00.000Z",
+      "currency": "USD",
+      "impact": "low",
+      "title": "4-Week Bill Auction",
+      "forecast": "",
+      "actual": "4.05%",
+      "previous": "3.955%",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-fed-s-goolsbee-speech.20261119T1730",
+      "time": "2026-11-19T17:30:00.000Z",
+      "currency": "USD",
+      "impact": "medium",
+      "title": "Fed's Goolsbee speech",
+      "forecast": "",
+      "actual": "",
+      "previous": "",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-10-year-tips-auction.20261119T1800",
+      "time": "2026-11-19T18:00:00.000Z",
+      "currency": "USD",
+      "impact": "medium",
+      "title": "10-year TIPS Auction",
+      "forecast": "",
+      "actual": "2.903%",
+      "previous": "2.653%",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-fed-s-barkin-speech.20261119T1915",
+      "time": "2026-11-19T19:15:00.000Z",
+      "currency": "USD",
+      "impact": "low",
+      "title": "Fed's Barkin speech",
+      "forecast": "",
+      "actual": "",
+      "previous": "",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "single_source",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-fed-s-barr-speech.20261119T1915",
+      "time": "2026-11-19T19:15:00.000Z",
+      "currency": "USD",
+      "impact": "medium",
+      "title": "Fed's Barr speech",
+      "forecast": "",
+      "actual": "",
+      "previous": "",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "single_source",
       "movedFrom": ""
     }
   ]
