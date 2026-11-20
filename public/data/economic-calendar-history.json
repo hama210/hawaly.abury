@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-19T20:32:58.965Z",
+  "updatedAt": "2026-11-20T03:11:40.428Z",
   "events": [
     {
       "id": "eur-30-y-bond-auction-de.20261111T1030",
@@ -2368,20 +2368,6 @@
       "movedFrom": ""
     },
     {
-      "id": "cny-fdi-foreign-direct-investment-ytd-yoy.20261118T0900",
-      "time": "2026-11-19T09:00:00.000Z",
-      "currency": "CNY",
-      "impact": "medium",
-      "title": "FDI - Foreign Direct Investment (YTD)  YoY",
-      "forecast": "",
-      "actual": "",
-      "previous": "-4.3%",
-      "period": "2026-10",
-      "status": "moved",
-      "confidence": "sources_agree",
-      "movedFrom": "2026-11-18T09:00:00Z"
-    },
-    {
       "id": "eur-current-account-nsa.20261118T0900",
       "time": "2026-11-19T09:00:00.000Z",
       "currency": "EUR",
@@ -2561,6 +2547,118 @@
       "period": "",
       "status": "scheduled",
       "confidence": "single_source",
+      "movedFrom": ""
+    },
+    {
+      "id": "jpy-national-consumer-price-index-yoy.20261119T2330",
+      "time": "2026-11-19T23:30:00.000Z",
+      "currency": "JPY",
+      "impact": "medium",
+      "title": "National Consumer Price Index YoY",
+      "forecast": "",
+      "actual": "2.3%",
+      "previous": "2.1%",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "jpy-national-cpi-ex-food-energy-yoy.20261119T2330",
+      "time": "2026-11-19T23:30:00.000Z",
+      "currency": "JPY",
+      "impact": "medium",
+      "title": "National CPI ex Food, Energy YoY",
+      "forecast": "",
+      "actual": "2.2%",
+      "previous": "2.4%",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "jpy-national-cpi-ex-fresh-food-yoy.20261119T2330",
+      "time": "2026-11-19T23:30:00.000Z",
+      "currency": "JPY",
+      "impact": "medium",
+      "title": "National CPI ex Fresh Food  YoY",
+      "forecast": "2.3%",
+      "actual": "2.2%",
+      "previous": "2.1%",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-fed-s-paulson-speech.20261119T2330",
+      "time": "2026-11-19T23:30:00.000Z",
+      "currency": "USD",
+      "impact": "medium",
+      "title": "Fed's Paulson speech",
+      "forecast": "",
+      "actual": "",
+      "previous": "",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "gbp-gfk-consumer-confidence.20261120T0001",
+      "time": "2026-11-20T00:01:00.000Z",
+      "currency": "GBP",
+      "impact": "medium",
+      "title": "GfK Consumer Confidence",
+      "forecast": "-22",
+      "actual": "-22",
+      "previous": "-24",
+      "period": "2026-11",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "cny-pboc-interest-rate-decision.20261120T0115",
+      "time": "2026-11-20T01:15:00.000Z",
+      "currency": "CNY",
+      "impact": "high",
+      "title": "PBoC Interest Rate Decision",
+      "forecast": "3%",
+      "actual": "3%",
+      "previous": "3%",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "nzd-credit-card-spending-yoy.20261124T0200",
+      "time": "2026-11-20T02:00:00.000Z",
+      "currency": "NZD",
+      "impact": "low",
+      "title": "Credit Card Spending YoY",
+      "forecast": "",
+      "actual": "5%",
+      "previous": "6.9%",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "eur-ecb-s-cipollone-speech.20261120T0310",
+      "time": "2026-11-20T03:10:00.000Z",
+      "currency": "EUR",
+      "impact": "medium",
+      "title": "ECB's Cipollone speech",
+      "forecast": "",
+      "actual": "",
+      "previous": "",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
       "movedFrom": ""
     }
   ]
