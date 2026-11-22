@@ -86,4 +86,9 @@ test('floating glass navigation includes real calendar link, accessible tabs and
   assert.match(css,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
   assert.match(css,/prefers-reduced-motion:reduce/);
   assert.match(css,/env\(safe-area-inset-bottom\)/);
+  assert.match(css,/width:min\(392px, calc\(100vw - 22px\)\)/);
+  assert.match(css,/min-height:50px/);
+  assert.match(css,/bottom:calc\(96px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(css,/translateY\(-10px\) scale\(1\.05\)/);
+  assert.match(css,/@media \(max-width:390px\)/);
 });
