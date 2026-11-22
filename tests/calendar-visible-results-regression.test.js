@@ -9,13 +9,16 @@ import { normalizeCalendarHistory } from '../src/services/economic-calendar.js';
 
 const now=Date.parse('2026-11-14T14:17:00Z'); // 17:17 Baghdad
 
-test('recover 38 source-backed Actual values saved in existing public production archive',()=>{
+test('preserve published Actual results from the growing production archive',()=>{
  const raw=JSON.parse(readFileSync('public/data/economic-calendar-history.json','utf8'));
  const history=normalizeCalendarHistory(raw);
  const latest=recentPublishedCalendarResults(history.events,now,30);
  const sourcePublished=history.events.filter(event=>String(event.actual||'').trim());
  assert.ok(sourcePublished.length>=35,'A regression must never erase saved source Actual records');
- assert.equal(latest.length,sourcePublished.length);
+ // The growing archive also contains later releases; the results view intentionally
+ // only displays already-published Actuals inside its 30-day lookback.
+ assert.ok(latest.length>=35,'At least 35 published values in the selected historic window must remain');
+ assert.ok(latest.length<=sourcePublished.length);
  assert.ok(latest.every(event=>event.actual && Date.parse(event.time)<=now));
  assert.ok(latest.every((event,index,arr)=>index===0||Date.parse(arr[index-1].time)>=Date.parse(event.time)));
  assert.ok(latest.some(event=>event.currency==='USD'&&event.title.includes('Initial Jobless Claims')));

@@ -12,7 +12,8 @@ test('the four preview-inspired screens are part of the actual application',()=>
     assert.match(main,new RegExp('hawal-screen '+name+'-screen'));
     assert.match(dashboard,new RegExp(name+':', 'i'));
   }
-  assert.match(main,/<Navigation mobile active=\{activeView\}/);
+  assert.match(main,/route\.page !== 'owner-health' && <Navigation mobile/);
+  assert.match(main,/route\.page === 'calendar' \? 'calendar'/);
   assert.match(main,/<Navigation active=\{activeView\}/);
   assert.match(main,/onNavigate=\{navigate\}/);
   assert.match(main,/navigationCopy\[lang\]/);
@@ -74,4 +75,15 @@ test('Sorani and Arabic machine translation happens within Hawal with original f
   assert.match(main,/translation-inline-status/);
   assert.match(main,/dir="auto"/);
   assert.doesNotMatch(main,/tradukka|window\.open\(/i);
+});
+
+test('floating glass navigation includes real calendar link, accessible tabs and reduced-motion styling',()=>{
+  assert.match(dashboard,/\['home', 'markets', 'calendar', 'news', 'more'\]/);
+  assert.match(dashboard,/pagePath\(lang, 'calendar'\)/);
+  assert.match(dashboard,/aria-current=\{isActive \? 'page'/);
+  assert.match(css,/HAWAL GLASSY NAV V5/);
+  assert.match(css,/\.glassy-mobile-nav\.redesigned-mobile-nav/);
+  assert.match(css,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+  assert.match(css,/prefers-reduced-motion:reduce/);
+  assert.match(css,/env\(safe-area-inset-bottom\)/);
 });

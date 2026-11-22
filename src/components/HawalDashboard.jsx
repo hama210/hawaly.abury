@@ -26,12 +26,28 @@ export function NavIcon({ name, size = 22 }) {
  };
  return <svg className="hawal-svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] || paths.more}</svg>;
 }
+const calendarLabels = {ku:'ڕۆژژمێر', ar:'التقويم', en:'Calendar'};
+
 export function Navigation({ active, onNavigate, lang, mobile = false }) {
- const c=navigationCopy[lang] || navigationCopy.ku;
- return <nav className={mobile?'mobile-nav redesigned-mobile-nav':'desktop-nav'} aria-label={mobile?'Mobile navigation':'Primary navigation'}>
-   {tabs.map(tab=><button key={tab} type="button" aria-current={active===tab?'page':undefined} aria-pressed={active===tab} className={active===tab?'active':''} onClick={()=>onNavigate(tab)}>
-     <NavIcon name={tab} size={mobile?21:17}/><span>{c[tab]}</span>
-   </button>)}
+ const c = navigationCopy[lang] || navigationCopy.ku;
+ const items = mobile ? ['home', 'markets', 'calendar', 'news', 'more'] : tabs;
+ const selected = Math.max(0, items.indexOf(active));
+ const indicator = mobile ? { '--nav-position': `${(selected + 0.5) * 100 / items.length}%` } : undefined;
+ return <nav
+   className={mobile ? 'mobile-nav redesigned-mobile-nav glassy-mobile-nav' : 'desktop-nav'}
+   aria-label={mobile ? 'Mobile navigation' : 'Primary navigation'}
+   dir={lang === 'en' ? 'ltr' : 'rtl'}
+   style={indicator}>
+   {items.map(tab => {
+     const isActive = active === tab;
+     const icon = <NavIcon name={tab} size={mobile ? 21 : 17}/>;
+     const contents = mobile
+       ? <><span className="glassy-tab-icon">{icon}</span><span className="glassy-tab-label">{tab === 'calendar' ? calendarLabels[lang] : c[tab]}</span></>
+       : <>{icon}<span>{c[tab]}</span></>;
+     return tab === 'calendar'
+       ? <a key={tab} href={pagePath(lang, 'calendar')} className={isActive ? 'active' : ''} aria-current={isActive ? 'page' : undefined}>{contents}</a>
+       : <button key={tab} type="button" className={isActive ? 'active' : ''} aria-pressed={isActive} aria-current={isActive ? 'page' : undefined} onClick={() => onNavigate(tab)}>{contents}</button>;
+   })}
  </nav>;
 }
 const rotatingMarkets = [

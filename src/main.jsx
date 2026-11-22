@@ -707,7 +707,13 @@ function App() {
       </>}
       <SiteFooter lang={lang}/>
     </div>
-    {route.page==='home' && <Navigation mobile active={activeView} onNavigate={navigate} lang={lang}/>}
+    {route.page !== 'owner-health' && <Navigation mobile
+      active={route.page === 'home' ? activeView : route.page === 'calendar' ? 'calendar' : route.page === 'metals' ? 'markets' : 'more'}
+      onNavigate={view => {
+        if (route.page === 'home') navigate(view);
+        else location.href = pagePath(lang) + (view === 'home' ? '' : '#' + view);
+      }}
+      lang={lang}/>}
     <SourcesDisclosure lang={lang} news={displayNews} sourceHealth={sourceHealth}/>
     <ArticleModal item={selected} lang={lang} dict={dict} onClose={closeArticle}/>
   </div>;
