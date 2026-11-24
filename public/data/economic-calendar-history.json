@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-23T20:12:23.380Z",
+  "updatedAt": "2026-11-24T04:46:14.590Z",
   "events": [
     {
       "id": "eur-30-y-bond-auction-de.20261111T1030",
@@ -3133,6 +3133,34 @@
       "actual": "4.7%",
       "previous": "4.708%",
       "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "jpy-manufacturing-pmi.20261123T0030",
+      "time": "2026-11-24T00:30:00.000Z",
+      "currency": "JPY",
+      "impact": "medium",
+      "title": "Jibun Bank Manufacturing PMI",
+      "forecast": "53.5",
+      "actual": "53.7",
+      "previous": "53.3",
+      "period": "2026-11",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "jpy-services-pmi.20261123T0030",
+      "time": "2026-11-24T00:30:00.000Z",
+      "currency": "JPY",
+      "impact": "medium",
+      "title": "Jibun Bank Services PMI",
+      "forecast": "",
+      "actual": "50.5",
+      "previous": "51.7",
+      "period": "2026-11",
       "status": "scheduled",
       "confidence": "sources_agree",
       "movedFrom": ""
