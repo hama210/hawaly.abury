@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T17:39:50.966Z",
+  "updatedAt": "2026-11-25T02:24:44.232Z",
   "events": [
     {
       "id": "eur-30-y-bond-auction-de.20261111T1030",
@@ -3304,6 +3304,104 @@
       "status": "moved",
       "confidence": "sources_agree",
       "movedFrom": "2026-11-24T15:30:00Z"
+    },
+    {
+      "id": "usd-api-weekly-crude-oil-stock.20261124T2130",
+      "time": "2026-11-24T21:30:00.000Z",
+      "currency": "USD",
+      "impact": "low",
+      "title": "API Weekly Crude Oil Stock",
+      "forecast": "",
+      "actual": "0.126M",
+      "previous": "5.3M",
+      "period": "2026-11",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "jpy-corporate-service-price-index-yoy.20261124T2350",
+      "time": "2026-11-24T23:50:00.000Z",
+      "currency": "JPY",
+      "impact": "medium",
+      "title": "Corporate Service Price Index  YoY",
+      "forecast": "3.6%",
+      "actual": "4.2%",
+      "previous": "3.7%",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "aud-construction-work-done.20261125T0030",
+      "time": "2026-11-25T00:30:00.000Z",
+      "currency": "AUD",
+      "impact": "low",
+      "title": "Construction Work Done",
+      "forecast": "0.8%",
+      "actual": "0.9%",
+      "previous": "-2.1%",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "aud-cpi-yoy.20261125T0030",
+      "time": "2026-11-25T00:30:00.000Z",
+      "currency": "AUD",
+      "impact": "high",
+      "title": "Consumer Price Index  YoY",
+      "forecast": "4.8%",
+      "actual": "4.9%",
+      "previous": "4.3%",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "official",
+      "movedFrom": ""
+    },
+    {
+      "id": "aud-monthly-cpi-yoy.20261125T0030",
+      "time": "2026-11-25T00:30:00.000Z",
+      "currency": "AUD",
+      "impact": "high",
+      "title": "Consumer Price Index  MoM",
+      "forecast": "",
+      "actual": "0.5%",
+      "previous": "0.8%",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "aud-trimmed-mean-cpi-mom.20261125T0030",
+      "time": "2026-11-25T00:30:00.000Z",
+      "currency": "AUD",
+      "impact": "medium",
+      "title": "Trimmed Mean CPI  MoM",
+      "forecast": "",
+      "actual": "0.5%",
+      "previous": "0.3%",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "aud-trimmed-mean-cpi-yoy.20261125T0030",
+      "time": "2026-11-25T00:30:00.000Z",
+      "currency": "AUD",
+      "impact": "medium",
+      "title": "Trimmed Mean CPI  YoY",
+      "forecast": "",
+      "actual": "3.8%",
+      "previous": "3.6%",
+      "period": "2026-10",
+      "status": "scheduled",
+      "confidence": "official",
+      "movedFrom": ""
     }
   ]
 }
