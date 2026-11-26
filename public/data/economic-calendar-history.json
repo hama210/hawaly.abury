@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-25T14:18:45.030Z",
+  "updatedAt": "2026-11-26T00:18:57.422Z",
   "events": [
     {
       "id": "eur-30-y-bond-auction-de.20261111T1030",
@@ -3717,6 +3717,34 @@
       "currency": "GBP",
       "impact": "high",
       "title": "BoE's Governor-Designate Bailey speech",
+      "forecast": "",
+      "actual": "",
+      "previous": "",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "usd-fed-s-beige-book.20261125T1900",
+      "time": "2026-11-25T19:00:00.000Z",
+      "currency": "USD",
+      "impact": "medium",
+      "title": "Fed's Beige Book",
+      "forecast": "",
+      "actual": "",
+      "previous": "",
+      "period": "",
+      "status": "scheduled",
+      "confidence": "sources_agree",
+      "movedFrom": ""
+    },
+    {
+      "id": "eur-eu-leaders-summit.20261126T0000",
+      "time": "2026-11-26T00:00:00.000Z",
+      "currency": "EUR",
+      "impact": "medium",
+      "title": "EU leaders summit",
       "forecast": "",
       "actual": "",
       "previous": "",
